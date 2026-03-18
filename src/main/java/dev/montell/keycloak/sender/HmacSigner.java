@@ -1,0 +1,31 @@
+package dev.montell.keycloak.sender;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+
+public final class HmacSigner {
+
+    private HmacSigner() {}
+
+    /**
+     * Returns a lowercase hex-encoded HMAC of {@code payload}.
+     *
+     * @param payload   the message to sign (UTF-8)
+     * @param secret    the HMAC secret (UTF-8)
+     * @param algorithm JCA algorithm name, e.g. {@code "HmacSHA256"}, {@code "HmacSHA1"}
+     * @throws IllegalArgumentException if the algorithm is unsupported
+     */
+    public static String sign(String payload, String secret, String algorithm) {
+        try {
+            Mac mac = Mac.getInstance(algorithm);
+            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), algorithm));
+            byte[] bytes = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(bytes.length * 2);
+            for (byte b : bytes) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException | java.security.InvalidKeyException e) {
+            throw new IllegalArgumentException("HMAC signing failed for algorithm: " + algorithm, e);
+        }
+    }
+}
