@@ -210,6 +210,44 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>1.15.3</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-junit5-plugin</artifactId>
+            <version>1.2.1</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <!-- Only mutate classes that have unit tests -->
+          <targetClasses>
+            <param>dev.montell.keycloak.event.EventPatternMatcher</param>
+            <param>dev.montell.keycloak.event.EventEnricher</param>
+            <param>dev.montell.keycloak.sender.HmacSigner</param>
+            <param>dev.montell.keycloak.sender.HttpWebhookSender</param>
+            <param>dev.montell.keycloak.dispatch.ExponentialBackOff</param>
+            <param>dev.montell.keycloak.dispatch.CircuitBreaker</param>
+            <param>dev.montell.keycloak.dispatch.CircuitBreakerRegistry</param>
+            <param>dev.montell.keycloak.dispatch.WebhookEventDispatcher</param>
+          </targetClasses>
+          <!-- Run only unit tests — IT tests use Testcontainers and are too slow -->
+          <targetTests>
+            <param>dev.montell.keycloak.unit.*</param>
+          </targetTests>
+          <mutators>
+            <mutator>DEFAULTS</mutator>
+          </mutators>
+          <outputFormats>
+            <outputFormat>HTML</outputFormat>
+            <outputFormat>XML</outputFormat>
+          </outputFormats>
+          <!-- Stable report path: target/pit-reports/ -->
+          <timestampedReports>false</timestampedReports>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <version>3.6.0</version>
