@@ -224,6 +224,9 @@ public class WebhookEventDispatcher {
         }
     }
 
+    public HttpWebhookSender getHttpSender() { return httpSender; }
+    public CircuitBreakerRegistry getRegistry() { return registry; }
+
     /** Graceful shutdown — waits up to 30s for in-flight tasks. */
     public void shutdown() {
         executor.shutdown();

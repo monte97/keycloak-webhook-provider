@@ -2,6 +2,7 @@
 package dev.montell.keycloak.listener;
 
 import com.google.auto.service.AutoService;
+import dev.montell.keycloak.dispatch.WebhookComponentHolder;
 import dev.montell.keycloak.dispatch.WebhookEventDispatcher;
 import dev.montell.keycloak.retention.RetentionCleanupTask;
 import lombok.extern.jbosslog.JBossLog;
@@ -37,6 +38,7 @@ public class WebhookEventListenerProviderFactory implements EventListenerProvide
     @Override
     public void postInit(KeycloakSessionFactory factory) {
         this.dispatcher = new WebhookEventDispatcher(factory);
+        WebhookComponentHolder.init(dispatcher.getHttpSender(), dispatcher.getRegistry());
 
         // Schedule retention cleanup every 24h
         KeycloakModelUtils.runJobInTransaction(factory, session -> {
