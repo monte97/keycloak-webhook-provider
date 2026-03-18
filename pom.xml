@@ -138,8 +138,9 @@
         </exclusion>
       </exclusions>
     </dependency>
-    <!-- hibernate-core: provided scope so it compiles main sources (Keycloak ships Hibernate at runtime)
-         and is also available for standalone JPA integration tests via test classpath -->
+    <!-- hibernate-core: provided scope keeps it out of the fat-JAR (Keycloak ships its own at runtime).
+         Failsafe integration tests pick it up via keycloak-model-jpa's transitive dependency.
+         Note: if that transitive route is ever removed, add an explicit <scope>test</scope> entry. -->
     <dependency>
       <groupId>org.hibernate.orm</groupId>
       <artifactId>hibernate-core</artifactId>

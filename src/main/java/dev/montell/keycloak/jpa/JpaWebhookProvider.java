@@ -90,7 +90,7 @@ public class JpaWebhookProvider implements WebhookProvider {
         Session session = em.unwrap(Session.class);
         Savepoint sp = null;
         try {
-            sp = session.doReturningWork(conn -> conn.setSavepoint("storeEvent_" + kcEventId));
+            sp = session.doReturningWork(conn -> conn.setSavepoint("storeEvent_sp"));
             WebhookEventEntity e = new WebhookEventEntity();
             e.setId(UUID.randomUUID().toString());
             e.setRealmId(realm.getId());
@@ -146,7 +146,8 @@ public class JpaWebhookProvider implements WebhookProvider {
             String eventType, int httpStatus, boolean success, int retries) {
         String id = WebhookSendEntity.buildId(webhookId, webhookEventId);
         WebhookSendEntity e = em.find(WebhookSendEntity.class, id);
-        if (e == null) {
+        boolean isNew = (e == null);
+        if (isNew) {
             e = new WebhookSendEntity();
             e.setId(id);
             e.setWebhookId(webhookId);
@@ -157,7 +158,7 @@ public class JpaWebhookProvider implements WebhookProvider {
         e.setSuccess(success);
         e.setRetries(retries);
         e.setLastAttemptAt(java.time.Instant.now());
-        em.persist(e);
+        if (isNew) em.persist(e); // existing entities are already managed; dirty-check handles updates
         em.flush();
         return new WebhookSendAdapter(e);
     }

@@ -4,8 +4,6 @@
     <class>dev.montell.keycloak.jpa.entity.WebhookEntity</class>
     <class>dev.montell.keycloak.jpa.entity.WebhookEventEntity</class>
     <class>dev.montell.keycloak.jpa.entity.WebhookSendEntity</class>
-    <properties>
-      <property name="hibernate.hbm2ddl.auto" value="create-drop"/>
-    </properties>
+    <properties/>
   </persistence-unit>
 </persistence>

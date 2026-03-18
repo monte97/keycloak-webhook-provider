@@ -58,7 +58,17 @@ class JpaWebhookProviderIT {
     }
 
     @BeforeEach
-    void beginTx() { em.getTransaction().begin(); }
+    void cleanAndBeginTx() {
+        // Truncate all tables in a committed transaction so each test starts clean.
+        // This is necessary because tests 4 and 5 commit mid-test, leaving rows
+        // that @AfterEach rollback cannot undo.
+        em.getTransaction().begin();
+        em.createNativeQuery(
+            "TRUNCATE TABLE WEBHOOK_SEND, WEBHOOK_EVENT_TYPE, WEBHOOK_EVENT, WEBHOOK"
+        ).executeUpdate();
+        em.getTransaction().commit();
+        em.getTransaction().begin();
+    }
 
     @AfterEach
     void rollbackTx() {
