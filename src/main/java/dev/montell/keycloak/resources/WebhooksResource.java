@@ -8,10 +8,17 @@ import jakarta.ws.rs.core.*;
 import java.net.URI;
 import java.util.List;
 import lombok.extern.jbosslog.JBossLog;
+import org.keycloak.jose.jws.JWSInput;
+import org.keycloak.jose.jws.JWSInputException;
+import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.representations.AccessToken;
 import org.keycloak.services.managers.AppAuthManager;
 import org.keycloak.services.managers.AuthenticationManager;
+import org.keycloak.services.resources.admin.AdminAuth;
+import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
+import org.keycloak.services.resources.admin.permissions.AdminPermissions;
 
 @JBossLog
 @Produces(MediaType.APPLICATION_JSON)
@@ -20,6 +27,10 @@ public class WebhooksResource {
 
     private final KeycloakSession session;
     private final RealmModel      realm;
+
+    private AuthenticationManager.AuthResult cachedAuthResult;
+    private AdminPermissionEvaluator permissions;
+    private boolean authInitialized;
 
     public WebhooksResource(KeycloakSession session, RealmModel realm) {
         this.session = session;
@@ -333,23 +344,34 @@ public class WebhooksResource {
     }
 
     protected AuthenticationManager.AuthResult authResult() {
-        return new AppAuthManager.BearerTokenAuthenticator(session)
-            .setRealm(realm).authenticate();
+        initAuth();
+        return cachedAuthResult;
     }
 
-    // NOTE: simplified auth — both view and manage require realm admin for now.
-    // Plan 3 will replace with AdminPermissionEvaluator.realm().canViewEvents() /
-    // canManageEvents() to support delegated view-events / manage-events roles.
-    protected void requireViewEvents() {
-        var auth = authResult();
-        if (auth == null
-                || auth.getToken().getRealmAccess() == null
-                || !auth.getToken().getRealmAccess().isUserInRole("admin")) {
+    private void initAuth() {
+        if (authInitialized) return;
+        authInitialized = true;
+        cachedAuthResult = new AppAuthManager.BearerTokenAuthenticator(session)
+            .setRealm(realm).authenticate();
+        if (cachedAuthResult == null) {
             throw new NotAuthorizedException("Bearer");
         }
+        AccessToken token = cachedAuthResult.getToken();
+        ClientModel client = realm.getClientByClientId(token.getIssuedFor());
+        if (client == null) {
+            throw new NotFoundException("Could not find client for authorization");
+        }
+        AdminAuth adminAuth = new AdminAuth(realm, token, cachedAuthResult.getUser(), client);
+        permissions = AdminPermissions.evaluator(session, realm, adminAuth);
+    }
+
+    protected void requireViewEvents() {
+        initAuth();
+        permissions.realm().requireViewEvents();
     }
 
     protected void requireManageEvents() {
-        requireViewEvents();
+        initAuth();
+        permissions.realm().requireManageEvents();
     }
 }
