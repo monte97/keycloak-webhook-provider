@@ -130,6 +130,21 @@
       <artifactId>keycloak-admin-client</artifactId>
       <version>${keycloak.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <!-- exclude old jboss jandex to avoid conflict with io.smallrye:jandex used by hibernate-core -->
+        <exclusion>
+          <groupId>org.jboss</groupId>
+          <artifactId>jandex</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- hibernate-core: provided scope so it compiles main sources (Keycloak ships Hibernate at runtime)
+         and is also available for standalone JPA integration tests via test classpath -->
+    <dependency>
+      <groupId>org.hibernate.orm</groupId>
+      <artifactId>hibernate-core</artifactId>
+      <version>6.4.4.Final</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 

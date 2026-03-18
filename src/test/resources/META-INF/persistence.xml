@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence" version="3.0">
+  <persistence-unit name="webhook-test" transaction-type="RESOURCE_LOCAL">
+    <class>dev.montell.keycloak.jpa.entity.WebhookEntity</class>
+    <class>dev.montell.keycloak.jpa.entity.WebhookEventEntity</class>
+    <class>dev.montell.keycloak.jpa.entity.WebhookSendEntity</class>
+    <properties>
+      <property name="hibernate.hbm2ddl.auto" value="create-drop"/>
+    </properties>
+  </persistence-unit>
+</persistence>

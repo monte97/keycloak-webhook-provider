@@ -6,9 +6,13 @@ import dev.montell.keycloak.jpa.entity.*;
 import dev.montell.keycloak.model.*;
 import dev.montell.keycloak.spi.WebhookProvider;
 import jakarta.persistence.*;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.extern.jbosslog.JBossLog;
+import org.hibernate.Session;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 
@@ -80,7 +84,13 @@ public class JpaWebhookProvider implements WebhookProvider {
     @Override
     public WebhookEventModel storeEvent(RealmModel realm, KeycloakEventType type,
                                         String kcEventId, String payloadJson) {
+        // Use a JDBC savepoint so that a unique constraint violation on KC_EVENT_ID can be
+        // recovered from within the same transaction (required on PostgreSQL which otherwise
+        // marks the entire transaction as aborted after a constraint error).
+        Session session = em.unwrap(Session.class);
+        Savepoint sp = null;
         try {
+            sp = session.doReturningWork(conn -> conn.setSavepoint("storeEvent_" + kcEventId));
             WebhookEventEntity e = new WebhookEventEntity();
             e.setId(UUID.randomUUID().toString());
             e.setRealmId(realm.getId());
@@ -89,10 +99,22 @@ public class JpaWebhookProvider implements WebhookProvider {
             e.setEventObject(payloadJson);
             em.persist(e);
             em.flush();
+            if (sp != null) {
+                final Savepoint spFinal = sp;
+                session.doWork(conn -> conn.releaseSavepoint(spFinal));
+            }
             return new WebhookEventAdapter(e);
         } catch (PersistenceException ex) {
             // Unique constraint violation on KC_EVENT_ID = duplicate event → idempotent
             log.debugf("storeEvent duplicate for kcEventId=%s: %s", kcEventId, ex.getMessage());
+            if (sp != null) {
+                final Savepoint spFinal = sp;
+                try {
+                    session.doWork(conn -> conn.rollback(spFinal));
+                } catch (Exception rollbackEx) {
+                    log.warnf("Failed to rollback savepoint for kcEventId=%s: %s", kcEventId, rollbackEx.getMessage());
+                }
+            }
             em.clear();
             WebhookEventModel existing = getEventByKcId(realm, kcEventId);
             if (existing == null) {
