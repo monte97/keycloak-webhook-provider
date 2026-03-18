@@ -332,7 +332,7 @@ public class WebhooksResource {
         try { return Integer.parseInt(val); } catch (NumberFormatException e) { return defaultValue; }
     }
 
-    private AuthenticationManager.AuthResult authResult() {
+    protected AuthenticationManager.AuthResult authResult() {
         return new AppAuthManager.BearerTokenAuthenticator(session)
             .setRealm(realm).authenticate();
     }
@@ -340,7 +340,7 @@ public class WebhooksResource {
     // NOTE: simplified auth — both view and manage require realm admin for now.
     // Plan 3 will replace with AdminPermissionEvaluator.realm().canViewEvents() /
     // canManageEvents() to support delegated view-events / manage-events roles.
-    private void requireViewEvents() {
+    protected void requireViewEvents() {
         var auth = authResult();
         if (auth == null
                 || auth.getToken().getRealmAccess() == null
@@ -349,7 +349,7 @@ public class WebhooksResource {
         }
     }
 
-    private void requireManageEvents() {
+    protected void requireManageEvents() {
         requireViewEvents();
     }
 }
