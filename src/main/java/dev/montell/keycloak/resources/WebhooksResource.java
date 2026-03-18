@@ -90,6 +90,107 @@ public class WebhooksResource {
         )).build();
     }
 
+    // --- GET /{id}/events ---
+    @GET @Path("{id}/events")
+    public Response getEvents(@PathParam("id") String id,
+            @QueryParam("first") @DefaultValue("0")  Integer first,
+            @QueryParam("max")   @DefaultValue("20") Integer max) {
+        requireViewEvents();
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+        var events = provider().getEventsByWebhookId(realm, id, first, max)
+            .map(e -> {
+                var m = new java.util.LinkedHashMap<String, Object>();
+                m.put("id", e.getId());
+                m.put("realmId", e.getRealmId());
+                m.put("eventType", e.getEventType().name());
+                m.put("kcEventId", e.getKcEventId());
+                m.put("eventObject", e.getEventObject());
+                m.put("createdAt", e.getCreatedAt().toString());
+                return m;
+            })
+            .toList();
+        return Response.ok(events).build();
+    }
+
+    // --- GET /{id}/sends ---
+    @GET @Path("{id}/sends")
+    public Response getSends(@PathParam("id") String id,
+            @QueryParam("first")   @DefaultValue("0")  Integer first,
+            @QueryParam("max")     @DefaultValue("20") Integer max,
+            @QueryParam("success") Boolean success) {
+        requireViewEvents();
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+        var sends = provider().getSendsByWebhook(realm, id, first, max, success)
+            .map(s -> {
+                var m = new java.util.LinkedHashMap<String, Object>();
+                m.put("id", s.getId());
+                m.put("webhookId", s.getWebhookId());
+                m.put("webhookEventId", s.getWebhookEventId());
+                m.put("eventType", s.getEventType());
+                m.put("httpStatus", s.getHttpStatus());
+                m.put("success", s.isSuccess());
+                m.put("retries", s.getRetries());
+                m.put("sentAt", s.getSentAt().toString());
+                m.put("lastAttemptAt", s.getLastAttemptAt().toString());
+                return m;
+            })
+            .toList();
+        return Response.ok(sends).build();
+    }
+
+    // --- GET /{id}/circuit ---
+    @GET @Path("{id}/circuit")
+    public Response getCircuit(@PathParam("id") String id) {
+        requireViewEvents();
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+        int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", 5);
+        int openSeconds      = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
+        var body = new java.util.LinkedHashMap<String, Object>();
+        body.put("state", w.getCircuitState());
+        body.put("failureCount", w.getFailureCount());
+        body.put("lastFailureAt", w.getLastFailureAt() != null ? w.getLastFailureAt().toString() : null);
+        body.put("failureThreshold", failureThreshold);
+        body.put("openSeconds", openSeconds);
+        return Response.ok(body).build();
+    }
+
+    // --- POST /{id}/circuit/reset ---
+    @POST @Path("{id}/circuit/reset")
+    public Response resetCircuit(@PathParam("id") String id) {
+        requireManageEvents();
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+        w.setCircuitState("CLOSED");
+        w.setFailureCount(0);
+        w.setLastFailureAt(null);
+        var registry = dev.montell.keycloak.dispatch.WebhookComponentHolder.registry();
+        if (registry != null) registry.invalidate(id);
+        return Response.noContent().build();
+    }
+
+    // --- POST /{id}/test ---
+    @POST @Path("{id}/test")
+    public Response testWebhook(@PathParam("id") String id) {
+        requireManageEvents();
+        var sender = dev.montell.keycloak.dispatch.WebhookComponentHolder.httpSender();
+        if (sender == null)
+            return Response.status(503).entity("Webhook sender not initialized").build();
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+        String payload = "{\"type\":\"test.PING\",\"uid\":\"" + java.util.UUID.randomUUID()
+            + "\",\"realmId\":\"" + realm.getId()
+            + "\",\"occurredAt\":\"" + java.time.Instant.now() + "\"}";
+        var result = sender.send(w.getUrl(), payload, w.getId(), w.getSecret(), w.getAlgorithm());
+        return Response.ok(java.util.Map.of(
+            "httpStatus", result.httpStatus(),
+            "success", result.success(),
+            "durationMs", result.durationMs()
+        )).build();
+    }
+
     // --- PUT /{id} ---
     @PUT @Path("{id}")
     public Response updateWebhook(@PathParam("id") String id, WebhookRepresentation rep) {
@@ -128,6 +229,12 @@ public class WebhooksResource {
         if (rep.eventTypes != null)  w.setEventTypes(rep.eventTypes);
         if (rep.retryMaxElapsedSeconds  != null) w.setRetryMaxElapsedSeconds(rep.retryMaxElapsedSeconds);
         if (rep.retryMaxIntervalSeconds != null) w.setRetryMaxIntervalSeconds(rep.retryMaxIntervalSeconds);
+    }
+
+    private int getRealmIntAttribute(String key, int defaultValue) {
+        String val = realm.getAttribute(key);
+        if (val == null) return defaultValue;
+        try { return Integer.parseInt(val); } catch (NumberFormatException e) { return defaultValue; }
     }
 
     private AuthenticationManager.AuthResult authResult() {
