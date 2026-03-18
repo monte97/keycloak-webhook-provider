@@ -191,6 +191,101 @@ public class WebhooksResource {
         )).build();
     }
 
+    // --- POST /{id}/sends/{sid}/resend ---
+    @POST @Path("{id}/sends/{sid}/resend")
+    public Response resendSingle(@PathParam("id") String id, @PathParam("sid") String sid) {
+        requireManageEvents();
+        var sender = dev.montell.keycloak.dispatch.WebhookComponentHolder.httpSender();
+        var registryHolder = dev.montell.keycloak.dispatch.WebhookComponentHolder.registry();
+        if (sender == null || registryHolder == null)
+            return Response.status(503).entity("Webhook components not initialized").build();
+
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+
+        var send = provider().getSendById(realm, sid);
+        if (send == null) throw new NotFoundException("send not found: " + sid);
+
+        // Svix-style: respect circuit breaker
+        int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", 5);
+        int openSeconds      = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
+        var cb = registryHolder.get(w, failureThreshold, openSeconds);
+        if (!cb.allowRequest())
+            return Response.status(409).entity("Circuit breaker is OPEN — reset it first via POST /{id}/circuit/reset").build();
+
+        // Load original event payload
+        var event = provider().getEventById(realm, send.getWebhookEventId());
+        if (event == null)
+            return Response.status(404).entity("Original event not found").build();
+
+        // Send synchronously
+        var result = sender.send(w.getUrl(), event.getEventObject(), w.getId(), w.getSecret(), w.getAlgorithm());
+
+        // Update CB state
+        if (result.success()) cb.onSuccess();
+        else                  cb.onFailure();
+        cb.applyTo(w);
+        registryHolder.invalidate(id);
+
+        // Update send record
+        provider().storeSend(realm, id, send.getWebhookEventId(),
+            send.getEventType(), result.httpStatus(), result.success(), send.getRetries() + 1);
+
+        return Response.ok(java.util.Map.of(
+            "httpStatus", result.httpStatus(),
+            "success", result.success(),
+            "durationMs", result.durationMs()
+        )).build();
+    }
+
+    // --- POST /{id}/resend-failed ---
+    @POST @Path("{id}/resend-failed")
+    public Response resendFailed(@PathParam("id") String id,
+            @QueryParam("hours") @DefaultValue("24") int hours) {
+        requireManageEvents();
+        var sender = dev.montell.keycloak.dispatch.WebhookComponentHolder.httpSender();
+        var registryHolder = dev.montell.keycloak.dispatch.WebhookComponentHolder.registry();
+        if (sender == null || registryHolder == null)
+            return Response.status(503).entity("Webhook components not initialized").build();
+
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+
+        int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", 5);
+        int openSeconds      = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
+        var cb = registryHolder.get(w, failureThreshold, openSeconds);
+        if (!cb.allowRequest())
+            return Response.status(409).entity("Circuit breaker is OPEN — reset it first").build();
+
+        java.time.Instant since = java.time.Instant.now().minus(java.time.Duration.ofHours(hours));
+        var failedSends = provider().getFailedSendsSince(realm, id, since).toList();
+
+        int resent = 0;
+        int failed = 0;
+        for (var send : failedSends) {
+            var event = provider().getEventById(realm, send.getWebhookEventId());
+            if (event == null) continue;
+
+            var result = sender.send(w.getUrl(), event.getEventObject(), w.getId(), w.getSecret(), w.getAlgorithm());
+            if (result.success()) cb.onSuccess();
+            else                  cb.onFailure();
+            cb.applyTo(w);
+            registryHolder.invalidate(id);
+
+            provider().storeSend(realm, id, send.getWebhookEventId(),
+                send.getEventType(), result.httpStatus(), result.success(), send.getRetries() + 1);
+
+            if (result.success()) {
+                resent++;
+            } else {
+                failed++;
+                break; // stop on first failure
+            }
+        }
+
+        return Response.ok(java.util.Map.of("resent", resent, "failed", failed)).build();
+    }
+
     // --- PUT /{id} ---
     @PUT @Path("{id}")
     public Response updateWebhook(@PathParam("id") String id, WebhookRepresentation rep) {
