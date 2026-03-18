@@ -54,7 +54,12 @@ public class WebhooksResource {
         requireManageEvents();
         if (rep.url == null || rep.url.isBlank())
             return Response.status(400).entity("url is required").build();
-        try { new java.net.URI(rep.url); } catch (Exception e) {
+        try {
+            java.net.URI uri = new java.net.URI(rep.url);
+            if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) {
+                return Response.status(400).entity("url must use http or https scheme").build();
+            }
+        } catch (Exception e) {
             return Response.status(400).entity("invalid url").build();
         }
         var user   = authResult().getUser();
@@ -79,8 +84,10 @@ public class WebhooksResource {
         requireManageEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException();
-        return Response.ok(java.util.Map.of("type", "secret", "value",
-            w.getSecret() != null ? w.getSecret() : "")).build();
+        return Response.ok(java.util.Map.of(
+            "type", "secret",
+            "configured", w.getSecret() != null
+        )).build();
     }
 
     // --- PUT /{id} ---
@@ -89,6 +96,16 @@ public class WebhooksResource {
         requireManageEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException();
+        if (rep.url != null) {
+            try {
+                java.net.URI uri = new java.net.URI(rep.url);
+                if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) {
+                    return Response.status(400).entity("url must use http or https scheme").build();
+                }
+            } catch (Exception e) {
+                return Response.status(400).entity("invalid url").build();
+            }
+        }
         applyRepresentation(w, rep);
         return Response.ok(WebhookRepresentation.from(w)).build();
     }
@@ -123,7 +140,9 @@ public class WebhooksResource {
     // canManageEvents() to support delegated view-events / manage-events roles.
     private void requireViewEvents() {
         var auth = authResult();
-        if (auth == null || !auth.getToken().getRealmAccess().isUserInRole("admin")) {
+        if (auth == null
+                || auth.getToken().getRealmAccess() == null
+                || !auth.getToken().getRealmAccess().isUserInRole("admin")) {
             throw new NotAuthorizedException("Bearer");
         }
     }
