@@ -137,6 +137,45 @@ public class JpaWebhookProvider implements WebhookProvider {
         }
     }
 
+    @Override
+    public WebhookEventModel getEventById(RealmModel realm, String id) {
+        WebhookEventEntity e = em.find(WebhookEventEntity.class, id);
+        if (e == null || !e.getRealmId().equals(realm.getId())) return null;
+        return new WebhookEventAdapter(e);
+    }
+
+    @Override
+    public Stream<WebhookEventModel> getEventsByWebhookId(RealmModel realm, String webhookId,
+                                                           Integer first, Integer max) {
+        WebhookEntity w = em.find(WebhookEntity.class, webhookId);
+        if (w == null || !w.getRealmId().equals(realm.getId())) return Stream.empty();
+        TypedQuery<WebhookEventEntity> q = em.createNamedQuery("getWebhookEventsByWebhookId", WebhookEventEntity.class);
+        q.setParameter("webhookId", webhookId);
+        if (first != null) q.setFirstResult(first);
+        if (max != null)   q.setMaxResults(max);
+        return q.getResultStream().map(WebhookEventAdapter::new);
+    }
+
+    @Override
+    public Stream<WebhookSendModel> getSendsByWebhook(RealmModel realm, String webhookId,
+                                                       Integer first, Integer max, Boolean success) {
+        TypedQuery<WebhookSendEntity> q = em.createNamedQuery("getWebhookSendsByWebhookIdFiltered", WebhookSendEntity.class);
+        q.setParameter("webhookId", webhookId);
+        q.setParameter("success", success);
+        if (first != null) q.setFirstResult(first);
+        if (max != null)   q.setMaxResults(max);
+        return q.getResultStream().map(WebhookSendAdapter::new);
+    }
+
+    @Override
+    public Stream<WebhookSendModel> getFailedSendsSince(RealmModel realm, String webhookId,
+                                                         java.time.Instant since) {
+        TypedQuery<WebhookSendEntity> q = em.createNamedQuery("getFailedSendsSince", WebhookSendEntity.class);
+        q.setParameter("webhookId", webhookId);
+        q.setParameter("since", since);
+        return q.getResultStream().map(WebhookSendAdapter::new);
+    }
+
     // --- Send log ---
 
     @Override

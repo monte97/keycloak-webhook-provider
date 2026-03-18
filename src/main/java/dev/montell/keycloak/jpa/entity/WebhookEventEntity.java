@@ -7,7 +7,9 @@ import java.time.Instant;
 
 @NamedQueries({
     @NamedQuery(name = "getWebhookEventByKcId",
-        query = "SELECT e FROM WebhookEventEntity e WHERE e.realmId = :realmId AND e.kcEventId = :kcEventId")
+        query = "SELECT e FROM WebhookEventEntity e WHERE e.realmId = :realmId AND e.kcEventId = :kcEventId"),
+    @NamedQuery(name = "getWebhookEventsByWebhookId",
+        query = "SELECT DISTINCT e FROM WebhookEventEntity e JOIN WebhookSendEntity s ON s.webhookEventId = e.id WHERE s.webhookId = :webhookId ORDER BY e.createdAt DESC")
 })
 @Entity
 @Table(name = "WEBHOOK_EVENT")

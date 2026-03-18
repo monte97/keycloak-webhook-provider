@@ -28,6 +28,17 @@ public interface WebhookProvider extends Provider {
                                  String kcEventId, String payloadJson);
     WebhookEventModel getEventByKcId(RealmModel realm, String kcEventId);
 
+    WebhookEventModel getEventById(RealmModel realm, String id);
+
+    Stream<WebhookEventModel> getEventsByWebhookId(RealmModel realm, String webhookId,
+                                                     Integer first, Integer max);
+
+    Stream<WebhookSendModel> getSendsByWebhook(RealmModel realm, String webhookId,
+                                                Integer first, Integer max, Boolean success);
+
+    Stream<WebhookSendModel> getFailedSendsSince(RealmModel realm, String webhookId,
+                                                  java.time.Instant since);
+
     // --- Send log ---
     WebhookSendModel storeSend(RealmModel realm, String webhookId, String webhookEventId,
                                String eventType, int httpStatus, boolean success,

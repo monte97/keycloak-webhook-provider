@@ -8,7 +8,11 @@ import java.time.Instant;
     @NamedQuery(name = "getWebhookSendsByWebhookId",
         query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId ORDER BY s.sentAt DESC"),
     @NamedQuery(name = "getWebhookSendsByEventId",
-        query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookEventId = :webhookEventId ORDER BY s.sentAt DESC")
+        query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookEventId = :webhookEventId ORDER BY s.sentAt DESC"),
+    @NamedQuery(name = "getWebhookSendsByWebhookIdFiltered",
+        query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId AND (:success IS NULL OR s.success = :success) ORDER BY s.lastAttemptAt DESC"),
+    @NamedQuery(name = "getFailedSendsSince",
+        query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId AND s.success = false AND s.lastAttemptAt >= :since ORDER BY s.lastAttemptAt ASC")
 })
 @Entity
 @Table(name = "WEBHOOK_SEND",
