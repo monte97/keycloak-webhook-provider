@@ -19,7 +19,7 @@ public interface WebhookModel {
     String getCircuitState();   void setCircuitState(String state);
     int getFailureCount();       void setFailureCount(int count);
     Instant getLastFailureAt(); void setLastFailureAt(Instant at);
-    // retry override (null = usa default)
+    // retry override (null = use default)
     Integer getRetryMaxElapsedSeconds();  void setRetryMaxElapsedSeconds(Integer s);
     Integer getRetryMaxIntervalSeconds(); void setRetryMaxIntervalSeconds(Integer s);
 }

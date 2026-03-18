@@ -8,6 +8,6 @@ public interface WebhookEventModel {
     String getRealmId();
     KeycloakEventType getEventType();
     String getKcEventId();
-    String getEventObject();   // JSON serializzato
+    String getEventObject();   // serialized JSON payload
     Instant getCreatedAt();
 }
