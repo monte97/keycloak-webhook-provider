@@ -90,11 +90,15 @@ public class JpaWebhookProvider implements WebhookProvider {
             em.persist(e);
             em.flush();
             return new WebhookEventAdapter(e);
-        } catch (Exception ex) {
-            // ConstraintViolationException = duplicate KC_EVENT_ID → idempotent
-            log.debugf("storeEvent duplicate or error for kcEventId=%s: %s", kcEventId, ex.getMessage());
+        } catch (PersistenceException ex) {
+            // Unique constraint violation on KC_EVENT_ID = duplicate event → idempotent
+            log.debugf("storeEvent duplicate for kcEventId=%s: %s", kcEventId, ex.getMessage());
             em.clear();
-            return getEventByKcId(realm, kcEventId);
+            WebhookEventModel existing = getEventByKcId(realm, kcEventId);
+            if (existing == null) {
+                log.warnf("storeEvent fallback returned null for kcEventId=%s — unexpected state", kcEventId);
+            }
+            return existing;
         }
     }
 
@@ -114,8 +118,10 @@ public class JpaWebhookProvider implements WebhookProvider {
     // --- Send log ---
 
     @Override
-    public WebhookSendModel storeSend(RealmModel realm, String webhookId, String webhookEventId,
-                                      String eventType, int httpStatus, boolean success, int retries) {
+    public WebhookSendModel storeSend(
+            RealmModel realm, // realm parameter accepted for API uniformity; scoping is via webhookId FK
+            String webhookId, String webhookEventId,
+            String eventType, int httpStatus, boolean success, int retries) {
         String id = WebhookSendEntity.buildId(webhookId, webhookEventId);
         WebhookSendEntity e = em.find(WebhookSendEntity.class, id);
         if (e == null) {
@@ -135,7 +141,9 @@ public class JpaWebhookProvider implements WebhookProvider {
     }
 
     @Override
-    public WebhookSendModel getSendById(RealmModel realm, String id) {
+    public WebhookSendModel getSendById(
+            RealmModel realm, // realm accepted for API uniformity; no direct realm column on WEBHOOK_SEND
+            String id) {
         WebhookSendEntity e = em.find(WebhookSendEntity.class, id);
         return e != null ? new WebhookSendAdapter(e) : null;
     }
