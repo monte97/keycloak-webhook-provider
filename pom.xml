@@ -231,6 +231,7 @@
             <param>dev.montell.keycloak.dispatch.CircuitBreaker</param>
             <param>dev.montell.keycloak.dispatch.CircuitBreakerRegistry</param>
             <param>dev.montell.keycloak.dispatch.WebhookEventDispatcher</param>
+            <param>dev.montell.keycloak.resources.WebhooksResource</param>
           </targetClasses>
           <!-- Run only unit tests — IT tests use Testcontainers and are too slow -->
           <targetTests>
