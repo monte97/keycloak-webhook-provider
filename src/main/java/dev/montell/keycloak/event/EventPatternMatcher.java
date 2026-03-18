@@ -10,6 +10,18 @@ public final class EventPatternMatcher {
 
     private EventPatternMatcher() {}
 
+    /**
+     * Checks whether any pattern in the set matches the given event type.
+     * Pattern resolution order (first match wins):
+     * <ol>
+     *   <li>{@code *} — matches everything</li>
+     *   <li>{@code access.*} — prefix match for all user (access) events</li>
+     *   <li>{@code admin.*} — prefix match for all admin events</li>
+     *   <li>exact string equality</li>
+     *   <li>Java regex (via {@link String#matches}) — note: {@code .} is a regex wildcard here,
+     *       not a literal dot. Patterns like {@code admin.USER-.*} work as expected.</li>
+     * </ol>
+     */
     public static boolean matches(Set<String> patterns, String eventType) {
         if (eventType == null || patterns == null || patterns.isEmpty()) return false;
         for (String pattern : patterns) {

@@ -59,6 +59,11 @@ class EventPatternMatcherTest {
     }
 
     @Test
+    void null_patterns_returns_false() {
+        assertFalse(EventPatternMatcher.matches(null, "access.LOGIN"));
+    }
+
+    @Test
     void multiple_patterns_any_match_returns_true() {
         assertTrue(EventPatternMatcher.matches(
             Set.of("admin.USER-DELETE", "access.LOGIN"), "access.LOGIN"));
