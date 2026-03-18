@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+    <changeSet id="webhook-1.0.0-1" author="montell">
+        <createTable tableName="WEBHOOK">
+            <column name="ID" type="VARCHAR(36)"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="REALM_ID" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="URL" type="VARCHAR(2048)"><constraints nullable="false"/></column>
+            <column name="SECRET" type="VARCHAR(255)"/>
+            <column name="ALGORITHM" type="VARCHAR(32)"><constraints nullable="false"/></column>
+            <column name="ENABLED" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="CIRCUIT_STATE" type="VARCHAR(16)" defaultValue="CLOSED"><constraints nullable="false"/></column>
+            <column name="FAILURE_COUNT" type="INTEGER" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="LAST_FAILURE_AT" type="TIMESTAMP"/>
+            <column name="CREATED_BY" type="VARCHAR(255)"/>
+            <column name="CREATED_AT" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="UPDATED_AT" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="RETRY_MAX_ELAPSED_SECONDS" type="INTEGER"/>
+            <column name="RETRY_MAX_INTERVAL_SECONDS" type="INTEGER"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="webhook-1.0.0-2" author="montell">
+        <createTable tableName="WEBHOOK_EVENT_TYPE">
+            <column name="WEBHOOK_ID" type="VARCHAR(36)"><constraints nullable="false"/></column>
+            <column name="EVENT_TYPE" type="VARCHAR(255)"><constraints nullable="false"/></column>
+        </createTable>
+        <addPrimaryKey tableName="WEBHOOK_EVENT_TYPE" columnNames="WEBHOOK_ID,EVENT_TYPE"/>
+        <addForeignKeyConstraint baseTableName="WEBHOOK_EVENT_TYPE" baseColumnNames="WEBHOOK_ID"
+            referencedTableName="WEBHOOK" referencedColumnNames="ID"
+            constraintName="FK_WEBHOOK_EVENT_TYPE_WEBHOOK"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="webhook-1.0.0-3" author="montell">
+        <createTable tableName="WEBHOOK_EVENT">
+            <column name="ID" type="VARCHAR(36)"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="REALM_ID" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="EVENT_TYPE" type="VARCHAR(16)"><constraints nullable="false"/></column>
+            <column name="KC_EVENT_ID" type="VARCHAR(255)"/>
+            <column name="EVENT_OBJECT" type="TEXT"><constraints nullable="false"/></column>
+            <column name="CREATED_AT" type="TIMESTAMP"><constraints nullable="false"/></column>
+        </createTable>
+        <createIndex tableName="WEBHOOK_EVENT" indexName="IDX_WEBHOOK_EVENT_REALM_CREATED">
+            <column name="REALM_ID"/>
+            <column name="CREATED_AT"/>
+        </createIndex>
+        <addUniqueConstraint tableName="WEBHOOK_EVENT" columnNames="KC_EVENT_ID"
+            constraintName="UQ_WEBHOOK_EVENT_KC_ID"/>
+    </changeSet>
+
+    <changeSet id="webhook-1.0.0-4" author="montell">
+        <createTable tableName="WEBHOOK_SEND">
+            <column name="ID" type="VARCHAR(80)"><constraints primaryKey="true" nullable="false"/></column>
+            <!-- ID = webhookId(36) + "-" + webhookEventId(36) = 73 chars -->
+            <column name="WEBHOOK_ID" type="VARCHAR(36)"><constraints nullable="false"/></column>
+            <column name="WEBHOOK_EVENT_ID" type="VARCHAR(36)"><constraints nullable="false"/></column>
+            <column name="EVENT_TYPE" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="HTTP_STATUS" type="INTEGER"/>
+            <column name="RETRIES" type="INTEGER" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="SUCCESS" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="SENT_AT" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="LAST_ATTEMPT_AT" type="TIMESTAMP"><constraints nullable="false"/></column>
+        </createTable>
+        <addUniqueConstraint tableName="WEBHOOK_SEND" columnNames="WEBHOOK_ID,WEBHOOK_EVENT_ID"
+            constraintName="UQ_WEBHOOK_SEND_WEBHOOK_EVENT"/>
+        <addForeignKeyConstraint baseTableName="WEBHOOK_SEND" baseColumnNames="WEBHOOK_ID"
+            referencedTableName="WEBHOOK" referencedColumnNames="ID"
+            constraintName="FK_WEBHOOK_SEND_WEBHOOK" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="WEBHOOK_SEND" baseColumnNames="WEBHOOK_EVENT_ID"
+            referencedTableName="WEBHOOK_EVENT" referencedColumnNames="ID"
+            constraintName="FK_WEBHOOK_SEND_EVENT" onDelete="CASCADE"/>
+        <createIndex tableName="WEBHOOK_SEND" indexName="IDX_WEBHOOK_SEND_WEBHOOK_SENT">
+            <column name="WEBHOOK_ID"/>
+            <column name="SENT_AT" descending="true"/>
+        </createIndex>
+        <createIndex tableName="WEBHOOK_SEND" indexName="IDX_WEBHOOK_SEND_EVENT">
+            <column name="WEBHOOK_EVENT_ID"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
