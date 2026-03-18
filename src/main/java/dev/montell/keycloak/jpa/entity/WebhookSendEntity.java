@@ -15,8 +15,13 @@ import java.time.Instant;
     uniqueConstraints = @UniqueConstraint(columnNames = {"WEBHOOK_ID", "WEBHOOK_EVENT_ID"}))
 public class WebhookSendEntity {
 
+    /** Builds the composite PK from its two components. Use this instead of string concatenation. */
+    public static String buildId(String webhookId, String webhookEventId) {
+        return webhookId + "-" + webhookEventId;
+    }
+
     @Id
-    @Column(name = "ID", length = 80) // composite id = webhookId(36) + "-" + webhookEventId(36) = 73 chars
+    @Column(name = "ID", length = 80) // buildId(webhookId, webhookEventId) = 73 chars max
     private String id;
 
     @Column(name = "WEBHOOK_ID", nullable = false, length = 36)

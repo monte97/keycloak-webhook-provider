@@ -11,6 +11,8 @@ import java.util.Set;
         query = "SELECT w FROM WebhookEntity w WHERE w.realmId = :realmId ORDER BY w.createdAt ASC"),
     @NamedQuery(name = "countWebhooksByRealmId",
         query = "SELECT COUNT(w) FROM WebhookEntity w WHERE w.realmId = :realmId"),
+    // NOTE: bulk DELETE bypasses the JPA first-level cache. Callers must call em.clear()
+    // after executing this query if the EntityManager session is reused afterward.
     @NamedQuery(name = "removeAllWebhooksByRealmId",
         query = "DELETE FROM WebhookEntity w WHERE w.realmId = :realmId")
 })
@@ -70,8 +72,8 @@ public class WebhookEntity {
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
-        if (createdAt == null) createdAt = now;
-        if (updatedAt == null) updatedAt = now;
+        createdAt = now;
+        updatedAt = now;
     }
 
     @PreUpdate

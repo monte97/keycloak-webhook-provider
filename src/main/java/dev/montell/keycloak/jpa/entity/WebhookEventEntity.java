@@ -24,6 +24,8 @@ public class WebhookEventEntity {
     @Column(name = "EVENT_TYPE", nullable = false, length = 16)
     private KeycloakEventType eventType;
 
+    // Nullable: some admin events may not carry a Keycloak event ID.
+    // The unique constraint is enforced only for non-null values (PostgreSQL / MySQL behavior).
     @Column(name = "KC_EVENT_ID", unique = true)
     private String kcEventId;
 

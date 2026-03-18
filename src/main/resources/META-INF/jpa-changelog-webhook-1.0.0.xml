@@ -21,6 +21,9 @@
             <column name="RETRY_MAX_ELAPSED_SECONDS" type="INTEGER"/>
             <column name="RETRY_MAX_INTERVAL_SECONDS" type="INTEGER"/>
         </createTable>
+        <createIndex tableName="WEBHOOK" indexName="IDX_WEBHOOK_REALM_ID">
+            <column name="REALM_ID"/>
+        </createIndex>
     </changeSet>
 
     <changeSet id="webhook-1.0.0-2" author="montell">
