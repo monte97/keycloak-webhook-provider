@@ -8,8 +8,8 @@ import jakarta.ws.rs.core.*;
 import java.net.URI;
 import java.util.List;
 import lombok.extern.jbosslog.JBossLog;
-import org.keycloak.jose.jws.JWSInput;
-import org.keycloak.jose.jws.JWSInputException;
+import dev.montell.keycloak.model.WebhookEventModel;
+import dev.montell.keycloak.model.WebhookSendModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -110,16 +110,7 @@ public class WebhooksResource {
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException("webhook not found: " + id);
         var events = provider().getEventsByWebhookId(realm, id, first, max)
-            .map(e -> {
-                var m = new java.util.LinkedHashMap<String, Object>();
-                m.put("id", e.getId());
-                m.put("realmId", e.getRealmId());
-                m.put("eventType", e.getEventType().name());
-                m.put("kcEventId", e.getKcEventId());
-                m.put("eventObject", e.getEventObject());
-                m.put("createdAt", e.getCreatedAt().toString());
-                return m;
-            })
+            .map(this::toEventMap)
             .toList();
         return Response.ok(events).build();
     }
@@ -134,19 +125,7 @@ public class WebhooksResource {
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException("webhook not found: " + id);
         var sends = provider().getSendsByWebhook(realm, id, first, max, success)
-            .map(s -> {
-                var m = new java.util.LinkedHashMap<String, Object>();
-                m.put("id", s.getId());
-                m.put("webhookId", s.getWebhookId());
-                m.put("webhookEventId", s.getWebhookEventId());
-                m.put("eventType", s.getEventType());
-                m.put("httpStatus", s.getHttpStatus());
-                m.put("success", s.isSuccess());
-                m.put("retries", s.getRetries());
-                m.put("sentAt", s.getSentAt().toString());
-                m.put("lastAttemptAt", s.getLastAttemptAt().toString());
-                return m;
-            })
+            .map(this::toSendMap)
             .toList();
         return Response.ok(sends).build();
     }
@@ -161,14 +140,7 @@ public class WebhooksResource {
         if (event == null) throw new NotFoundException("event not found");
         if (!event.getEventType().name().equals(type))
             throw new NotFoundException("event not found");
-        var m = new java.util.LinkedHashMap<String, Object>();
-        m.put("id", event.getId());
-        m.put("realmId", event.getRealmId());
-        m.put("eventType", event.getEventType().name());
-        m.put("kcEventId", event.getKcEventId());
-        m.put("eventObject", event.getEventObject());
-        m.put("createdAt", event.getCreatedAt().toString());
-        return Response.ok(m).build();
+        return Response.ok(toEventMap(event)).build();
     }
 
     // --- GET /sends/{type}/{kid} ---
@@ -182,19 +154,7 @@ public class WebhooksResource {
         if (!event.getEventType().name().equals(type))
             throw new NotFoundException("event not found");
         var sends = provider().getSendsByEvent(realm, event.getId())
-            .map(s -> {
-                var m = new java.util.LinkedHashMap<String, Object>();
-                m.put("id", s.getId());
-                m.put("webhookId", s.getWebhookId());
-                m.put("webhookEventId", s.getWebhookEventId());
-                m.put("eventType", s.getEventType());
-                m.put("httpStatus", s.getHttpStatus());
-                m.put("success", s.isSuccess());
-                m.put("retries", s.getRetries());
-                m.put("sentAt", s.getSentAt().toString());
-                m.put("lastAttemptAt", s.getLastAttemptAt().toString());
-                return m;
-            })
+            .map(this::toSendMap)
             .toList();
         return Response.ok(sends).build();
     }
@@ -374,6 +334,32 @@ public class WebhooksResource {
         return Response.noContent().build();
     }
 
+    // --- mapping helpers ---
+    private java.util.Map<String, Object> toEventMap(WebhookEventModel e) {
+        var m = new java.util.LinkedHashMap<String, Object>();
+        m.put("id", e.getId());
+        m.put("realmId", e.getRealmId());
+        m.put("eventType", e.getEventType().name());
+        m.put("kcEventId", e.getKcEventId());
+        m.put("eventObject", e.getEventObject());
+        m.put("createdAt", e.getCreatedAt().toString());
+        return m;
+    }
+
+    private java.util.Map<String, Object> toSendMap(WebhookSendModel s) {
+        var m = new java.util.LinkedHashMap<String, Object>();
+        m.put("id", s.getId());
+        m.put("webhookId", s.getWebhookId());
+        m.put("webhookEventId", s.getWebhookEventId());
+        m.put("eventType", s.getEventType());
+        m.put("httpStatus", s.getHttpStatus());
+        m.put("success", s.isSuccess());
+        m.put("retries", s.getRetries());
+        m.put("sentAt", s.getSentAt().toString());
+        m.put("lastAttemptAt", s.getLastAttemptAt().toString());
+        return m;
+    }
+
     // --- helpers ---
     private void applyRepresentation(WebhookModel w, WebhookRepresentation rep) {
         if (rep.url        != null)  w.setUrl(rep.url);
@@ -398,7 +384,6 @@ public class WebhooksResource {
 
     private void initAuth() {
         if (authInitialized) return;
-        authInitialized = true;
         cachedAuthResult = new AppAuthManager.BearerTokenAuthenticator(session)
             .setRealm(realm).authenticate();
         if (cachedAuthResult == null) {
@@ -411,6 +396,7 @@ public class WebhooksResource {
         }
         AdminAuth adminAuth = new AdminAuth(realm, token, cachedAuthResult.getUser(), client);
         permissions = AdminPermissions.evaluator(session, realm, adminAuth);
+        authInitialized = true;
     }
 
     protected void requireViewEvents() {
