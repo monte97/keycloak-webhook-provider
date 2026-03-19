@@ -151,6 +151,54 @@ public class WebhooksResource {
         return Response.ok(sends).build();
     }
 
+    // --- GET /events/{type}/{kid} ---
+    @GET @Path("events/{type}/{kid}")
+    public Response getEventByKcId(@PathParam("type") String type, @PathParam("kid") String kid) {
+        requireViewEvents();
+        if (!"USER".equals(type) && !"ADMIN".equals(type))
+            return Response.status(400).entity("type must be USER or ADMIN").build();
+        var event = provider().getEventByKcId(realm, kid);
+        if (event == null) throw new NotFoundException("event not found");
+        if (!event.getEventType().name().equals(type))
+            throw new NotFoundException("event not found");
+        var m = new java.util.LinkedHashMap<String, Object>();
+        m.put("id", event.getId());
+        m.put("realmId", event.getRealmId());
+        m.put("eventType", event.getEventType().name());
+        m.put("kcEventId", event.getKcEventId());
+        m.put("eventObject", event.getEventObject());
+        m.put("createdAt", event.getCreatedAt().toString());
+        return Response.ok(m).build();
+    }
+
+    // --- GET /sends/{type}/{kid} ---
+    @GET @Path("sends/{type}/{kid}")
+    public Response getSendsByKcId(@PathParam("type") String type, @PathParam("kid") String kid) {
+        requireViewEvents();
+        if (!"USER".equals(type) && !"ADMIN".equals(type))
+            return Response.status(400).entity("type must be USER or ADMIN").build();
+        var event = provider().getEventByKcId(realm, kid);
+        if (event == null) throw new NotFoundException("event not found");
+        if (!event.getEventType().name().equals(type))
+            throw new NotFoundException("event not found");
+        var sends = provider().getSendsByEvent(realm, event.getId())
+            .map(s -> {
+                var m = new java.util.LinkedHashMap<String, Object>();
+                m.put("id", s.getId());
+                m.put("webhookId", s.getWebhookId());
+                m.put("webhookEventId", s.getWebhookEventId());
+                m.put("eventType", s.getEventType());
+                m.put("httpStatus", s.getHttpStatus());
+                m.put("success", s.isSuccess());
+                m.put("retries", s.getRetries());
+                m.put("sentAt", s.getSentAt().toString());
+                m.put("lastAttemptAt", s.getLastAttemptAt().toString());
+                return m;
+            })
+            .toList();
+        return Response.ok(sends).build();
+    }
+
     // --- GET /{id}/circuit ---
     @GET @Path("{id}/circuit")
     public Response getCircuit(@PathParam("id") String id) {

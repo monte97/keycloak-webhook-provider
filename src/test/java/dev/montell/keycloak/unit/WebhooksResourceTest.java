@@ -372,6 +372,89 @@ class WebhooksResourceTest {
         assertEquals(409, resp.getStatus());
     }
 
+    // -----------------------------------------------------------------------
+    // GET /events/{type}/{kid}
+    // -----------------------------------------------------------------------
+
+    @Test
+    void getEventByKcId_returns_event() {
+        WebhookEventModel e = mockEvent("ev-1", "wh-1");
+        when(e.getKcEventId()).thenReturn("kc-123");
+        when(provider.getEventByKcId(realm, "kc-123")).thenReturn(e);
+
+        Response resp = resource.getEventByKcId("USER", "kc-123");
+
+        assertEquals(200, resp.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) resp.getEntity();
+        assertEquals("ev-1", body.get("id"));
+        assertEquals("USER", body.get("eventType"));
+    }
+
+    @Test
+    void getEventByKcId_404_when_not_found() {
+        when(provider.getEventByKcId(realm, "missing")).thenReturn(null);
+        assertThrows(NotFoundException.class, () -> resource.getEventByKcId("USER", "missing"));
+    }
+
+    @Test
+    void getEventByKcId_404_when_type_mismatch() {
+        WebhookEventModel e = mockEvent("ev-1", "wh-1");
+        when(provider.getEventByKcId(realm, "kc-ev-1")).thenReturn(e);
+        // mockEvent sets eventType to USER, requesting ADMIN should 404
+        assertThrows(NotFoundException.class, () -> resource.getEventByKcId("ADMIN", "kc-ev-1"));
+    }
+
+    @Test
+    void getEventByKcId_400_invalid_type() {
+        Response resp = resource.getEventByKcId("INVALID", "kc-123");
+        assertEquals(400, resp.getStatus());
+    }
+
+    // -----------------------------------------------------------------------
+    // GET /sends/{type}/{kid}
+    // -----------------------------------------------------------------------
+
+    @Test
+    void getSendsByKcId_returns_sends() {
+        WebhookEventModel e = mockEvent("ev-1", "wh-1");
+        WebhookSendModel s = mockSend("send-1", "wh-1", "ev-1");
+        when(e.getKcEventId()).thenReturn("kc-123");
+        when(provider.getEventByKcId(realm, "kc-123")).thenReturn(e);
+        when(provider.getSendsByEvent(realm, "ev-1")).thenReturn(Stream.of(s));
+
+        Response resp = resource.getSendsByKcId("USER", "kc-123");
+
+        assertEquals(200, resp.getStatus());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> body = (List<Map<String, Object>>) resp.getEntity();
+        assertEquals(1, body.size());
+        assertEquals("send-1", body.get(0).get("id"));
+    }
+
+    @Test
+    void getSendsByKcId_404_when_event_not_found() {
+        when(provider.getEventByKcId(realm, "missing")).thenReturn(null);
+        assertThrows(NotFoundException.class, () -> resource.getSendsByKcId("USER", "missing"));
+    }
+
+    @Test
+    void getSendsByKcId_404_when_type_mismatch() {
+        WebhookEventModel e = mockEvent("ev-1", "wh-1");
+        when(provider.getEventByKcId(realm, "kc-ev-1")).thenReturn(e);
+        assertThrows(NotFoundException.class, () -> resource.getSendsByKcId("ADMIN", "kc-ev-1"));
+    }
+
+    @Test
+    void getSendsByKcId_400_invalid_type() {
+        Response resp = resource.getSendsByKcId("UNKNOWN", "kc-123");
+        assertEquals(400, resp.getStatus());
+    }
+
+    // -----------------------------------------------------------------------
+    // POST /{id}/resend-failed (bulk)
+    // -----------------------------------------------------------------------
+
     @Test
     void resend_bulk_stops_on_first_failure() {
         CircuitBreakerRegistry realRegistry = new CircuitBreakerRegistry(5, 60);
