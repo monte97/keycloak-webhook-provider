@@ -96,6 +96,52 @@ class HttpWebhookSenderTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void send_300_returns_success_false() throws Exception {
+        // Kills statusCode < 300 boundary mutation (>= vs >)
+        HttpClient client = mock(HttpClient.class);
+        HttpResponse<String> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(300);
+        doReturn(response).when(client).send(any(HttpRequest.class), any());
+
+        HttpSendResult result = new HttpWebhookSender(client)
+            .send("https://example.com/hook", "{}", "wh-id", null, "HmacSHA256");
+
+        assertFalse(result.success());
+        assertEquals(300, result.httpStatus());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void send_success_duration_is_plausible() throws Exception {
+        // Kills durationMs = currentTimeMs - start → + start (+ gives ~2*epoch ≈ 3.4e12 ms)
+        HttpClient client = mock(HttpClient.class);
+        HttpResponse<String> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(200);
+        doReturn(response).when(client).send(any(HttpRequest.class), any());
+
+        HttpSendResult result = new HttpWebhookSender(client)
+            .send("https://example.com/hook", "{}", "wh-id", null, "HmacSHA256");
+
+        assertTrue(result.durationMs() >= 0 && result.durationMs() < 1_000,
+            "expected durationMs in [0,1000) ms, got: " + result.durationMs());
+    }
+
+    @Test
+    void send_exception_duration_is_plausible() throws Exception {
+        // Kills durationMs subtraction mutation in the catch block
+        HttpClient client = mock(HttpClient.class);
+        when(client.send(any(HttpRequest.class), any()))
+            .thenThrow(new java.io.IOException("timeout"));
+
+        HttpSendResult result = new HttpWebhookSender(client)
+            .send("https://example.com/hook", "{}", "wh-id", null, "HmacSHA256");
+
+        assertTrue(result.durationMs() >= 0 && result.durationMs() < 1_000,
+            "expected durationMs in [0,1000) ms, got: " + result.durationMs());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void send_always_includes_webhook_id_header() throws Exception {
         HttpClient client = mock(HttpClient.class);
         HttpResponse<String> response = mock(HttpResponse.class);

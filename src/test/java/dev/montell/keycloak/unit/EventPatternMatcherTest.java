@@ -64,6 +64,22 @@ class EventPatternMatcherTest {
     }
 
     @Test
+    void access_prefix_requires_dot_separator() {
+        // Kills shortcut-bypass mutation: "accessLOGIN" has no dot → startsWith("access.") is false
+        // but "accessLOGIN".matches("access.*") is true (regex fallback)
+        assertFalse(EventPatternMatcher.matches(Set.of("access.*"), "accessLOGIN"));
+        assertFalse(EventPatternMatcher.matches(Set.of("admin.*"),  "adminUSER"));
+    }
+
+    @Test
+    void exact_match_on_pattern_with_regex_metachar() {
+        // "access(LOGIN)" equals "access(LOGIN)" → exact-match shortcut returns true
+        // but regex "access(LOGIN)" matches "accessLOGIN", NOT "access(LOGIN)" → false
+        // Removing the exact-match shortcut would make this return false → test fails → kills mutation
+        assertTrue(EventPatternMatcher.matches(Set.of("access(LOGIN)"), "access(LOGIN)"));
+    }
+
+    @Test
     void multiple_patterns_any_match_returns_true() {
         assertTrue(EventPatternMatcher.matches(
             Set.of("admin.USER-DELETE", "access.LOGIN"), "access.LOGIN"));

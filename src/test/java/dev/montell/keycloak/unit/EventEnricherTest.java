@@ -110,6 +110,45 @@ class EventEnricherTest {
     }
 
     @Test
+    void enrich_admin_event_authDetails_not_null_when_set() {
+        // Kills line 37 "event.getAuthDetails() != null" → always-false mutation
+        AdminEvent event = new AdminEvent();
+        event.setRealmId("realm-1");
+        event.setResourceType(ResourceType.USER);
+        event.setOperationType(OperationType.CREATE);
+        event.setTime(2_000_000L);
+
+        org.keycloak.events.admin.AuthDetails ad = new org.keycloak.events.admin.AuthDetails();
+        ad.setClientId("client-1");
+        ad.setUserId(null);
+        event.setAuthDetails(ad);
+
+        WebhookPayload.AdminEvent result = EventEnricher.enrich(event, null);
+
+        assertNotNull(result.authDetails());
+        assertEquals("client-1", result.authDetails().clientId());
+    }
+
+    @Test
+    void enrich_admin_event_username_null_when_session_absent() {
+        // Kills "return null" → "return """ mutation in resolveUsername
+        AdminEvent event = new AdminEvent();
+        event.setRealmId("realm-1");
+        event.setResourceType(ResourceType.USER);
+        event.setOperationType(OperationType.CREATE);
+        event.setTime(2_000_000L);
+
+        org.keycloak.events.admin.AuthDetails ad = new org.keycloak.events.admin.AuthDetails();
+        ad.setUserId(null);
+        event.setAuthDetails(ad);
+
+        WebhookPayload.AdminEvent result = EventEnricher.enrich(event, null);
+
+        assertNotNull(result.authDetails());
+        assertNull(result.authDetails().username());
+    }
+
+    @Test
     void enrich_admin_event_parses_representation_json() throws Exception {
         AdminEvent event = new AdminEvent();
         event.setRealmId("realm-1");

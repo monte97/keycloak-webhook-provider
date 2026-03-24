@@ -2,9 +2,15 @@
 package dev.montell.keycloak.unit;
 
 import dev.montell.keycloak.dispatch.CircuitBreaker;
+import dev.montell.keycloak.model.WebhookModel;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
 
 class CircuitBreakerTest {
 
@@ -60,6 +66,31 @@ class CircuitBreakerTest {
         cb.onSuccess();
         assertEquals(CircuitBreaker.CLOSED, cb.getState());
         assertEquals(0, cb.getFailureCount());
+        assertTrue(cb.allowRequest());
+    }
+
+    @Test
+    void failure_count_increments_correctly() {
+        CircuitBreaker cb = new CircuitBreaker(5, 60);
+        cb.onFailure();
+        assertEquals(1, cb.getFailureCount());
+        cb.onFailure();
+        assertEquals(2, cb.getFailureCount());
+    }
+
+    @Test
+    void half_open_state_allows_requests_via_fromWebhook() {
+        WebhookModel mockWebhook = mock(WebhookModel.class);
+        when(mockWebhook.getCircuitState()).thenReturn(CircuitBreaker.HALF_OPEN);
+        when(mockWebhook.getFailureCount()).thenReturn(3);
+        // lastFailureAt is very recent — openSeconds=60 has NOT elapsed yet.
+        // Without the HALF_OPEN branch, the fallback (isAfter(lastFailureAt+60s)) returns false.
+        // This distinguishes HALF_OPEN (always-allow) from the time-based probe window.
+        when(mockWebhook.getLastFailureAt()).thenReturn(Instant.now());
+
+        CircuitBreaker cb = CircuitBreaker.fromWebhook(mockWebhook, 5, 60);
+
+        assertEquals(CircuitBreaker.HALF_OPEN, cb.getState());
         assertTrue(cb.allowRequest());
     }
 
