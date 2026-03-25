@@ -12,3 +12,5 @@ target/
 webhook-ui/node_modules/
 webhook-ui/node/
 src/main/resources/webhook-ui/
+docs/openapi-bundled.yaml
+docs/openapi.html

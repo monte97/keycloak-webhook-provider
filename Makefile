@@ -5,13 +5,12 @@
 # Configuration
 # ============================================================
 
-JAR_NAME := keycloak-webhook-provider-1.0.0-SNAPSHOT.jar
-JAR := target/$(JAR_NAME)
-DOCKER_IMAGE := keycloak-webhook-provider-build
+VERSION := $(shell sed -n 's/.*<version>\(.*\)<\/version>.*/\1/p' pom.xml | head -1)
+JAR := target/keycloak-webhook-provider-$(VERSION).jar
 DOCKER_RUN := docker run --rm -v "$(CURDIR)":/build -w /build
 UID := $(shell id -u)
 GID := $(shell id -g)
-FIX_OWNER = @$(DOCKER_RUN) alpine chown -R $(UID):$(GID) target/ webhook-ui/node/ 2>/dev/null || true
+FIX_OWNER = @$(DOCKER_RUN) alpine chown -R $(UID):$(GID) target/ 2>/dev/null || true
 
 OPENAPI_SPEC := docs/openapi.yaml
 OPENAPI_BUNDLE := docs/openapi-bundled.yaml
@@ -32,19 +31,19 @@ endif
 # Build
 # ============================================================
 
-## Compile sources (Java + webhook-ui)
+## compile        Compile sources (Java + webhook-ui)
 compile:
 	$(MVN) compile
 	$(FIX_OWNER)
 
-## Build fat JAR (skip all tests)
+## package        Build fat JAR (skip all tests)
 package:
 	$(MVN) package -DskipTests
 	$(FIX_OWNER)
-	@echo ">>> JAR: $(JAR)"
+	@echo ">>> $(JAR)"
 	@ls -lh $(JAR)
 
-## Remove build artifacts
+## clean          Remove build artifacts
 clean:
 	$(MVN) clean
 
@@ -52,11 +51,11 @@ clean:
 # Test
 # ============================================================
 
-## Run unit tests only (*Test.java)
+## test-unit      Run unit tests only (*Test.java + UI)
 test-unit:
 	$(MVN) test
 
-## Run integration tests (Testcontainers — requires Docker)
+## test-integration  Run integration tests (Testcontainers, requires Docker)
 test-integration:
 ifeq ($(BUILD),local)
 	$(MVN) verify -Dmaven.surefire.skip=true
@@ -64,7 +63,7 @@ else
 	$(DOCKER_RUN) -v /var/run/docker.sock:/var/run/docker.sock -v mvn-cache:/root/.m2 $(MVN_IMAGE) mvn verify -Dmaven.surefire.skip=true
 endif
 
-## Run all tests (unit + integration)
+## test           Run all tests (unit + integration)
 test:
 ifeq ($(BUILD),local)
 	$(MVN) verify
@@ -72,7 +71,7 @@ else
 	$(DOCKER_RUN) -v /var/run/docker.sock:/var/run/docker.sock -v mvn-cache:/root/.m2 $(MVN_IMAGE) mvn verify
 endif
 
-## Run mutation testing with Pitest (unit tests only)
+## test-mutation  Run mutation testing with Pitest
 test-mutation:
 	$(MVN) test pitest:mutationCoverage
 	@echo ">>> Report: target/pit-reports/index.html"
@@ -81,7 +80,7 @@ test-mutation:
 # OpenAPI
 # ============================================================
 
-## Lint and validate the OpenAPI spec
+## openapi-lint   Lint and validate the OpenAPI spec
 openapi-lint:
 	@echo ">>> Validating $(OPENAPI_SPEC)..."
 ifeq ($(BUILD),local)
@@ -90,7 +89,7 @@ else
 	$(DOCKER_RUN) node:20-slim npx --yes @redocly/cli@latest lint $(OPENAPI_SPEC)
 endif
 
-## Bundle the spec into a single resolved file
+## openapi-bundle Bundle the spec into a single resolved file
 openapi-bundle:
 	@echo ">>> Bundling $(OPENAPI_SPEC)..."
 ifeq ($(BUILD),local)
@@ -100,7 +99,7 @@ else
 endif
 	@echo ">>> Output: $(OPENAPI_BUNDLE)"
 
-## Generate HTML documentation from the spec
+## openapi-html   Generate HTML documentation from the spec
 openapi-html:
 	@echo ">>> Generating HTML docs..."
 ifeq ($(BUILD),local)
@@ -110,7 +109,7 @@ else
 endif
 	@echo ">>> Output: $(OPENAPI_HTML)"
 
-## Check spec/code drift: verify every JAX-RS endpoint has a matching path in openapi.yaml
+## openapi-diff   Check spec/code drift
 openapi-diff:
 	@echo ">>> Checking spec/code alignment..."
 	@JAVA_ENDPOINTS=$$(grep -E '@(GET|POST|PUT|DELETE|PATCH)' src/main/java/dev/montell/keycloak/resources/WebhooksResource.java \
@@ -125,11 +124,11 @@ openapi-diff:
 		echo "  OK: counts match"; \
 	fi
 
-## Show available targets
+## help           Show available targets
 help:
 	@echo "Usage: make <target> [BUILD=docker|local]"
 	@echo ""
-	@echo "  BUILD=docker (default) — runs everything in containers, no local deps needed"
+	@echo "  BUILD=docker (default) — runs in containers, no local deps needed"
 	@echo "  BUILD=local            — uses local Java 17 (sdkman) + Maven + Node"
 	@echo ""
-	@grep -E '^## ' Makefile | sed 's/^## /  /'
+	@grep -E '^## ' Makefile | sed 's/^## /  make /'

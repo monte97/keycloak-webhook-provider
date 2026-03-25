@@ -19,7 +19,7 @@ jobs:
       - name: Rename JAR to release version
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          cp target/keycloak-webhook-provider-*.jar \
+          mv target/keycloak-webhook-provider-*.jar \
              target/keycloak-webhook-provider-${VERSION}.jar
 
       - name: Create GitHub Release
