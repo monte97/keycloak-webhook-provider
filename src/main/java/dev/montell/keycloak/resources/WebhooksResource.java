@@ -347,9 +347,23 @@ public class WebhooksResource {
 
     // --- UI static file serving ---
 
+    private static final String UI_CLIENT_ID = "webhook-ui";
+
+    private void ensureUiClient() {
+        if (realm.getClientByClientId(UI_CLIENT_ID) != null) return;
+        var client = realm.addClient(UI_CLIENT_ID);
+        client.setPublicClient(true);
+        client.setDirectAccessGrantsEnabled(true);
+        client.setRedirectUris(java.util.Set.of("*"));
+        client.setWebOrigins(java.util.Set.of("+"));
+        client.setEnabled(true);
+        log.infof("Auto-created '%s' OIDC client in realm '%s'", UI_CLIENT_ID, realm.getName());
+    }
+
     @GET @Path("ui")
     @Produces("text/html")
     public Response serveUi() {
+        ensureUiClient();
         try (var is = getClass().getClassLoader().getResourceAsStream("webhook-ui/index.html")) {
             if (is == null) return Response.status(404).entity("UI not found").build();
             String html = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
