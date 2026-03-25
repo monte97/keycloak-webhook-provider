@@ -17,6 +17,8 @@ export interface WebhookInput {
   algorithm?: string;
   enabled: boolean;
   eventTypes: string[];
+  retryMaxElapsedSeconds?: number;
+  retryMaxIntervalSeconds?: number;
 }
 
 export interface SecretStatus {

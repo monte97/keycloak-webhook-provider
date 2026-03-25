@@ -15,7 +15,7 @@ export function createWebhookApi(basePath: string, realm: string, keycloak: Keyc
       ...options,
       headers: {
         Authorization: `Bearer ${keycloak.token}`,
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...options.headers,
       },
     });
