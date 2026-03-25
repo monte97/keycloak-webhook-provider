@@ -10,17 +10,24 @@ Practical guide for maintaining, extending, and debugging the webhook provider. 
 
 - Java 17 (JDK, not JRE)
 - Maven 3.8+
+- Node.js 20+ and npm (for the admin UI frontend)
 - Docker (for integration tests with Testcontainers)
 - An IDE with Lombok support (IntelliJ, VS Code + Extension Pack for Java)
 
 ### Build
 
 ```bash
-# Build + unit tests
+# Build the frontend (one-time, or after UI changes)
+cd webhook-ui && npm ci && npm run build && cd ..
+
+# Build + Java unit tests (includes UI assets in JAR)
 mvn package -Dmaven.failsafe.skip=true
 
-# Unit tests only (82 tests, ~5s, no Docker)
+# Java unit tests only (87 tests, ~5s, no Docker)
 mvn test
+
+# Frontend tests (24 tests, uses Vitest + jsdom)
+cd webhook-ui && npm test
 
 # Unit + integration tests (requires Docker)
 mvn verify
@@ -29,7 +36,7 @@ mvn verify
 mvn org.pitest:pitest-maven:mutationCoverage
 ```
 
-The final artifact is a fat JAR (Maven Shade) that bundles all non-provided dependencies.
+The final artifact is a fat JAR (Maven Shade) that bundles all non-provided dependencies, including the compiled UI assets.
 
 ### Local deployment
 
@@ -61,12 +68,27 @@ src/main/java/dev/montell/keycloak/
 │   ├── entity/     # JPA entities + entity provider
 │   └── adapter/    # Entity → Model adapters
 ├── model/          # Domain model interfaces
-├── resources/      # REST API (JAX-RS)
+├── resources/      # REST API (JAX-RS) + UI serving
 └── retention/      # Periodic cleanup
 
 src/test/java/dev/montell/keycloak/
 ├── unit/           # Unit tests (Mockito, no DB)
 └── it/             # Integration tests (Testcontainers + PostgreSQL)
+
+webhook-ui/                      # Admin UI (React SPA)
+├── src/
+│   ├── main.tsx                 # Entry point — Keycloak JS init, realm/base path detection
+│   ├── App.tsx                  # Main layout — webhook list, modals, toast notifications
+│   ├── api/webhookApi.ts        # REST client — typed fetch wrapper with KC token auth
+│   ├── components/
+│   │   ├── WebhookModal.tsx     # Create/edit form — URL, secret, algorithm, event types
+│   │   ├── WebhookTable.tsx     # Sortable table with circuit breaker badges
+│   │   ├── CircuitBadge.tsx     # CLOSED/OPEN/HALF_OPEN status badge
+│   │   └── eventTypes.ts        # Event type catalog with descriptions
+│   └── __tests__/               # Vitest + React Testing Library tests
+├── vite.config.ts               # Build config — outputs to dist/
+├── tsconfig.json
+└── package.json
 ```
 
 ### Test naming convention
@@ -143,6 +165,41 @@ To add a new migration:
 
 ---
 
+## Frontend development (webhook-ui)
+
+### Dev workflow
+
+```bash
+cd webhook-ui
+
+# Install dependencies
+npm ci
+
+# Run tests (Vitest, watch mode)
+npm test
+
+# Run tests once (CI)
+npx vitest run
+
+# Dev server (standalone, without Keycloak)
+npm run dev
+```
+
+The Vite dev server is useful for rapid UI iteration but requires a running Keycloak instance for authentication. For full integration testing, build the JAR and deploy to Keycloak.
+
+### Build and embed
+
+The frontend build output (`webhook-ui/dist/`) is copied into the JAR's classpath at `webhook-ui/`. The Maven build handles this automatically via the `maven-resources-plugin` — just run `npm run build` before `mvn package`.
+
+### Key design decisions
+
+- **`keycloak-js` is bundled** — Keycloak 26.1 no longer serves the JS adapter at `/js/keycloak.js`. The adapter is imported from npm (`keycloak-js@26.1.0`).
+- **`<base href>` injection** — the server injects a `<base>` tag in `index.html` at serve time so that relative asset paths resolve correctly under any Keycloak base path (e.g. `/auth/realms/test/webhooks/ui/`).
+- **Auto-created OIDC client** — `WebhooksResource.ensureUiClient()` creates the `webhook-ui` public client on first UI access. No seed or admin console setup needed.
+- **PatternFly 5** — the UI uses PF5 components for consistency with the Keycloak admin console aesthetic.
+
+---
+
 ## Critical areas to know
 
 ### Transaction savepoint (JpaWebhookProvider)
@@ -208,6 +265,16 @@ Key mocks:
 ```bash
 # Requires Docker
 mvn verify
+```
+
+### Frontend tests
+
+The admin UI uses Vitest + React Testing Library + jsdom. Tests cover modal behavior, form validation, event type dropdown, and API interactions.
+
+```bash
+cd webhook-ui
+npm test              # watch mode
+npx vitest run        # CI mode (24 tests)
 ```
 
 ### Mutation testing

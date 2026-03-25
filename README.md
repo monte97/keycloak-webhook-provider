@@ -1,6 +1,6 @@
 # Keycloak Webhook Provider
 
-A production-ready Keycloak SPI that delivers webhook notifications for realm events — login, logout, user creation, role changes, and more — with circuit breaker, HMAC signing, async dispatch, and a full REST management API.
+A production-ready Keycloak SPI that delivers webhook notifications for realm events — login, logout, user creation, role changes, and more — with circuit breaker, HMAC signing, async dispatch, a full REST management API, and an embedded admin UI.
 
 Built for Keycloak 26.x.
 
@@ -12,7 +12,9 @@ Built for Keycloak 26.x.
 - **HMAC signing** — `X-Webhook-Signature` header (HmacSHA256 or HmacSHA1) for payload verification
 - **Event filtering** — subscribe to specific event types per webhook
 - **Send history** — every delivery attempt is logged (status, duration, error)
-- **REST API** — 16 endpoints to manage webhooks, inspect history, control circuit breakers
+- **REST API** — 18 endpoints to manage webhooks, inspect history, control circuit breakers
+- **Admin UI** — embedded React + PatternFly SPA for browser-based management
+- **Auto-provisioning** — OIDC client (`webhook-ui`) created automatically on first UI access
 - **Persistence** — PostgreSQL via JPA/Liquibase (uses Keycloak's existing datasource)
 
 ## Requirements
@@ -20,6 +22,7 @@ Built for Keycloak 26.x.
 - Keycloak 26.x
 - PostgreSQL (Keycloak's default datasource)
 - Java 17 (build only)
+- Node.js 20+ (frontend build only)
 
 ## Installation
 
@@ -34,7 +37,10 @@ Download `keycloak-webhook-provider-*.jar` from the [Releases](https://github.co
 ### Option 3: Build from source
 
 ```bash
-# Requires Java 17 and Maven
+# Build the frontend (one-time, or after UI changes)
+cd webhook-ui && npm ci && npm run build && cd ..
+
+# Build the JAR (includes the compiled UI assets)
 mvn package -Dmaven.failsafe.skip=true
 # Output: target/keycloak-webhook-provider-*.jar
 ```
@@ -262,11 +268,34 @@ def verify(secret: str, body: bytes, signature_header: str) -> bool:
     return hmac.compare_digest(expected, received)
 ```
 
+## Admin UI
+
+The provider ships an embedded single-page application for managing webhooks from the browser. Each realm has its own independent UI instance:
+
+```
+http://localhost:8080/auth/realms/{realm}/webhooks/ui
+```
+
+For example, `/auth/realms/test/webhooks/ui` manages webhooks for the `test` realm, `/auth/realms/master/webhooks/ui` for `master`, and so on. Each UI authenticates against its own realm and only shows webhooks belonging to that realm.
+
+Features:
+- Create, edit, and delete webhooks
+- Searchable event type dropdown with human-readable descriptions
+- Circuit breaker status monitoring with manual reset
+- Send test pings
+- Authentication via Keycloak JS adapter (realm's own OIDC)
+
+On first access to a realm's UI, the provider auto-creates a public OIDC client (`webhook-ui`) in that realm. No manual configuration is required.
+
+**Tech stack:** React 18, PatternFly 5, TypeScript, Vite — compiled at build time and served as static assets from the JAR.
+
 ## REST API
 
 All endpoints are under `/auth/realms/{realm}/webhooks`.
 
 Authentication: Bearer token with `manage-realm` (write) or `view-realm` (read) role.
+
+The full API is described in [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.1). You can use it to generate client SDKs with [openapi-generator](https://openapi-generator.tech/) or import it into tools like Swagger UI and Postman.
 
 ### Webhook management
 
@@ -303,6 +332,13 @@ Authentication: Bearer token with `manage-realm` (write) or `view-realm` (read) 
 | `POST` | `/{id}/test` | Send a test ping to the webhook URL |
 | `POST` | `/{id}/sends/{sid}/resend` | Resend a specific failed delivery |
 | `POST` | `/{id}/resend-failed` | Bulk resend all failed deliveries |
+
+### Admin UI
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/ui` | Serve the admin UI (HTML) |
+| `GET` | `/ui/{path}` | Serve UI static assets (JS, CSS, images) |
 
 ### Example: create a webhook
 
@@ -364,11 +400,14 @@ Thresholds and timeouts are configurable in the provider source.
 ## Tests
 
 ```bash
-# Unit tests (82 tests, no Docker required)
+# Java unit tests (87 tests, no Docker required)
 mvn test -Dmaven.failsafe.skip=true
 
-# All tests including integration (requires Docker for Testcontainers)
+# All Java tests including integration (requires Docker for Testcontainers)
 mvn verify
+
+# Frontend tests (24 tests)
+cd webhook-ui && npm test
 ```
 
 ## License

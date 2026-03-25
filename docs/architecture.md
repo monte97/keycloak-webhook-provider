@@ -4,11 +4,12 @@ Technical reference for contributors and operators. Covers component design, dat
 
 ## Overview
 
-The provider integrates with Keycloak as a standard SPI and adds three capabilities:
+The provider integrates with Keycloak as a standard SPI and adds four capabilities:
 
 1. **Event capture** — intercepts Keycloak events (login, logout, admin actions) via the `EventListenerProvider` SPI
 2. **Webhook delivery** — async HTTP dispatch with retry, HMAC signing, and circuit breaker
-3. **Management API** — 16 REST endpoints under `/realms/{realm}/webhooks` for CRUD, history, and circuit control
+3. **Management API** — 18 REST endpoints under `/realms/{realm}/webhooks` for CRUD, history, circuit control, and UI serving
+4. **Admin UI** — embedded React + PatternFly SPA at `/realms/{realm}/webhooks/ui` for browser-based management
 
 All state (webhooks, events, send history, circuit breaker) is persisted in PostgreSQL via Keycloak's existing JPA datasource.
 
@@ -64,9 +65,16 @@ Keycloak event (access or admin)
 
 Parallel:
 ┌─────────────────────────────────┐
-│     WebhooksResource (REST)     │  JAX-RS — 16 endpoints
+│     WebhooksResource (REST)     │  JAX-RS — 18 endpoints
 │  GET/POST/PUT/DELETE webhooks   │  Requires manage-realm / view-realm
 │  events, sends, circuit, resend │
+│  + UI serve (GET /ui, /ui/*)    │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│       Admin UI (embedded)       │  React 18 + PatternFly 5
+│  Vite build → static assets    │  Served from JAR classpath
+│  keycloak-js auth adapter       │  Auto-creates webhook-ui client
 └─────────────────────────────────┘
 ```
 
@@ -352,6 +360,47 @@ The Phase Two `ext-event-http-sender` provider (the `keycloak-events` JAR) provi
 ### Why JPA/Liquibase instead of native SQL?
 
 Keycloak already uses JPA internally. Reusing the same datasource and entity provider infrastructure means no additional database connection configuration. Liquibase ensures schema migrations run automatically on upgrade, which matters for a provider that's installed and forgotten.
+
+---
+
+## Admin UI architecture
+
+### Build pipeline
+
+The UI is a standard Vite + React + TypeScript project in `webhook-ui/`. At build time:
+
+1. `npm run build` produces optimized static assets in `webhook-ui/dist/`
+2. Maven copies the `dist/` contents to `src/main/resources/webhook-ui/` (via `maven-resources-plugin`)
+3. The Maven Shade plugin bundles everything into the fat JAR
+
+At runtime, assets are loaded from the JAR classpath via `getClass().getResourceAsStream("/webhook-ui/...")`.
+
+### Static file serving
+
+Two JAX-RS endpoints in `WebhooksResource`:
+
+- `GET /ui` — serves `index.html` with a `<base href>` tag injected dynamically:
+  ```html
+  <base href="/auth/realms/{realm}/webhooks/ui/">
+  ```
+  This ensures all relative asset paths (JS, CSS, images) resolve correctly regardless of the Keycloak base path.
+
+- `GET /ui/{path}` — serves individual assets with content type detection based on file extension. Uses explicit `@Produces` to override the class-level `APPLICATION_JSON` annotation. Path traversal and null byte injection are rejected with 400.
+
+### Authentication
+
+The UI authenticates via `keycloak-js` (bundled from npm, not loaded from the server — KC 26.1 no longer serves the JS adapter at `/js/keycloak.js`). It uses the realm's own OIDC endpoint with a dedicated `webhook-ui` public client.
+
+### Auto-provisioning of OIDC client
+
+On first access to `/ui`, the provider checks for a `webhook-ui` client in the realm. If absent, it creates one:
+
+- Public client (no secret)
+- Redirect URIs: `*`
+- Web origins: `+` (same-origin)
+- Direct access grants enabled
+
+This eliminates manual client setup — the UI works out of the box on any realm.
 
 ---
 
