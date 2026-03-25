@@ -345,6 +345,59 @@ public class WebhooksResource {
         return Response.noContent().build();
     }
 
+    // --- UI static file serving ---
+
+    @GET @Path("ui")
+    @Produces("text/html")
+    public Response serveUi() {
+        try (var is = getClass().getClassLoader().getResourceAsStream("webhook-ui/index.html")) {
+            if (is == null) return Response.status(404).entity("UI not found").build();
+            String html = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            String basePath = session.getContext().getUri().getBaseUri().getPath();
+            if (basePath.endsWith("/")) basePath = basePath.substring(0, basePath.length() - 1);
+            // Inject <base> so relative asset paths (./assets/) resolve to ui/assets/
+            String uiBase = basePath + "/realms/" + realm.getName() + "/webhooks/ui/";
+            html = html.replace("<head>", "<head><base href=\"" + uiBase + "\">");
+            html = html.replace("{{REALM}}", realm.getName())
+                       .replace("{{BASE_PATH}}", basePath);
+            return Response.ok(html).type("text/html")
+                .header("Cache-Control", "no-cache").build();
+        } catch (java.io.IOException e) {
+            return Response.serverError().entity("Failed to read UI").build();
+        }
+    }
+
+    @GET @Path("ui/{path: .+}")
+    @Produces({"application/javascript", "text/css", "text/html", "image/svg+xml", "font/woff2", "application/json", "application/octet-stream"})
+    public Response serveUiAsset(@PathParam("path") String path) {
+        if (path.contains("..") || path.contains("\0")) {
+            return Response.status(400).entity("Invalid path").build();
+        }
+        try (var is = getClass().getClassLoader().getResourceAsStream("webhook-ui/" + path)) {
+            if (is == null) return Response.status(404).entity("Not found").build();
+            byte[] bytes = is.readAllBytes();
+            String contentType = guessContentType(path);
+            String cacheControl = path.startsWith("assets/")
+                ? "public, max-age=31536000, immutable"
+                : "no-cache";
+            return Response.ok(bytes).type(contentType)
+                .header("Cache-Control", cacheControl).build();
+        } catch (java.io.IOException e) {
+            return Response.serverError().entity("Failed to read asset").build();
+        }
+    }
+
+    private String guessContentType(String path) {
+        if (path.endsWith(".js"))  return "application/javascript";
+        if (path.endsWith(".css")) return "text/css";
+        if (path.endsWith(".svg")) return "image/svg+xml";
+        if (path.endsWith(".html")) return "text/html";
+        if (path.endsWith(".json")) return "application/json";
+        if (path.endsWith(".woff2")) return "font/woff2";
+        if (path.endsWith(".woff")) return "font/woff";
+        return "application/octet-stream";
+    }
+
     // --- mapping helpers ---
     private java.util.Map<String, Object> toEventMap(WebhookEventModel e) {
         var m = new java.util.LinkedHashMap<String, Object>();

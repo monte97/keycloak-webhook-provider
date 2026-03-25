@@ -9,3 +9,6 @@ target/
 .project
 .superpowers/
 .worktrees/
+webhook-ui/node_modules/
+webhook-ui/node/
+src/main/resources/webhook-ui/
