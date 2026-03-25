@@ -103,17 +103,27 @@ Two new endpoints in `WebhooksResource`:
 
 Returns `index.html` from classpath `/webhook-ui/index.html`.
 
-Before returning, replaces `{{REALM}}` placeholder in the HTML with `realm.getName()`:
+Before returning, replaces placeholders in the HTML:
 
 ```html
-<script>window.__KC_REALM__ = "{{REALM}}";</script>
+<script>
+  window.__KC_REALM__ = "{{REALM}}";
+  window.__KC_BASE__ = "{{BASE_PATH}}";
+</script>
 ```
 
+- `{{REALM}}` → `realm.getName()`
+- `{{BASE_PATH}}` → derived from `session.getContext().getUri().getBaseUri()` (e.g. `/auth` or `/`). This ensures the UI works regardless of whether `KC_HTTP_RELATIVE_PATH` is set.
+
 Content-Type: `text/html`. No authentication required (it's static HTML).
+
+Both endpoints must return `Response` objects with explicit `.type(mediaType)` to override the class-level `@Produces(APPLICATION_JSON)` annotation on `WebhooksResource`.
 
 ### `GET /ui/{path: .*}`
 
 Returns any file from classpath `/webhook-ui/{path}`.
+
+**Path traversal protection:** the `path` parameter is sanitized — requests containing `..` are rejected with 400. The resolved path must stay within `/webhook-ui/`.
 
 Content-Type derived from file extension:
 - `.js` → `application/javascript`
@@ -133,14 +143,14 @@ These endpoints are added directly to `WebhooksResource`. This keeps the provide
 
 ### Keycloak JS adapter
 
-Loaded from Keycloak itself at `/auth/js/keycloak.js` — always available, no npm dependency needed.
+Loaded from Keycloak itself at `${basePath}/js/keycloak.js` — always available, no npm dependency needed.
 
 ```typescript
 // main.tsx
-import Keycloak from '/auth/js/keycloak.js';
+const basePath = window.__KC_BASE__; // e.g. "/auth" or ""
 
 const keycloak = new Keycloak({
-  url: '/auth',
+  url: basePath || '/',
   realm: window.__KC_REALM__,
   clientId: 'security-admin-console',
 });
@@ -159,7 +169,15 @@ keycloak.init({ onLoad: 'login-required' }).then((authenticated) => {
 This is the built-in client Keycloak uses for its own admin console. Admins already have an active session for this client when they're working in the admin console. Using it means:
 - No new client to register
 - No additional login prompt if the admin has an active session
-- The token already carries `manage-realm` / `view-realm` roles
+- The token already carries `view-events` / `manage-events` permissions
+
+### Required permissions
+
+The REST API enforces two permission levels via `AdminPermissionEvaluator`:
+- **`view-events`** — list webhooks, get circuit state (read operations)
+- **`manage-events`** — create, update, delete, test, reset circuit (write operations)
+
+These are **not** the same as `view-realm` / `manage-realm`. The UI must handle 403 errors for users who have view but not manage permissions.
 
 ### Token refresh
 
@@ -179,7 +197,7 @@ interface WebhookApi {
   create(data: WebhookInput): Promise<Webhook>;
   update(id: string, data: WebhookInput): Promise<Webhook>;
   delete(id: string): Promise<void>;
-  getSecret(id: string): Promise<string>;
+  getSecretStatus(id: string): Promise<SecretStatus>;
   test(id: string): Promise<TestResult>;
   getCircuit(id: string): Promise<CircuitState>;
   resetCircuit(id: string): Promise<void>;
@@ -207,11 +225,20 @@ interface WebhookInput {
 }
 ```
 
-Base URL: `/auth/realms/${realm}/webhooks`
+```typescript
+interface SecretStatus {
+  type: 'secret';
+  configured: boolean;
+}
+```
 
-All methods set `Authorization: Bearer ${token}` and `Content-Type: application/json`.
+Base URL: `${window.__KC_BASE__}/realms/${realm}/webhooks`
 
-Error handling: non-2xx responses throw a typed error with status code and body. Components display errors via PatternFly `Alert`.
+Note: `eventTypes` is a `Set<String>` on the server — duplicates are silently deduplicated and ordering is not guaranteed.
+
+All methods set `Authorization: Bearer ${token}` and `Content-Type: application/json`. Each method calls `keycloak.updateToken(30)` before the request.
+
+Error handling: non-2xx responses throw a typed error with status code and body. 403 errors indicate insufficient permissions. Components display errors via PatternFly `Alert`.
 
 ---
 
@@ -222,12 +249,12 @@ Error handling: non-2xx responses throw a typed error with status code and body.
 - **Toolbar:** page title "Webhooks", realm name, "Create webhook" button (right-aligned)
 - **Table columns:**
   - URL (truncated with tooltip if long)
-  - Enabled (PatternFly `Switch`, toggles inline via `PUT /{id}`)
+  - Enabled (PatternFly `Switch`, toggles inline via `PUT /{id}`. Rendered as read-only/disabled when the user lacks `manage-events` permission — detected by attempting the first write and caching the 403 result)
   - Circuit (`CircuitBadge` component)
   - Events (count, e.g. "5 events" — full list in tooltip)
   - Actions (PatternFly kebab dropdown: Edit, Test ping, Delete)
 - **Empty state:** PatternFly `EmptyState` with "No webhooks configured" and a "Create webhook" CTA
-- **Polling:** `setInterval` every 30s calls `list()` to refresh table data. Clears on unmount.
+- **Polling:** `setInterval` every 30s calls `list()` to refresh table data. Clears on unmount. Pauses when `document.hidden` is true (visibility API) to avoid unnecessary requests from inactive tabs.
 - **Delete:** PatternFly `Modal` confirmation: "Delete webhook to {url}? This cannot be undone."
 - **Test ping:** calls `POST /{id}/test`, shows success/failure as a transient PatternFly `Alert`
 
@@ -240,7 +267,7 @@ Single component, two modes controlled by props:
 **Fields:**
 - URL — `TextInput`, required, validated as valid URL on blur
 - Enabled — `Switch`, default `true` for create
-- Secret — `TextInput` type=password, optional. In edit mode shows "••••••••" placeholder; fetches real value from `GET /{id}/secret` only when the field is focused (lazy load)
+- Secret — `TextInput` type=password, optional. In edit mode shows a status indicator ("Secret configured" or "No secret") based on `GET /{id}/secret` → `{configured: true/false}`. The API does not expose the raw secret value (write-only by design). Typing a new value replaces the existing secret; leaving the field blank preserves the current value.
 - Algorithm — `FormSelect` with options: HmacSHA256 (default), HmacSHA1
 - Event types — `DualListSelector` or chip/tag input. Available types listed as constants (the common access.* and admin.* types). User can also type custom event types.
 
@@ -315,8 +342,10 @@ Vitest + React Testing Library. Runs via `npm test` which is called by `frontend
 No change for operators. The UI is in the JAR — same `providers/` + `kc.sh build` workflow. The UI is accessible at:
 
 ```
-https://<keycloak>/auth/realms/<realm>/webhooks/ui
+https://<keycloak>[/auth]/realms/<realm>/webhooks/ui
 ```
+
+The `/auth` prefix depends on whether `KC_HTTP_RELATIVE_PATH` is set. The UI adapts automatically via `window.__KC_BASE__`.
 
 ### Browser support
 
@@ -341,9 +370,19 @@ npm run dev   # Vite dev server on port 5173, proxy /auth → localhost:8080
 ```typescript
 server: {
   proxy: {
-    '/auth': 'http://localhost:8080',
+    '/auth': 'http://localhost:8080',   // if KC uses /auth prefix
+    '/realms': 'http://localhost:8080', // if KC uses default (no prefix)
+    '/js': 'http://localhost:8080',     // KC JS adapter
   },
 },
 ```
 
-This proxies API calls and the KC JS adapter to a running Keycloak instance.
+This proxies API calls and the KC JS adapter to a running Keycloak instance. Adjust proxy targets based on `KC_HTTP_RELATIVE_PATH` setting.
+
+### PatternFly version
+
+Pin `@patternfly/react-core` and `@patternfly/react-table` to `^5.4` in `package.json`. PatternFly 5 has had breaking changes between minor versions.
+
+### Error boundary
+
+A top-level React `ErrorBoundary` component wraps the app. If a component throws during rendering, it shows a PatternFly `EmptyState` with the error message and a "Reload" button instead of a white screen.
