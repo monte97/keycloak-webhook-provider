@@ -1,0 +1,752 @@
+openapi: 3.1.0
+info:
+  title: Keycloak Webhook Provider API
+  description: |
+    REST API for managing webhooks, inspecting event/send history,
+    controlling circuit breakers, and triggering deliveries.
+
+    All endpoints are scoped to a Keycloak realm and require a bearer token
+    with `manage-realm` (write) or `view-realm` (read) role.
+  version: 1.0.0
+  contact:
+    name: Francesco Montelli
+    url: https://montelli.dev
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: "{scheme}://{host}/auth/realms/{realm}/webhooks"
+    description: Keycloak webhook API
+    variables:
+      scheme:
+        default: http
+        enum: [http, https]
+      host:
+        default: localhost:8080
+      realm:
+        default: master
+        description: Keycloak realm name
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Webhooks
+    description: CRUD operations on webhook registrations
+  - name: Events
+    description: Captured event history
+  - name: Sends
+    description: Delivery attempt history
+  - name: Circuit Breaker
+    description: Circuit breaker state and control
+  - name: Delivery
+    description: Test ping and resend operations
+
+paths:
+  /:
+    get:
+      operationId: listWebhooks
+      summary: List webhooks
+      description: Returns a paginated list of webhooks for the realm.
+      tags: [Webhooks]
+      parameters:
+        - $ref: "#/components/parameters/first"
+        - $ref: "#/components/parameters/max"
+      responses:
+        "200":
+          description: Webhook list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Webhook"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      operationId: createWebhook
+      summary: Create a webhook
+      tags: [Webhooks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookCreate"
+      responses:
+        "201":
+          description: Webhook created
+          headers:
+            Location:
+              description: URL of the created webhook
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        "400":
+          description: Invalid input (missing or invalid URL)
+          content:
+            application/json:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /count:
+    get:
+      operationId: countWebhooks
+      summary: Count webhooks
+      description: Returns the total number of webhooks in the realm.
+      tags: [Webhooks]
+      responses:
+        "200":
+          description: Webhook count
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /{id}:
+    get:
+      operationId: getWebhook
+      summary: Get a webhook
+      tags: [Webhooks]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+      responses:
+        "200":
+          description: Webhook details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      operationId: updateWebhook
+      summary: Update a webhook
+      description: Partial update — only provided fields are changed.
+      tags: [Webhooks]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookUpdate"
+      responses:
+        "200":
+          description: Updated webhook
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        "400":
+          description: Invalid URL
+          content:
+            application/json:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteWebhook
+      summary: Delete a webhook
+      tags: [Webhooks]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+      responses:
+        "204":
+          description: Webhook deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /{id}/secret:
+    get:
+      operationId: getWebhookSecret
+      summary: Get webhook secret status
+      description: |
+        Returns whether a secret is configured for this webhook.
+        Does not return the secret value itself.
+      tags: [Webhooks]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+      responses:
+        "200":
+          description: Secret status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /{id}/events:
+    get:
+      operationId: getWebhookEvents
+      summary: List events for a webhook
+      description: Returns events that matched this webhook's subscriptions.
+      tags: [Events]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+        - $ref: "#/components/parameters/first"
+        - name: max
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Event list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebhookEvent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /{id}/sends:
+    get:
+      operationId: getWebhookSends
+      summary: List send attempts for a webhook
+      tags: [Sends]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+        - $ref: "#/components/parameters/first"
+        - name: max
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: success
+          in: query
+          description: Filter by delivery outcome
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Send attempt list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebhookSend"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /events/{type}/{kcEventId}:
+    get:
+      operationId: getEventByKcId
+      summary: Look up event by Keycloak event ID
+      tags: [Events]
+      parameters:
+        - $ref: "#/components/parameters/eventType"
+        - name: kcEventId
+          in: path
+          required: true
+          description: Keycloak's internal event ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEvent"
+        "400":
+          description: "Invalid type (must be USER or ADMIN)"
+          content:
+            application/json:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /sends/{type}/{kcEventId}:
+    get:
+      operationId: getSendsByKcId
+      summary: Look up send attempts by Keycloak event ID
+      tags: [Sends]
+      parameters:
+        - $ref: "#/components/parameters/eventType"
+        - name: kcEventId
+          in: path
+          required: true
+          description: Keycloak's internal event ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Send attempts for this event
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebhookSend"
+        "400":
+          description: "Invalid type (must be USER or ADMIN)"
+          content:
+            application/json:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /{id}/circuit:
+    get:
+      operationId: getCircuitBreaker
+      summary: Get circuit breaker status
+      tags: [Circuit Breaker]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+      responses:
+        "200":
+          description: Circuit breaker state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CircuitBreakerStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /{id}/circuit/reset:
+    post:
+      operationId: resetCircuitBreaker
+      summary: Reset circuit breaker to CLOSED
+      tags: [Circuit Breaker]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+      responses:
+        "204":
+          description: Circuit breaker reset
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /{id}/test:
+    post:
+      operationId: testWebhook
+      summary: Send a test ping
+      description: |
+        Sends a `test.PING` event to the webhook URL.
+        Does not persist the event or update circuit breaker state.
+      tags: [Delivery]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: Webhook sender not initialized
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /{id}/sends/{sendId}/resend:
+    post:
+      operationId: resendSingle
+      summary: Resend a specific delivery
+      description: |
+        Retries a specific failed send. Respects circuit breaker state —
+        returns 409 if the circuit is OPEN.
+      tags: [Delivery]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+        - name: sendId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Resend result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Circuit breaker is OPEN
+          content:
+            application/json:
+              schema:
+                type: string
+        "503":
+          description: Webhook components not initialized
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /{id}/resend-failed:
+    post:
+      operationId: resendFailed
+      summary: Bulk resend all failed deliveries
+      description: |
+        Resends all failed deliveries for this webhook within the specified
+        time window. Stops on first failure. Respects circuit breaker state.
+      tags: [Delivery]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+        - name: hours
+          in: query
+          description: Look back window in hours
+          schema:
+            type: integer
+            default: 24
+      responses:
+        "200":
+          description: Bulk resend result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkResendResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Circuit breaker is OPEN
+          content:
+            application/json:
+              schema:
+                type: string
+        "503":
+          description: Webhook components not initialized
+          content:
+            application/json:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Keycloak access token. Obtain via:
+        ```
+        POST /auth/realms/{realm}/protocol/openid-connect/token
+        grant_type=password&client_id=admin-cli&username=...&password=...
+        ```
+
+  parameters:
+    webhookId:
+      name: id
+      in: path
+      required: true
+      description: Webhook UUID
+      schema:
+        type: string
+        format: uuid
+
+    eventType:
+      name: type
+      in: path
+      required: true
+      description: Event category
+      schema:
+        type: string
+        enum: [USER, ADMIN]
+
+    first:
+      name: first
+      in: query
+      description: Pagination offset (0-based)
+      schema:
+        type: integer
+        default: 0
+
+    max:
+      name: max
+      in: query
+      description: Maximum number of results
+      schema:
+        type: integer
+        default: 100
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token
+    Forbidden:
+      description: Insufficient realm permissions
+    NotFound:
+      description: Resource not found
+
+  schemas:
+    Webhook:
+      type: object
+      description: Webhook registration (response). The `secret` field is never included — use `GET /{id}/secret`.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        url:
+          type: string
+          format: uri
+          example: "https://your-service.example.com/webhook"
+        algorithm:
+          type: string
+          enum: [HmacSHA256, HmacSHA1]
+          default: HmacSHA256
+        enabled:
+          type: boolean
+          default: false
+        eventTypes:
+          type: array
+          items:
+            type: string
+          description: |
+            Event patterns to subscribe to. Supports exact match (`access.LOGIN`),
+            wildcards (`*`, `access.*`, `admin.*`), and Java regex (`admin.USER-.*`).
+          example: ["access.LOGIN", "access.LOGOUT", "admin.USER-DELETE"]
+        circuitState:
+          type: string
+          enum: [CLOSED, OPEN, HALF_OPEN]
+          readOnly: true
+        failureCount:
+          type: integer
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        retryMaxElapsedSeconds:
+          type: ["integer", "null"]
+          description: Maximum total retry time in seconds (default 900)
+        retryMaxIntervalSeconds:
+          type: ["integer", "null"]
+          description: Maximum interval between retries in seconds (default 180)
+
+    WebhookCreate:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Target URL (must use http or https scheme)
+          example: "https://your-service.example.com/webhook"
+        secret:
+          type: string
+          description: HMAC signing secret
+        algorithm:
+          type: string
+          enum: [HmacSHA256, HmacSHA1]
+          default: HmacSHA256
+        enabled:
+          type: boolean
+          default: false
+        eventTypes:
+          type: array
+          items:
+            type: string
+          example: ["access.LOGIN", "access.LOGOUT"]
+        retryMaxElapsedSeconds:
+          type: ["integer", "null"]
+        retryMaxIntervalSeconds:
+          type: ["integer", "null"]
+
+    WebhookUpdate:
+      type: object
+      description: Partial update — only provided fields are changed.
+      properties:
+        url:
+          type: string
+          format: uri
+        secret:
+          type: string
+        algorithm:
+          type: string
+          enum: [HmacSHA256, HmacSHA1]
+        enabled:
+          type: boolean
+        eventTypes:
+          type: array
+          items:
+            type: string
+        retryMaxElapsedSeconds:
+          type: ["integer", "null"]
+        retryMaxIntervalSeconds:
+          type: ["integer", "null"]
+
+    SecretStatus:
+      type: object
+      properties:
+        type:
+          type: string
+          example: secret
+        configured:
+          type: boolean
+          description: Whether a secret is set on this webhook
+
+    WebhookEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        realmId:
+          type: string
+        eventType:
+          type: string
+          enum: [USER, ADMIN]
+        kcEventId:
+          type: ["string", "null"]
+          description: Keycloak's internal event ID (null for admin events)
+        eventObject:
+          type: string
+          description: Full JSON payload of the captured event
+        createdAt:
+          type: string
+          format: date-time
+
+    WebhookSend:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        webhookId:
+          type: string
+          format: uuid
+        webhookEventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        httpStatus:
+          type: integer
+          description: HTTP status code (-1 on network error)
+        success:
+          type: boolean
+        retries:
+          type: integer
+          description: Number of retry attempts (0 = first try)
+        sentAt:
+          type: string
+          format: date-time
+        lastAttemptAt:
+          type: string
+          format: date-time
+
+    CircuitBreakerStatus:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [CLOSED, OPEN, HALF_OPEN]
+        failureCount:
+          type: integer
+        lastFailureAt:
+          type: ["string", "null"]
+          format: date-time
+        failureThreshold:
+          type: integer
+          description: Number of failures before opening (realm-configurable)
+        openSeconds:
+          type: integer
+          description: Seconds the circuit stays open before probe (realm-configurable)
+
+    SendResult:
+      type: object
+      properties:
+        httpStatus:
+          type: integer
+        success:
+          type: boolean
+        durationMs:
+          type: integer
+          format: int64
+
+    BulkResendResult:
+      type: object
+      properties:
+        resent:
+          type: integer
+          description: Number of successfully resent deliveries
+        failed:
+          type: integer
+          description: Number of failed resend attempts
