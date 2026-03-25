@@ -81,7 +81,8 @@ describe('WebhookTable', () => {
     await screen.findByText('https://api.example.com/webhook');
     fireEvent.click(screen.getByRole('button', { name: /create webhook/i }));
 
-    expect(screen.getAllByText(/create webhook/i).length).toBeGreaterThanOrEqual(1);
+    // PF5 renders both the button label and modal title — >= 2 means the modal is open
+    expect(screen.getAllByText(/create webhook/i).length).toBeGreaterThanOrEqual(2);
   });
 
   it('calls delete API after confirmation', async () => {

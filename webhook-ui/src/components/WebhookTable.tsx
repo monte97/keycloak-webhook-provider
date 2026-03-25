@@ -23,6 +23,7 @@ import {
 } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { PlusCircleIcon, CubesIcon, EllipsisVIcon } from '@patternfly/react-icons';
+import { ApiError } from '../api/types';
 import type { Webhook, WebhookInput } from '../api/types';
 import type { WebhookApiClient } from '../api/webhookApi';
 import { CircuitBadge } from './CircuitBadge';
@@ -35,9 +36,9 @@ interface AlertItem {
 }
 
 const POLL_INTERVAL = 30_000;
-let alertKey = 0;
 
 export function WebhookTable({ api }: { api: WebhookApiClient }) {
+  const alertKeyRef = useRef(0);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
@@ -77,7 +78,7 @@ export function WebhookTable({ api }: { api: WebhookApiClient }) {
   }, [fetchWebhooks]);
 
   const addAlert = (variant: AlertItem['variant'], title: string) => {
-    const key = ++alertKey;
+    const key = ++alertKeyRef.current;
     setAlerts((prev) => [...prev, { key, variant, title }]);
     setTimeout(() => setAlerts((prev) => prev.filter((a) => a.key !== key)), 5000);
   };
@@ -129,7 +130,7 @@ export function WebhookTable({ api }: { api: WebhookApiClient }) {
       await api.update(webhook.id, { ...webhook, enabled: !webhook.enabled });
       fetchWebhooks();
     } catch (err: unknown) {
-      if (err instanceof Object && 'status' in err && (err as { status: unknown }).status === 403) setReadOnly(true);
+      if (err instanceof ApiError && err.status === 403) setReadOnly(true);
       addAlert('danger', `Toggle failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
@@ -147,9 +148,13 @@ export function WebhookTable({ api }: { api: WebhookApiClient }) {
   };
 
   const handleCircuitReset = async (webhookId: string) => {
-    await api.resetCircuit(webhookId);
-    addAlert('success', 'Circuit breaker reset');
-    fetchWebhooks();
+    try {
+      await api.resetCircuit(webhookId);
+      addAlert('success', 'Circuit breaker reset');
+      fetchWebhooks();
+    } catch (err: unknown) {
+      addAlert('danger', `Reset failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   if (loading) return null;
