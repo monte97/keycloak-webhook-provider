@@ -96,9 +96,24 @@ describe('WebhookModal', () => {
           url: 'https://example.com/hook',
           eventTypes: ['access.LOGIN'],
           enabled: true,
+          algorithm: 'HmacSHA256',
         }),
       );
     });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('does not add duplicate event types', () => {
+    render(<WebhookModal mode="create" isOpen onSave={onSave} onClose={onClose} />);
+
+    const eventInput = screen.getByPlaceholderText(/add event type/i);
+    fireEvent.change(eventInput, { target: { value: 'access.LOGIN' } });
+    fireEvent.keyDown(eventInput, { key: 'Enter' });
+    fireEvent.change(eventInput, { target: { value: 'access.LOGIN' } });
+    fireEvent.keyDown(eventInput, { key: 'Enter' });
+
+    // Should only appear once
+    expect(screen.getAllByText('access.LOGIN')).toHaveLength(1);
   });
 
   it('shows API error inside modal', async () => {
