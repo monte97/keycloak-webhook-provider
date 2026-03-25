@@ -368,17 +368,21 @@ public class WebhooksResource {
     @GET @Path("ui/{path: .+}")
     @Produces(MediaType.WILDCARD)
     public Response serveUiAsset(@PathParam("path") String path) {
-        if (path.contains("..")) {
+        if (path.contains("..") || path.contains("\0")) {
             return Response.status(400).entity("Invalid path").build();
         }
-        var is = getClass().getClassLoader().getResourceAsStream("webhook-ui/" + path);
-        if (is == null) return Response.status(404).entity("Not found").build();
-        String contentType = guessContentType(path);
-        String cacheControl = path.startsWith("assets/")
-            ? "public, max-age=31536000, immutable"
-            : "no-cache";
-        return Response.ok(is).type(contentType)
-            .header("Cache-Control", cacheControl).build();
+        try (var is = getClass().getClassLoader().getResourceAsStream("webhook-ui/" + path)) {
+            if (is == null) return Response.status(404).entity("Not found").build();
+            byte[] bytes = is.readAllBytes();
+            String contentType = guessContentType(path);
+            String cacheControl = path.startsWith("assets/")
+                ? "public, max-age=31536000, immutable"
+                : "no-cache";
+            return Response.ok(bytes).type(contentType)
+                .header("Cache-Control", cacheControl).build();
+        } catch (java.io.IOException e) {
+            return Response.serverError().entity("Failed to read asset").build();
+        }
     }
 
     private String guessContentType(String path) {

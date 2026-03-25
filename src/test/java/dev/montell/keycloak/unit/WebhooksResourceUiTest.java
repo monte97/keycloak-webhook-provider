@@ -11,8 +11,6 @@ import org.keycloak.models.KeycloakUriInfo;
 import org.keycloak.models.RealmModel;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import java.net.URI;
 
@@ -20,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class WebhooksResourceUiTest {
 
     @Mock KeycloakSession session;
@@ -32,45 +29,39 @@ class WebhooksResourceUiTest {
 
     @BeforeEach
     void setUp() {
-        when(realm.getName()).thenReturn("test-realm");
-        when(session.getContext()).thenReturn(context);
-        when(context.getUri()).thenReturn(uriInfo);
-        when(uriInfo.getBaseUri()).thenReturn(URI.create("http://localhost:8080/auth/"));
         resource = new WebhooksResource(session, realm);
     }
 
     @Test
     void serveUi_returnsHtmlWithRealmAndBasePath() {
+        when(realm.getName()).thenReturn("test-realm");
+        when(session.getContext()).thenReturn(context);
+        when(context.getUri()).thenReturn(uriInfo);
+        when(uriInfo.getBaseUri()).thenReturn(URI.create("http://localhost:8080/auth/"));
+
         Response response = resource.serveUi();
 
         assertEquals(200, response.getStatus());
         assertEquals("text/html", response.getMediaType().toString());
         String body = (String) response.getEntity();
-        assertTrue(body.contains("\"test-realm\""), "Should contain realm name");
-        assertTrue(body.contains("\"/auth\""), "Should contain base path");
-    }
-
-    @Test
-    void serveUiAsset_returnsJsFile() {
-        // This test verifies the content-type mapping. The actual file won't exist
-        // in test classpath, so we test the path traversal guard separately.
-        Response response = resource.serveUiAsset("../etc/passwd");
-
-        assertEquals(400, response.getStatus());
+        assertTrue(body.contains("window.__KC_REALM__ = \"test-realm\""), "Should contain realm assignment");
+        assertTrue(body.contains("window.__KC_BASE__ = \"/auth\""), "Should contain base path assignment");
     }
 
     @Test
     void serveUiAsset_rejectsPathTraversal() {
-        Response response = resource.serveUiAsset("../../secret");
-        assertEquals(400, response.getStatus());
+        assertEquals(400, resource.serveUiAsset("../etc/passwd").getStatus());
+        assertEquals(400, resource.serveUiAsset("../../secret").getStatus());
+        assertEquals(400, resource.serveUiAsset("foo/../bar").getStatus());
+    }
 
-        Response response2 = resource.serveUiAsset("foo/../bar");
-        assertEquals(400, response2.getStatus());
+    @Test
+    void serveUiAsset_rejectsNullByte() {
+        assertEquals(400, resource.serveUiAsset("foo\0.js").getStatus());
     }
 
     @Test
     void serveUiAsset_returns404ForMissingFile() {
-        Response response = resource.serveUiAsset("nonexistent.js");
-        assertEquals(404, response.getStatus());
+        assertEquals(404, resource.serveUiAsset("nonexistent.js").getStatus());
     }
 }
