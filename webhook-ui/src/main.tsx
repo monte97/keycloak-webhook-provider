@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import Keycloak from 'keycloak-js';
 import { App } from './App';
 import { createWebhookApi } from './api/webhookApi';
 
@@ -15,14 +16,11 @@ const realm = window.__KC_REALM__;
 
 async function init() {
   if (!realm) throw new Error('__KC_REALM__ is not set — check server-side placeholder injection');
-  // Load KC JS adapter from Keycloak itself
-  const kcModule = await import(/* @vite-ignore */ `${basePath}/js/keycloak.js`);
-  const Keycloak = kcModule.default;
 
   const keycloak = new Keycloak({
     url: basePath || '/',
     realm,
-    clientId: 'security-admin-console',
+    clientId: 'webhook-ui',
   });
 
   const authenticated = await keycloak.init({ onLoad: 'login-required' });

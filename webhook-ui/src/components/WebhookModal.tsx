@@ -15,8 +15,15 @@ import {
   HelperTextItem,
   Label,
   LabelGroup,
+  Select,
+  SelectOption,
+  SelectList,
+  MenuToggle,
+  TextInputGroup,
+  TextInputGroupMain,
 } from '@patternfly/react-core';
 import type { Webhook, WebhookInput } from '../api/types';
+import { ALL_EVENT_OPTIONS } from './eventTypes';
 
 interface WebhookModalProps {
   mode: 'create' | 'edit';
@@ -43,6 +50,7 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
   const [algorithm, setAlgorithm] = useState('HmacSHA256');
   const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [eventInput, setEventInput] = useState('');
+  const [eventSelectOpen, setEventSelectOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -91,8 +99,8 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
     }
   };
 
-  const addEventType = () => {
-    const trimmed = eventInput.trim();
+  const addEventType = (value: string) => {
+    const trimmed = value.trim();
     if (trimmed && !eventTypes.includes(trimmed)) {
       setEventTypes([...eventTypes, trimmed]);
       setEventInput('');
@@ -104,18 +112,18 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
         });
       }
     }
+    setEventSelectOpen(false);
   };
 
   const removeEventType = (type: string) => {
     setEventTypes(eventTypes.filter((t) => t !== type));
   };
 
-  const handleEventKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addEventType();
-    }
-  };
+  const filteredOptions = ALL_EVENT_OPTIONS.filter(
+    (opt) => !eventTypes.includes(opt.value) &&
+      (opt.value.toLowerCase().includes(eventInput.toLowerCase()) ||
+       opt.description.toLowerCase().includes(eventInput.toLowerCase())),
+  );
 
   const secretHelperText = mode === 'edit'
     ? secretConfigured === true
@@ -153,14 +161,15 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
             value={url}
             onChange={(_e: React.FormEvent<HTMLInputElement>, val: string) => setUrl(val)}
             validated={errors.url ? 'error' : 'default'}
+            placeholder="https://api.example.com/webhook"
           />
-          {errors.url && (
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem variant="error">{errors.url}</HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          )}
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant={errors.url ? 'error' : 'default'}>
+                {errors.url || 'The endpoint that will receive webhook POST requests.'}
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
         </FormGroup>
 
         <FormGroup label="Enabled" fieldId="enabled">
@@ -170,6 +179,11 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
             isChecked={enabled}
             onChange={(_e: React.FormEvent<HTMLInputElement>, val: boolean) => setEnabled(val)}
           />
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>Disabled webhooks will not receive any events.</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
         </FormGroup>
 
         <FormGroup label="Secret" fieldId="secret">
@@ -180,13 +194,13 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
             onChange={(_e: React.FormEvent<HTMLInputElement>, val: string) => setSecret(val)}
             placeholder={mode === 'edit' ? '••••••••' : 'Optional HMAC secret'}
           />
-          {secretHelperText && (
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem>{secretHelperText}</HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          )}
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>
+                {secretHelperText || 'Used to sign payloads with HMAC. Your endpoint can verify the X-Webhook-Signature header.'}
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
         </FormGroup>
 
         <FormGroup label="Algorithm" fieldId="algorithm">
@@ -198,23 +212,49 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
             <FormSelectOption value="HmacSHA256" label="HmacSHA256" />
             <FormSelectOption value="HmacSHA1" label="HmacSHA1" />
           </FormSelect>
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>HMAC algorithm for signing webhook payloads. SHA-256 recommended.</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
         </FormGroup>
 
         <FormGroup label="Event types" isRequired fieldId="eventTypes">
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <TextInput
-              id="eventTypeInput"
-              placeholder="Add event type"
-              value={eventInput}
-              onChange={(_e: React.FormEvent<HTMLInputElement>, val: string) => setEventInput(val)}
-              onKeyDown={handleEventKeyDown}
-            />
-            <Button variant="secondary" onClick={addEventType} isDisabled={!eventInput.trim()}>
-              Add
-            </Button>
-          </div>
+          <Select
+            id="eventTypeSelect"
+            isOpen={eventSelectOpen}
+            onSelect={(_e, value) => { if (value) addEventType(String(value)); }}
+            onOpenChange={setEventSelectOpen}
+            popperProps={{ appendTo: () => document.body, maxWidth: 'trigger', enableFlip: true }}
+            isScrollable
+            style={{ maxHeight: 300 } as React.CSSProperties}
+            toggle={(toggleRef) => (
+              <MenuToggle ref={toggleRef} onClick={() => setEventSelectOpen(!eventSelectOpen)} isExpanded={eventSelectOpen} style={{ width: '100%' }}>
+                <TextInputGroup>
+                  <TextInputGroupMain
+                    value={eventInput}
+                    onChange={(_e, val) => { setEventInput(val); if (!eventSelectOpen) setEventSelectOpen(true); }}
+                    placeholder="Search event types..."
+                    aria-label="Search event types"
+                  />
+                </TextInputGroup>
+              </MenuToggle>
+            )}
+          >
+            <SelectList>
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((opt) => (
+                  <SelectOption key={opt.value} value={opt.value} description={opt.description}>
+                    {opt.value}
+                  </SelectOption>
+                ))
+              ) : (
+                <SelectOption isDisabled>No matching events</SelectOption>
+              )}
+            </SelectList>
+          </Select>
           {eventTypes.length > 0 && (
-            <LabelGroup>
+            <LabelGroup style={{ marginTop: 8 }}>
               {eventTypes.map((t) => (
                 <Label key={t} onClose={() => removeEventType(t)}>
                   {t}
@@ -222,13 +262,13 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
               ))}
             </LabelGroup>
           )}
-          {errors.eventTypes && (
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem variant="error">{errors.eventTypes}</HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          )}
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant={errors.eventTypes ? 'error' : 'default'}>
+                {errors.eventTypes || 'Use * for all events, access.* / admin.* for categories, or pick specific events.'}
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
         </FormGroup>
       </Form>
     </Modal>

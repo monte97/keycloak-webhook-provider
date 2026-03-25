@@ -33,7 +33,7 @@ class WebhooksResourceUiTest {
     }
 
     @Test
-    void serveUi_returnsHtmlWithRealmAndBasePath() {
+    void serveUi_returnsHtmlWithBaseTag() {
         when(realm.getName()).thenReturn("test-realm");
         when(session.getContext()).thenReturn(context);
         when(context.getUri()).thenReturn(uriInfo);
@@ -44,8 +44,9 @@ class WebhooksResourceUiTest {
         assertEquals(200, response.getStatus());
         assertEquals("text/html", response.getMediaType().toString());
         String body = (String) response.getEntity();
-        assertTrue(body.contains("window.__KC_REALM__ = \"test-realm\""), "Should contain realm assignment");
-        assertTrue(body.contains("window.__KC_BASE__ = \"/auth\""), "Should contain base path assignment");
+        assertTrue(body.contains("window.__KC_REALM__ = \"test-realm\""), "Should contain realm");
+        assertTrue(body.contains("window.__KC_BASE__ = \"/auth\""), "Should contain base path");
+        assertTrue(body.contains("<base href=\"/auth/realms/test-realm/webhooks/ui/\">"), "Should contain base tag");
     }
 
     @Test

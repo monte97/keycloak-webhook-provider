@@ -2,7 +2,7 @@ import type { Webhook, WebhookInput, SecretStatus, CircuitState, TestResult } fr
 import { ApiError } from './types';
 
 interface KeycloakInstance {
-  token: string;
+  token?: string;
   updateToken(minValidity: number): Promise<boolean>;
 }
 

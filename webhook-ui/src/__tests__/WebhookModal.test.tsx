@@ -83,10 +83,9 @@ describe('WebhookModal', () => {
       target: { value: 'https://example.com/hook' },
     });
 
-    // Type an event type and add it
-    const eventInput = screen.getByPlaceholderText(/add event type/i);
-    fireEvent.change(eventInput, { target: { value: 'access.LOGIN' } });
-    fireEvent.keyDown(eventInput, { key: 'Enter' });
+    // Open event type dropdown and select an option
+    fireEvent.click(screen.getByPlaceholderText(/search event types/i));
+    fireEvent.click(screen.getByText('access.LOGIN'));
 
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
@@ -103,17 +102,18 @@ describe('WebhookModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('does not add duplicate event types', () => {
+  it('does not add duplicate event types', async () => {
     render(<WebhookModal mode="create" isOpen onSave={onSave} onClose={onClose} />);
 
-    const eventInput = screen.getByPlaceholderText(/add event type/i);
-    fireEvent.change(eventInput, { target: { value: 'access.LOGIN' } });
-    fireEvent.keyDown(eventInput, { key: 'Enter' });
-    fireEvent.change(eventInput, { target: { value: 'access.LOGIN' } });
-    fireEvent.keyDown(eventInput, { key: 'Enter' });
+    // Select access.LOGIN
+    fireEvent.click(screen.getByPlaceholderText(/search event types/i));
+    fireEvent.click(screen.getByText('access.LOGIN'));
 
-    // Should only appear once
-    expect(screen.getAllByText('access.LOGIN')).toHaveLength(1);
+    // Open again — access.LOGIN should not appear in the list (already selected)
+    fireEvent.click(screen.getByPlaceholderText(/search event types/i));
+    const loginOptions = screen.getAllByText('access.LOGIN');
+    // Only the label chip should show it, not the dropdown
+    expect(loginOptions).toHaveLength(1);
   });
 
   it('shows API error inside modal', async () => {
@@ -123,9 +123,8 @@ describe('WebhookModal', () => {
     fireEvent.change(screen.getByLabelText(/url/i), {
       target: { value: 'https://example.com/hook' },
     });
-    const eventInput = screen.getByPlaceholderText(/add event type/i);
-    fireEvent.change(eventInput, { target: { value: 'access.LOGIN' } });
-    fireEvent.keyDown(eventInput, { key: 'Enter' });
+    fireEvent.click(screen.getByPlaceholderText(/search event types/i));
+    fireEvent.click(screen.getByText('access.LOGIN'));
 
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
 

@@ -354,8 +354,10 @@ public class WebhooksResource {
             if (is == null) return Response.status(404).entity("UI not found").build();
             String html = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             String basePath = session.getContext().getUri().getBaseUri().getPath();
-            // Remove trailing slash for clean path
             if (basePath.endsWith("/")) basePath = basePath.substring(0, basePath.length() - 1);
+            // Inject <base> so relative asset paths (./assets/) resolve to ui/assets/
+            String uiBase = basePath + "/realms/" + realm.getName() + "/webhooks/ui/";
+            html = html.replace("<head>", "<head><base href=\"" + uiBase + "\">");
             html = html.replace("{{REALM}}", realm.getName())
                        .replace("{{BASE_PATH}}", basePath);
             return Response.ok(html).type("text/html")
