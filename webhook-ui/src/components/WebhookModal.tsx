@@ -51,6 +51,8 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
   const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [eventInput, setEventInput] = useState('');
   const [eventSelectOpen, setEventSelectOpen] = useState(false);
+  const [retryMaxElapsed, setRetryMaxElapsed] = useState('');
+  const [retryMaxInterval, setRetryMaxInterval] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -62,12 +64,16 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
       setAlgorithm(webhook.algorithm);
       setEventTypes([...webhook.eventTypes]);
       setSecret('');
+      setRetryMaxElapsed(webhook.retryMaxElapsedSeconds != null ? String(webhook.retryMaxElapsedSeconds) : '');
+      setRetryMaxInterval(webhook.retryMaxIntervalSeconds != null ? String(webhook.retryMaxIntervalSeconds) : '');
     } else {
       setUrl('');
       setEnabled(true);
       setSecret('');
       setAlgorithm('HmacSHA256');
       setEventTypes([]);
+      setRetryMaxElapsed('');
+      setRetryMaxInterval('');
     }
     setErrors({});
     setApiError(null);
@@ -79,6 +85,10 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
     if (!url.trim()) errs.url = 'URL is required';
     else if (!isValidUrl(url)) errs.url = 'Must be a valid HTTP or HTTPS URL';
     if (eventTypes.length === 0) errs.eventTypes = 'At least one event type is required';
+    if (retryMaxElapsed && (isNaN(Number(retryMaxElapsed)) || Number(retryMaxElapsed) < 1))
+      errs.retryMaxElapsed = 'Must be a positive number';
+    if (retryMaxInterval && (isNaN(Number(retryMaxInterval)) || Number(retryMaxInterval) < 1))
+      errs.retryMaxInterval = 'Must be a positive number';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -90,6 +100,8 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
     try {
       const data: WebhookInput = { url, enabled, eventTypes, algorithm };
       if (secret) data.secret = secret;
+      if (retryMaxElapsed) data.retryMaxElapsedSeconds = Number(retryMaxElapsed);
+      if (retryMaxInterval) data.retryMaxIntervalSeconds = Number(retryMaxInterval);
       await onSave(data);
       onClose();
     } catch (err: unknown) {
@@ -215,6 +227,42 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
           <FormHelperText>
             <HelperText>
               <HelperTextItem>HMAC algorithm for signing webhook payloads. SHA-256 recommended.</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        </FormGroup>
+
+        <FormGroup label="Max retry duration (seconds)" fieldId="retryMaxElapsed">
+          <TextInput
+            id="retryMaxElapsed"
+            type="number"
+            value={retryMaxElapsed}
+            onChange={(_e: React.FormEvent<HTMLInputElement>, val: string) => setRetryMaxElapsed(val)}
+            validated={errors.retryMaxElapsed ? 'error' : 'default'}
+            placeholder="900"
+          />
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant={errors.retryMaxElapsed ? 'error' : 'default'}>
+                {errors.retryMaxElapsed || 'Total time window for retry attempts. Default: 900 (15 minutes).'}
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        </FormGroup>
+
+        <FormGroup label="Max retry interval (seconds)" fieldId="retryMaxInterval">
+          <TextInput
+            id="retryMaxInterval"
+            type="number"
+            value={retryMaxInterval}
+            onChange={(_e: React.FormEvent<HTMLInputElement>, val: string) => setRetryMaxInterval(val)}
+            validated={errors.retryMaxInterval ? 'error' : 'default'}
+            placeholder="180"
+          />
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant={errors.retryMaxInterval ? 'error' : 'default'}>
+                {errors.retryMaxInterval || 'Maximum wait between retries (exponential backoff cap). Default: 180 (3 minutes).'}
+              </HelperTextItem>
             </HelperText>
           </FormHelperText>
         </FormGroup>
