@@ -366,7 +366,7 @@ public class WebhooksResource {
     }
 
     @GET @Path("ui/{path: .+}")
-    @Produces(MediaType.WILDCARD)
+    @Produces({"application/javascript", "text/css", "text/html", "image/svg+xml", "font/woff2", "application/json", "application/octet-stream"})
     public Response serveUiAsset(@PathParam("path") String path) {
         if (path.contains("..") || path.contains("\0")) {
             return Response.status(400).entity("Invalid path").build();
@@ -391,6 +391,8 @@ public class WebhooksResource {
         if (path.endsWith(".svg")) return "image/svg+xml";
         if (path.endsWith(".html")) return "text/html";
         if (path.endsWith(".json")) return "application/json";
+        if (path.endsWith(".woff2")) return "font/woff2";
+        if (path.endsWith(".woff")) return "font/woff";
         return "application/octet-stream";
     }
 
