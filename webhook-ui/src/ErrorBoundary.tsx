@@ -2,6 +2,7 @@ import React from 'react';
 import {
   EmptyState,
   EmptyStateBody,
+  EmptyStateFooter,
   EmptyStateHeader,
   EmptyStateIcon,
   Button,
@@ -23,6 +24,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
     return { error };
   }
 
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[ErrorBoundary]', error, info.componentStack);
+  }
+
   render() {
     if (this.state.error) {
       return (
@@ -33,9 +38,11 @@ export class ErrorBoundary extends React.Component<Props, State> {
             icon={<EmptyStateIcon icon={ExclamationCircleIcon} />}
           />
           <EmptyStateBody>{this.state.error.message}</EmptyStateBody>
-          <Button variant="primary" onClick={() => window.location.reload()}>
-            Reload
-          </Button>
+          <EmptyStateFooter>
+            <Button variant="primary" onClick={() => window.location.reload()}>
+              Reload
+            </Button>
+          </EmptyStateFooter>
         </EmptyState>
       );
     }

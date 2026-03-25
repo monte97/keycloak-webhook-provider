@@ -14,6 +14,7 @@ const basePath = window.__KC_BASE__ || '';
 const realm = window.__KC_REALM__;
 
 async function init() {
+  if (!realm) throw new Error('__KC_REALM__ is not set — check server-side placeholder injection');
   // Load KC JS adapter from Keycloak itself
   const kcModule = await import(/* @vite-ignore */ `${basePath}/js/keycloak.js`);
   const Keycloak = kcModule.default;
@@ -40,7 +41,11 @@ async function init() {
   );
 }
 
-init().catch((err) => {
-  document.getElementById('root')!.innerHTML =
-    `<pre>Failed to initialize: ${err.message}</pre>`;
+init().catch((err: unknown) => {
+  const root = document.getElementById('root');
+  if (root) {
+    const pre = document.createElement('pre');
+    pre.textContent = `Failed to initialize: ${err instanceof Error ? err.message : String(err)}`;
+    root.appendChild(pre);
+  }
 });
