@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CircuitBadge } from '../components/CircuitBadge';
 
 describe('CircuitBadge', () => {
@@ -13,7 +13,7 @@ describe('CircuitBadge', () => {
     expect(screen.getByText('OPEN')).toBeInTheDocument();
   });
 
-  it('renders yellow label for HALF_OPEN state', () => {
+  it('renders gold label for HALF_OPEN state', () => {
     render(<CircuitBadge state="HALF_OPEN" failureCount={3} webhookId="1" onReset={vi.fn()} />);
     expect(screen.getByText('HALF_OPEN')).toBeInTheDocument();
   });
@@ -22,7 +22,9 @@ describe('CircuitBadge', () => {
     const onReset = vi.fn().mockResolvedValue(undefined);
     render(<CircuitBadge state="OPEN" failureCount={5} webhookId="1" onReset={onReset} />);
 
-    fireEvent.click(screen.getByText('OPEN'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('OPEN'));
+    });
     expect(screen.getByText(/5 failures/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /reset/i })).toBeInTheDocument();
   });
@@ -31,8 +33,12 @@ describe('CircuitBadge', () => {
     const onReset = vi.fn().mockResolvedValue(undefined);
     render(<CircuitBadge state="OPEN" failureCount={5} webhookId="1" onReset={onReset} />);
 
-    fireEvent.click(screen.getByText('OPEN'));
-    fireEvent.click(screen.getByRole('button', { name: /reset/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByText('OPEN'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /reset/i }));
+    });
 
     await waitFor(() => expect(onReset).toHaveBeenCalledWith('1'));
   });
