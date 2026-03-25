@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Toolbar,
   ToolbarContent,
@@ -209,7 +209,7 @@ export function WebhookTable({ api }: { api: WebhookApiClient }) {
               Webhooks
             </Title>
           </ToolbarItem>
-          <ToolbarItem align={{ default: 'alignEnd' }}>
+          <ToolbarItem align={{ default: 'alignRight' }}>
             <Button variant="primary" icon={<PlusCircleIcon />} onClick={handleCreate}>
               Create webhook
             </Button>

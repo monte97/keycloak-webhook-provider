@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Label, Popover, Button } from '@patternfly/react-core';
 
 interface CircuitBadgeProps {
