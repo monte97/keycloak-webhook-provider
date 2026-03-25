@@ -65,12 +65,183 @@ realms:
 
 Events follow a `category.ACTION` pattern:
 
-| Prefix | Examples |
-|--------|---------|
-| `access.*` | `access.LOGIN`, `access.LOGOUT`, `access.REGISTER`, `access.LOGIN_ERROR` |
-| `admin.*` | `admin.USER-CREATE`, `admin.USER-DELETE`, `admin.CLIENT_ROLE_MAPPING-CREATE`, `admin.GROUP_MEMBERSHIP-CREATE` |
+- **Access events**: `access.{EventType}` — user-facing events (login, logout, registration, token operations)
+- **Admin events**: `admin.{ResourceType}-{OperationType}` — realm management events (user created, role assigned, client updated)
 
-Use `*` to subscribe to all events of a category (not recommended in production — high volume).
+Use `*` to subscribe to all events, `access.*` or `admin.*` for a whole category. Exact strings and Java regexes (e.g. `admin.USER-.*`) are also supported.
+
+#### Access events (`access.*`)
+
+All 96 values from `org.keycloak.events.EventType` (Keycloak 26.x):
+
+| Event type |
+|------------|
+| `access.AUTHREQID_TO_TOKEN` |
+| `access.AUTHREQID_TO_TOKEN_ERROR` |
+| `access.CLIENT_DELETE` |
+| `access.CLIENT_DELETE_ERROR` |
+| `access.CLIENT_INFO` |
+| `access.CLIENT_INFO_ERROR` |
+| `access.CLIENT_INITIATED_ACCOUNT_LINKING` |
+| `access.CLIENT_INITIATED_ACCOUNT_LINKING_ERROR` |
+| `access.CLIENT_LOGIN` |
+| `access.CLIENT_LOGIN_ERROR` |
+| `access.CLIENT_REGISTER` |
+| `access.CLIENT_REGISTER_ERROR` |
+| `access.CLIENT_UPDATE` |
+| `access.CLIENT_UPDATE_ERROR` |
+| `access.CODE_TO_TOKEN` |
+| `access.CODE_TO_TOKEN_ERROR` |
+| `access.CUSTOM_REQUIRED_ACTION` |
+| `access.CUSTOM_REQUIRED_ACTION_ERROR` |
+| `access.DELETE_ACCOUNT` |
+| `access.DELETE_ACCOUNT_ERROR` |
+| `access.EXECUTE_ACTIONS` |
+| `access.EXECUTE_ACTIONS_ERROR` |
+| `access.EXECUTE_ACTION_TOKEN` |
+| `access.EXECUTE_ACTION_TOKEN_ERROR` |
+| `access.FEDERATED_IDENTITY_LINK` |
+| `access.FEDERATED_IDENTITY_LINK_ERROR` |
+| `access.FEDERATED_IDENTITY_OVERRIDE_LINK` |
+| `access.FEDERATED_IDENTITY_OVERRIDE_LINK_ERROR` |
+| `access.GRANT_CONSENT` |
+| `access.GRANT_CONSENT_ERROR` |
+| `access.IDENTITY_PROVIDER_FIRST_LOGIN` |
+| `access.IDENTITY_PROVIDER_FIRST_LOGIN_ERROR` |
+| `access.IDENTITY_PROVIDER_LINK_ACCOUNT` |
+| `access.IDENTITY_PROVIDER_LINK_ACCOUNT_ERROR` |
+| `access.IDENTITY_PROVIDER_LOGIN` |
+| `access.IDENTITY_PROVIDER_LOGIN_ERROR` |
+| `access.IDENTITY_PROVIDER_POST_LOGIN` |
+| `access.IDENTITY_PROVIDER_POST_LOGIN_ERROR` |
+| `access.IDENTITY_PROVIDER_RESPONSE` |
+| `access.IDENTITY_PROVIDER_RESPONSE_ERROR` |
+| `access.IDENTITY_PROVIDER_RETRIEVE_TOKEN` |
+| `access.IDENTITY_PROVIDER_RETRIEVE_TOKEN_ERROR` |
+| `access.IMPERSONATE` |
+| `access.IMPERSONATE_ERROR` |
+| `access.INTROSPECT_TOKEN` |
+| `access.INTROSPECT_TOKEN_ERROR` |
+| `access.INVALID_SIGNATURE` |
+| `access.INVALID_SIGNATURE_ERROR` |
+| `access.INVITE_ORG` |
+| `access.INVITE_ORG_ERROR` |
+| `access.LOGIN` |
+| `access.LOGIN_ERROR` |
+| `access.LOGOUT` |
+| `access.LOGOUT_ERROR` |
+| `access.OAUTH2_DEVICE_AUTH` |
+| `access.OAUTH2_DEVICE_AUTH_ERROR` |
+| `access.OAUTH2_DEVICE_CODE_TO_TOKEN` |
+| `access.OAUTH2_DEVICE_CODE_TO_TOKEN_ERROR` |
+| `access.OAUTH2_DEVICE_VERIFY_USER_CODE` |
+| `access.OAUTH2_DEVICE_VERIFY_USER_CODE_ERROR` |
+| `access.OAUTH2_EXTENSION_GRANT` |
+| `access.OAUTH2_EXTENSION_GRANT_ERROR` |
+| `access.PERMISSION_TOKEN` |
+| `access.PERMISSION_TOKEN_ERROR` |
+| `access.PUSHED_AUTHORIZATION_REQUEST` |
+| `access.PUSHED_AUTHORIZATION_REQUEST_ERROR` |
+| `access.REFRESH_TOKEN` |
+| `access.REFRESH_TOKEN_ERROR` |
+| `access.REGISTER` |
+| `access.REGISTER_ERROR` |
+| `access.REGISTER_NODE` |
+| `access.REGISTER_NODE_ERROR` |
+| `access.REMOVE_CREDENTIAL` |
+| `access.REMOVE_CREDENTIAL_ERROR` |
+| `access.REMOVE_FEDERATED_IDENTITY` |
+| `access.REMOVE_FEDERATED_IDENTITY_ERROR` |
+| `access.REMOVE_TOTP` |
+| `access.REMOVE_TOTP_ERROR` |
+| `access.RESET_PASSWORD` |
+| `access.RESET_PASSWORD_ERROR` |
+| `access.RESTART_AUTHENTICATION` |
+| `access.RESTART_AUTHENTICATION_ERROR` |
+| `access.REVOKE_GRANT` |
+| `access.REVOKE_GRANT_ERROR` |
+| `access.SEND_IDENTITY_PROVIDER_LINK` |
+| `access.SEND_IDENTITY_PROVIDER_LINK_ERROR` |
+| `access.SEND_RESET_PASSWORD` |
+| `access.SEND_RESET_PASSWORD_ERROR` |
+| `access.SEND_VERIFY_EMAIL` |
+| `access.SEND_VERIFY_EMAIL_ERROR` |
+| `access.TOKEN_EXCHANGE` |
+| `access.TOKEN_EXCHANGE_ERROR` |
+| `access.UNREGISTER_NODE` |
+| `access.UNREGISTER_NODE_ERROR` |
+| `access.UPDATE_CONSENT` |
+| `access.UPDATE_CONSENT_ERROR` |
+| `access.UPDATE_CREDENTIAL` |
+| `access.UPDATE_CREDENTIAL_ERROR` |
+| `access.UPDATE_EMAIL` |
+| `access.UPDATE_EMAIL_ERROR` |
+| `access.UPDATE_PASSWORD` |
+| `access.UPDATE_PASSWORD_ERROR` |
+| `access.UPDATE_PROFILE` |
+| `access.UPDATE_PROFILE_ERROR` |
+| `access.UPDATE_TOTP` |
+| `access.UPDATE_TOTP_ERROR` |
+| `access.USER_DISABLED_BY_PERMANENT_LOCKOUT` |
+| `access.USER_DISABLED_BY_PERMANENT_LOCKOUT_ERROR` |
+| `access.USER_DISABLED_BY_TEMPORARY_LOCKOUT` |
+| `access.USER_DISABLED_BY_TEMPORARY_LOCKOUT_ERROR` |
+| `access.USER_INFO_REQUEST` |
+| `access.USER_INFO_REQUEST_ERROR` |
+| `access.VALIDATE_ACCESS_TOKEN` |
+| `access.VALIDATE_ACCESS_TOKEN_ERROR` |
+| `access.VERIFY_EMAIL` |
+| `access.VERIFY_EMAIL_ERROR` |
+| `access.VERIFY_PROFILE` |
+| `access.VERIFY_PROFILE_ERROR` |
+
+#### Admin events (`admin.*`)
+
+Format: `admin.{ResourceType}-{OperationType}`
+
+**Operations** (4): `CREATE`, `UPDATE`, `DELETE`, `ACTION`
+
+**Resource types** (36 values from `org.keycloak.events.admin.ResourceType`):
+
+| Resource type | Example event types |
+|---------------|---------------------|
+| `AUTHENTICATOR_CONFIG` | `admin.AUTHENTICATOR_CONFIG-CREATE` |
+| `AUTH_EXECUTION` | `admin.AUTH_EXECUTION-CREATE` |
+| `AUTH_EXECUTION_FLOW` | `admin.AUTH_EXECUTION_FLOW-CREATE` |
+| `AUTH_FLOW` | `admin.AUTH_FLOW-CREATE` |
+| `AUTHORIZATION_POLICY` | `admin.AUTHORIZATION_POLICY-CREATE` |
+| `AUTHORIZATION_RESOURCE` | `admin.AUTHORIZATION_RESOURCE-CREATE` |
+| `AUTHORIZATION_RESOURCE_SERVER` | `admin.AUTHORIZATION_RESOURCE_SERVER-UPDATE` |
+| `AUTHORIZATION_SCOPE` | `admin.AUTHORIZATION_SCOPE-CREATE` |
+| `CLIENT` | `admin.CLIENT-CREATE`, `admin.CLIENT-UPDATE`, `admin.CLIENT-DELETE` |
+| `CLIENT_INITIAL_ACCESS_MODEL` | `admin.CLIENT_INITIAL_ACCESS_MODEL-CREATE` |
+| `CLIENT_ROLE` | `admin.CLIENT_ROLE-CREATE`, `admin.CLIENT_ROLE-DELETE` |
+| `CLIENT_ROLE_MAPPING` | `admin.CLIENT_ROLE_MAPPING-CREATE`, `admin.CLIENT_ROLE_MAPPING-DELETE` |
+| `CLIENT_SCOPE` | `admin.CLIENT_SCOPE-CREATE` |
+| `CLIENT_SCOPE_CLIENT_MAPPING` | `admin.CLIENT_SCOPE_CLIENT_MAPPING-CREATE` |
+| `CLIENT_SCOPE_MAPPING` | `admin.CLIENT_SCOPE_MAPPING-CREATE` |
+| `CLUSTER_NODE` | `admin.CLUSTER_NODE-CREATE` |
+| `COMPONENT` | `admin.COMPONENT-CREATE` |
+| `CUSTOM` | `admin.CUSTOM-ACTION` |
+| `GROUP` | `admin.GROUP-CREATE`, `admin.GROUP-UPDATE`, `admin.GROUP-DELETE` |
+| `GROUP_MEMBERSHIP` | `admin.GROUP_MEMBERSHIP-CREATE`, `admin.GROUP_MEMBERSHIP-DELETE` |
+| `IDENTITY_PROVIDER` | `admin.IDENTITY_PROVIDER-CREATE` |
+| `IDENTITY_PROVIDER_MAPPER` | `admin.IDENTITY_PROVIDER_MAPPER-CREATE` |
+| `ORGANIZATION` | `admin.ORGANIZATION-CREATE` |
+| `ORGANIZATION_MEMBERSHIP` | `admin.ORGANIZATION_MEMBERSHIP-CREATE` |
+| `PROTOCOL_MAPPER` | `admin.PROTOCOL_MAPPER-CREATE` |
+| `REALM` | `admin.REALM-UPDATE` |
+| `REALM_ROLE` | `admin.REALM_ROLE-CREATE`, `admin.REALM_ROLE-DELETE` |
+| `REALM_ROLE_MAPPING` | `admin.REALM_ROLE_MAPPING-CREATE`, `admin.REALM_ROLE_MAPPING-DELETE` |
+| `REALM_SCOPE_MAPPING` | `admin.REALM_SCOPE_MAPPING-CREATE` |
+| `REQUIRED_ACTION` | `admin.REQUIRED_ACTION-CREATE` |
+| `REQUIRED_ACTION_CONFIG` | `admin.REQUIRED_ACTION_CONFIG-UPDATE` |
+| `USER` | `admin.USER-CREATE`, `admin.USER-UPDATE`, `admin.USER-DELETE` |
+| `USER_FEDERATION_MAPPER` | `admin.USER_FEDERATION_MAPPER-CREATE` |
+| `USER_FEDERATION_PROVIDER` | `admin.USER_FEDERATION_PROVIDER-CREATE` |
+| `USER_LOGIN_FAILURE` | `admin.USER_LOGIN_FAILURE-DELETE` |
+| `USER_PROFILE` | `admin.USER_PROFILE-UPDATE` |
+| `USER_SESSION` | `admin.USER_SESSION-DELETE` |
 
 ### HMAC signature verification
 
