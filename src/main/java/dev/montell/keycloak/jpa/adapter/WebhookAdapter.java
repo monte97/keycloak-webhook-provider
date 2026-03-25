@@ -6,6 +6,11 @@ import dev.montell.keycloak.model.WebhookModel;
 import java.time.Instant;
 import java.util.Set;
 
+/**
+ * Adapts a {@link WebhookEntity} JPA entity to the {@link WebhookModel} domain interface.
+ * All getters and setters delegate directly to the underlying managed entity, so changes
+ * made through this adapter are automatically persisted by JPA dirty-checking.
+ */
 public class WebhookAdapter implements WebhookModel {
 
     private final WebhookEntity entity;

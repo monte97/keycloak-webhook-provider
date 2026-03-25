@@ -6,6 +6,10 @@ import dev.montell.keycloak.model.KeycloakEventType;
 import dev.montell.keycloak.model.WebhookEventModel;
 import java.time.Instant;
 
+/**
+ * Adapts a {@link WebhookEventEntity} JPA entity to the {@link WebhookEventModel}
+ * domain interface.
+ */
 public class WebhookEventAdapter implements WebhookEventModel {
 
     private final WebhookEventEntity entity;

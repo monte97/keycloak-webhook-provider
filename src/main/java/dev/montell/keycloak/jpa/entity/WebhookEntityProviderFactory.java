@@ -11,6 +11,10 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.RealmModel;
 
+/**
+ * Factory for {@link WebhookEntityProvider}. Also registers a listener for
+ * {@link RealmModel.RealmRemovedEvent} to clean up all webhook data when a realm is deleted.
+ */
 @JBossLog
 @AutoService(JpaEntityProviderFactory.class)
 public class WebhookEntityProviderFactory implements JpaEntityProviderFactory {

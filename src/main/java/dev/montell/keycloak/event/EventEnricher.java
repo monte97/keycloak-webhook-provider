@@ -13,6 +13,12 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Transforms raw Keycloak {@link Event} and {@link AdminEvent} objects into
+ * {@link WebhookPayload} records enriched with auth context (username, IP address).
+ *
+ * <p>This is a stateless utility class. All methods are static.
+ */
 @JBossLog
 public final class EventEnricher {
 
@@ -20,6 +26,14 @@ public final class EventEnricher {
 
     private EventEnricher() {}
 
+    /**
+     * Enriches a user-facing Keycloak event into an {@link WebhookPayload.AccessEvent}.
+     * The event type is prefixed with {@code "access."} (e.g. {@code "access.LOGIN"}).
+     *
+     * @param event   the raw Keycloak event
+     * @param session the current Keycloak session (used for user resolution)
+     * @return an immutable access event payload
+     */
     public static WebhookPayload.AccessEvent enrich(Event event, KeycloakSession session) {
         return new WebhookPayload.AccessEvent(
             UUID.randomUUID().toString(),
@@ -32,6 +46,15 @@ public final class EventEnricher {
         );
     }
 
+    /**
+     * Enriches a Keycloak admin event into an {@link WebhookPayload.AdminEvent}.
+     * The event type follows the pattern {@code "admin.RESOURCE_TYPE-OPERATION"}
+     * (e.g. {@code "admin.USER-CREATE"}).
+     *
+     * @param event   the raw Keycloak admin event
+     * @param session the current Keycloak session (used for username resolution)
+     * @return an immutable admin event payload
+     */
     public static WebhookPayload.AdminEvent enrich(AdminEvent event, KeycloakSession session) {
         AuthDetails authDetails = null;
         if (event.getAuthDetails() != null) {

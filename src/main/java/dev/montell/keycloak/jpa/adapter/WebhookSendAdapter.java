@@ -5,6 +5,10 @@ import dev.montell.keycloak.jpa.entity.WebhookSendEntity;
 import dev.montell.keycloak.model.WebhookSendModel;
 import java.time.Instant;
 
+/**
+ * Adapts a {@link WebhookSendEntity} JPA entity to the {@link WebhookSendModel}
+ * domain interface.
+ */
 public class WebhookSendAdapter implements WebhookSendModel {
 
     private final WebhookSendEntity entity;

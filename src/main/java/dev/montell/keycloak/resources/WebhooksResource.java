@@ -20,6 +20,17 @@ import org.keycloak.services.resources.admin.AdminAuth;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
 import org.keycloak.services.resources.admin.permissions.AdminPermissions;
 
+/**
+ * JAX-RS resource providing 16 REST endpoints for webhook management, event/send history,
+ * circuit breaker control, and delivery operations. Mounted at
+ * {@code /realms/{realm}/webhooks} via {@link WebhooksResourceProviderFactory}.
+ *
+ * <p>Authorization uses Keycloak's {@link AdminPermissionEvaluator} with lazy initialization:
+ * <ul>
+ *   <li>{@code manage-realm} role: create, update, delete webhooks; get secret; test/resend</li>
+ *   <li>{@code view-realm} role: read webhooks, events, sends, circuit state</li>
+ * </ul>
+ */
 @JBossLog
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

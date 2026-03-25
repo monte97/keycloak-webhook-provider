@@ -10,6 +10,17 @@ import org.keycloak.timer.ScheduledTask;
 
 import java.util.List;
 
+/**
+ * Scheduled task that deletes old webhook events and send records based on per-realm
+ * retention policies. Runs every 24 hours, scheduled by
+ * {@link dev.montell.keycloak.listener.WebhookEventListenerProviderFactory}.
+ *
+ * <p>Retention periods are configured via realm attributes:
+ * <ul>
+ *   <li>{@code _webhook.retention.events.days} — default {@value #DEFAULT_EVENT_DAYS}</li>
+ *   <li>{@code _webhook.retention.sends.days} — default {@value #DEFAULT_SEND_DAYS}</li>
+ * </ul>
+ */
 @JBossLog
 public class RetentionCleanupTask implements ScheduledTask {
 

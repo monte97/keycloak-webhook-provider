@@ -14,6 +14,11 @@ import java.time.Instant;
     @NamedQuery(name = "getFailedSendsSince",
         query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId AND s.success = false AND s.lastAttemptAt >= :since ORDER BY s.lastAttemptAt ASC")
 })
+/**
+ * JPA entity mapped to the {@code WEBHOOK_SEND} table. Tracks individual delivery attempts
+ * per webhook-event pair. The composite primary key is built from {@code webhookId} and
+ * {@code webhookEventId} via {@link #buildId}. Retries update the existing record in place.
+ */
 @Entity
 @Table(name = "WEBHOOK_SEND",
     uniqueConstraints = @UniqueConstraint(columnNames = {"WEBHOOK_ID", "WEBHOOK_EVENT_ID"}))

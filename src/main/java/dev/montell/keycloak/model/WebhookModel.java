@@ -4,6 +4,13 @@ package dev.montell.keycloak.model;
 import java.time.Instant;
 import java.util.Set;
 
+/**
+ * Domain model for a webhook registration. Exposes configuration (URL, secret, event filters),
+ * circuit breaker state, and retry parameters. Implementations are backed by JPA entities
+ * via the adapter pattern.
+ *
+ * @see dev.montell.keycloak.jpa.adapter.WebhookAdapter
+ */
 public interface WebhookModel {
     String getId();
     String getRealmId();

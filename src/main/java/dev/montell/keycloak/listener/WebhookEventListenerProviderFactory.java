@@ -16,6 +16,15 @@ import org.keycloak.timer.TimerProvider;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Factory for {@link WebhookEventListenerProvider}. This is the main entry point for the
+ * webhook provider: it initializes the {@link WebhookEventDispatcher}, registers shared
+ * components via {@link WebhookComponentHolder}, and schedules the 24-hour
+ * {@link RetentionCleanupTask}.
+ *
+ * <p>Registered as provider ID {@value #PROVIDER_ID}. Enable in Keycloak via
+ * Realm Settings &rarr; Events &rarr; Event Listeners &rarr; {@code montell-webhook}.
+ */
 @JBossLog
 @AutoService(EventListenerProviderFactory.class)
 public class WebhookEventListenerProviderFactory implements EventListenerProviderFactory {

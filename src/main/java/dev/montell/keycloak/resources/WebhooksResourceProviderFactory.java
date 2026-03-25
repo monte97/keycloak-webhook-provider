@@ -8,6 +8,10 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.services.resource.RealmResourceProvider;
 import org.keycloak.services.resource.RealmResourceProviderFactory;
 
+/**
+ * Factory that registers the webhook REST API under
+ * {@code /realms/{realm}/webhooks} (provider ID: {@value #PROVIDER_ID}).
+ */
 @AutoService(RealmResourceProviderFactory.class)
 public class WebhooksResourceProviderFactory implements RealmResourceProviderFactory {
 

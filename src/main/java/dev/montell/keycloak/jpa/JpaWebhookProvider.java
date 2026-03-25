@@ -16,6 +16,14 @@ import org.hibernate.Session;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 
+/**
+ * JPA-backed implementation of {@link WebhookProvider}. Uses Keycloak's existing
+ * {@link EntityManager} and datasource for all persistence operations.
+ *
+ * <p>Notable implementation detail: {@link #storeEvent} uses a JDBC savepoint to handle
+ * duplicate {@code KC_EVENT_ID} values idempotently. This is required because PostgreSQL
+ * marks the entire transaction as aborted after a constraint violation.
+ */
 @JBossLog
 public class JpaWebhookProvider implements WebhookProvider {
 

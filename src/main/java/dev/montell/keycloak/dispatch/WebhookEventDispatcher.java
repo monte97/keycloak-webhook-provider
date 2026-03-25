@@ -22,6 +22,18 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Central orchestrator for asynchronous webhook delivery. Manages the full lifecycle:
+ * event persistence, webhook matching, HTTP dispatch with circuit breaker protection,
+ * and exponential backoff retry scheduling.
+ *
+ * <p>Uses a {@link ScheduledExecutorService} with {@code nCPUs} threads and a cap of
+ * {@value #MAX_PENDING} pending tasks for backpressure. Events exceeding the cap are
+ * dropped with a warning log.
+ *
+ * <p>Thread safety: the dispatcher is a singleton shared across all Keycloak request
+ * threads. Enqueue is non-blocking; all I/O happens on executor threads.
+ */
 @JBossLog
 public class WebhookEventDispatcher {
 

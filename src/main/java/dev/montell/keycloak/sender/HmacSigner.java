@@ -5,6 +5,14 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
 
+/**
+ * Computes HMAC signatures for webhook payload verification. Supports HmacSHA256 (default)
+ * and HmacSHA1. The output is a lowercase hex-encoded digest suitable for use in the
+ * {@code X-Keycloak-Signature} header.
+ *
+ * <p>Consumers should verify signatures using constant-time comparison
+ * ({@code MessageDigest.isEqual} in Java, {@code hmac.compare_digest} in Python).
+ */
 public final class HmacSigner {
 
     private HmacSigner() {}

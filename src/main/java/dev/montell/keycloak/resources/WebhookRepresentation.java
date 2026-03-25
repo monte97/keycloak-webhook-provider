@@ -6,6 +6,11 @@ import dev.montell.keycloak.model.WebhookModel;
 import java.time.Instant;
 import java.util.Set;
 
+/**
+ * JSON DTO for webhook REST API requests and responses. Fields are public for Jackson
+ * serialization. The {@code secret} field is intentionally excluded from {@link #from}
+ * responses; use the dedicated {@code GET /{id}/secret} endpoint instead.
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class WebhookRepresentation {
 

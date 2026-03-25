@@ -16,6 +16,14 @@ import java.util.Set;
     @NamedQuery(name = "removeAllWebhooksByRealmId",
         query = "DELETE FROM WebhookEntity w WHERE w.realmId = :realmId")
 })
+/**
+ * JPA entity mapped to the {@code WEBHOOK} table. Stores webhook configuration,
+ * circuit breaker state, and retry parameters. Event type subscriptions are stored
+ * in the {@code WEBHOOK_EVENT_TYPE} collection table.
+ *
+ * <p>Uses ID-based {@code equals}/{@code hashCode} (not {@code @Data}) to avoid
+ * issues with JPA proxy objects and lazy-loaded collections.
+ */
 @Entity
 @Table(name = "WEBHOOK")
 public class WebhookEntity {

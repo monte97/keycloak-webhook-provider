@@ -3,6 +3,12 @@ package dev.montell.keycloak.model;
 
 import java.time.Instant;
 
+/**
+ * Domain model for a captured Keycloak event. Each event is persisted before webhook
+ * delivery is attempted, enabling resend and audit trail functionality.
+ *
+ * @see dev.montell.keycloak.jpa.adapter.WebhookEventAdapter
+ */
 public interface WebhookEventModel {
     String getId();
     String getRealmId();

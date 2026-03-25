@@ -5,6 +5,12 @@ import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 import lombok.extern.jbosslog.JBossLog;
 
+/**
+ * Matches event type strings against webhook subscription patterns. Supports wildcards
+ * ({@code *}, {@code access.*}, {@code admin.*}), exact match, and Java regex.
+ *
+ * <p>This is a stateless utility class. All methods are static.
+ */
 @JBossLog
 public final class EventPatternMatcher {
 

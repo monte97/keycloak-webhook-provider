@@ -11,6 +11,11 @@ import java.time.Instant;
     @NamedQuery(name = "getWebhookEventsByWebhookId",
         query = "SELECT DISTINCT e FROM WebhookEventEntity e JOIN WebhookSendEntity s ON s.webhookEventId = e.id WHERE s.webhookId = :webhookId ORDER BY e.createdAt DESC")
 })
+/**
+ * JPA entity mapped to the {@code WEBHOOK_EVENT} table. Stores captured Keycloak events
+ * with their full JSON payload. The {@code KC_EVENT_ID} column has a unique constraint
+ * (nullable for admin events that lack a stable ID).
+ */
 @Entity
 @Table(name = "WEBHOOK_EVENT")
 public class WebhookEventEntity {

@@ -1,6 +1,10 @@
 // src/main/java/dev/montell/keycloak/model/KeycloakEventType.java
 package dev.montell.keycloak.model;
 
+/**
+ * Coarse classification of Keycloak events into user (access) and admin categories.
+ * Used as a discriminator column in {@code WEBHOOK_EVENT} and for routing logic.
+ */
 public enum KeycloakEventType {
     USER,   // access.* events (login, register, logout…)
     ADMIN,  // admin.* events (USER-CREATE, USER-DELETE…)

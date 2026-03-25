@@ -8,6 +8,20 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
+/**
+ * Sends webhook payloads via HTTP POST with optional HMAC signature. Uses Java's built-in
+ * {@link HttpClient} with a 3-second connect timeout and 10-second read timeout.
+ *
+ * <p>Headers sent on every request:
+ * <ul>
+ *   <li>{@code Content-Type: application/json}</li>
+ *   <li>{@code X-Keycloak-Webhook-Id: <webhookId>}</li>
+ *   <li>{@code X-Keycloak-Signature: sha256=<hex>} (only when a secret is configured)</li>
+ * </ul>
+ *
+ * <p>Success is defined as any HTTP 2xx response. Network errors and non-2xx statuses
+ * are returned as failures with {@code httpStatus = -1} or the actual status code.
+ */
 @JBossLog
 public class HttpWebhookSender {
 

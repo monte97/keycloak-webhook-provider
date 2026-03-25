@@ -10,6 +10,10 @@ import org.keycloak.connections.jpa.JpaConnectionProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 
+/**
+ * Factory that creates {@link JpaWebhookProvider} instances using the {@link EntityManager}
+ * from Keycloak's JPA connection. Registered as provider ID {@value #PROVIDER_ID}.
+ */
 @AutoService(WebhookProviderFactory.class)
 public class JpaWebhookProviderFactory implements WebhookProviderFactory {
 

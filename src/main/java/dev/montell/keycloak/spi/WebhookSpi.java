@@ -6,6 +6,11 @@ import org.keycloak.provider.Provider;
 import org.keycloak.provider.ProviderFactory;
 import org.keycloak.provider.Spi;
 
+/**
+ * Declares the custom "webhookProvider" SPI to Keycloak. This registration allows
+ * {@link WebhookProvider} implementations to be discovered and injected via
+ * {@code session.getProvider(WebhookProvider.class)}.
+ */
 @AutoService(Spi.class)
 public class WebhookSpi implements Spi {
 

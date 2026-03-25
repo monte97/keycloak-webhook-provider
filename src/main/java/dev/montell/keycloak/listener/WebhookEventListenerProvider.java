@@ -11,6 +11,14 @@ import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.models.AbstractKeycloakTransaction;
 import org.keycloak.models.KeycloakSession;
 
+/**
+ * Keycloak {@link EventListenerProvider} SPI implementation that captures realm events
+ * and enqueues them for asynchronous webhook delivery.
+ *
+ * <p>Events are enriched via {@link EventEnricher} and dispatched only after the
+ * Keycloak request transaction commits (via {@code enlistAfterCommit}), ensuring
+ * consistency between Keycloak state and webhook notifications.
+ */
 @JBossLog
 public class WebhookEventListenerProvider implements EventListenerProvider {
 

@@ -4,6 +4,10 @@ package dev.montell.keycloak.jpa.entity;
 import java.util.List;
 import org.keycloak.connections.jpa.entityprovider.JpaEntityProvider;
 
+/**
+ * Registers webhook JPA entities and Liquibase changelog with Keycloak's entity provider
+ * system. This enables automatic schema creation and migration on Keycloak startup.
+ */
 public class WebhookEntityProvider implements JpaEntityProvider {
 
     static final String FACTORY_ID = "webhook-entity-provider";
