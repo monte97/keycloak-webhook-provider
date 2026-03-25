@@ -222,6 +222,8 @@ interface WebhookInput {
   algorithm?: string;
   enabled: boolean;
   eventTypes: string[];
+  retryMaxElapsedSeconds?: number;   // excluded from v1 UI form — advanced config
+  retryMaxIntervalSeconds?: number;  // excluded from v1 UI form — advanced config
 }
 ```
 
@@ -229,6 +231,20 @@ interface WebhookInput {
 interface SecretStatus {
   type: 'secret';
   configured: boolean;
+}
+
+interface CircuitState {
+  state: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+  failureCount: number;
+  lastFailureAt: string | null;
+  failureThreshold: number;
+  openSeconds: number;
+}
+
+interface TestResult {
+  httpStatus: number;
+  success: boolean;
+  durationMs: number;
 }
 ```
 
@@ -267,9 +283,10 @@ Single component, two modes controlled by props:
 **Fields:**
 - URL — `TextInput`, required, validated as valid URL on blur
 - Enabled — `Switch`, default `true` for create
-- Secret — `TextInput` type=password, optional. In edit mode shows a status indicator ("Secret configured" or "No secret") based on `GET /{id}/secret` → `{configured: true/false}`. The API does not expose the raw secret value (write-only by design). Typing a new value replaces the existing secret; leaving the field blank preserves the current value.
+- Secret — `TextInput` type=password, optional. In edit mode shows a status indicator ("Secret configured" or "No secret") based on `GET /{id}/secret` → `{configured: true/false}`. The API does not expose the raw secret value (write-only by design). Typing a new value replaces the existing secret; leaving the field blank preserves the current value. Note: `GET /{id}/secret` requires `manage-events` — if the call returns 403, the field simply shows "Secret status unknown" (graceful degradation).
+- `retryMaxElapsedSeconds` / `retryMaxIntervalSeconds` — excluded from v1 form. These are advanced retry tuning fields supported by the API but not exposed in the UI. Default server values apply. Backlog for a future "Advanced settings" accordion.
 - Algorithm — `FormSelect` with options: HmacSHA256 (default), HmacSHA1
-- Event types — `DualListSelector` or chip/tag input. Available types listed as constants (the common access.* and admin.* types). User can also type custom event types.
+- Event types — `DualListSelector` or chip/tag input. Available types listed as constants (the common access.* and admin.* types). User can also type custom event types. The server accepts arbitrary strings without validation — client-side validation is not required.
 
 **Validation:**
 - URL must be a valid HTTP/HTTPS URL
