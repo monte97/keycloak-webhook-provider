@@ -5,26 +5,37 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @NamedQueries({
-    @NamedQuery(name = "getWebhookSendsByWebhookId",
-        query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId ORDER BY s.sentAt DESC"),
-    @NamedQuery(name = "getWebhookSendsByEventId",
-        query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookEventId = :webhookEventId ORDER BY s.sentAt DESC"),
-    @NamedQuery(name = "getWebhookSendsByWebhookIdFiltered",
-        query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId AND (:success IS NULL OR s.success = :success) ORDER BY s.lastAttemptAt DESC"),
-    @NamedQuery(name = "getFailedSendsSince",
-        query = "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId AND s.success = false AND s.lastAttemptAt >= :since ORDER BY s.lastAttemptAt ASC")
+    @NamedQuery(
+            name = "getWebhookSendsByWebhookId",
+            query =
+                    "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId ORDER BY s.sentAt DESC"),
+    @NamedQuery(
+            name = "getWebhookSendsByEventId",
+            query =
+                    "SELECT s FROM WebhookSendEntity s WHERE s.webhookEventId = :webhookEventId ORDER BY s.sentAt DESC"),
+    @NamedQuery(
+            name = "getWebhookSendsByWebhookIdFiltered",
+            query =
+                    "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId AND (:success IS NULL OR s.success = :success) ORDER BY s.lastAttemptAt DESC"),
+    @NamedQuery(
+            name = "getFailedSendsSince",
+            query =
+                    "SELECT s FROM WebhookSendEntity s WHERE s.webhookId = :webhookId AND s.success = false AND s.lastAttemptAt >= :since ORDER BY s.lastAttemptAt ASC")
 })
 /**
- * JPA entity mapped to the {@code WEBHOOK_SEND} table. Tracks individual delivery attempts
- * per webhook-event pair. The composite primary key is built from {@code webhookId} and
- * {@code webhookEventId} via {@link #buildId}. Retries update the existing record in place.
+ * JPA entity mapped to the {@code WEBHOOK_SEND} table. Tracks individual delivery attempts per
+ * webhook-event pair. The composite primary key is built from {@code webhookId} and {@code
+ * webhookEventId} via {@link #buildId}. Retries update the existing record in place.
  */
 @Entity
-@Table(name = "WEBHOOK_SEND",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"WEBHOOK_ID", "WEBHOOK_EVENT_ID"}))
+@Table(
+        name = "WEBHOOK_SEND",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"WEBHOOK_ID", "WEBHOOK_EVENT_ID"}))
 public class WebhookSendEntity {
 
-    /** Builds the composite PK from its two components. Use this instead of string concatenation. */
+    /**
+     * Builds the composite PK from its two components. Use this instead of string concatenation.
+     */
     public static String buildId(String webhookId, String webhookEventId) {
         return webhookId + "-" + webhookEventId;
     }
@@ -63,24 +74,77 @@ public class WebhookSendEntity {
         if (lastAttemptAt == null) lastAttemptAt = sentAt;
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public String getWebhookId() { return webhookId; }
-    public void setWebhookId(String webhookId) { this.webhookId = webhookId; }
-    public String getWebhookEventId() { return webhookEventId; }
-    public void setWebhookEventId(String webhookEventId) { this.webhookEventId = webhookEventId; }
-    public String getEventType() { return eventType; }
-    public void setEventType(String eventType) { this.eventType = eventType; }
-    public Integer getHttpStatus() { return httpStatus; }
-    public void setHttpStatus(Integer httpStatus) { this.httpStatus = httpStatus; }
-    public int getRetries() { return retries; }
-    public void setRetries(int retries) { this.retries = retries; }
-    public boolean isSuccess() { return success; }
-    public void setSuccess(boolean success) { this.success = success; }
-    public Instant getSentAt() { return sentAt; }
-    public void setSentAt(Instant sentAt) { this.sentAt = sentAt; }
-    public Instant getLastAttemptAt() { return lastAttemptAt; }
-    public void setLastAttemptAt(Instant lastAttemptAt) { this.lastAttemptAt = lastAttemptAt; }
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getWebhookId() {
+        return webhookId;
+    }
+
+    public void setWebhookId(String webhookId) {
+        this.webhookId = webhookId;
+    }
+
+    public String getWebhookEventId() {
+        return webhookEventId;
+    }
+
+    public void setWebhookEventId(String webhookEventId) {
+        this.webhookEventId = webhookEventId;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
+    }
+
+    public Integer getHttpStatus() {
+        return httpStatus;
+    }
+
+    public void setHttpStatus(Integer httpStatus) {
+        this.httpStatus = httpStatus;
+    }
+
+    public int getRetries() {
+        return retries;
+    }
+
+    public void setRetries(int retries) {
+        this.retries = retries;
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+
+    public Instant getSentAt() {
+        return sentAt;
+    }
+
+    public void setSentAt(Instant sentAt) {
+        this.sentAt = sentAt;
+    }
+
+    public Instant getLastAttemptAt() {
+        return lastAttemptAt;
+    }
+
+    public void setLastAttemptAt(Instant lastAttemptAt) {
+        this.lastAttemptAt = lastAttemptAt;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -90,5 +154,7 @@ public class WebhookSendEntity {
     }
 
     @Override
-    public int hashCode() { return id == null ? 0 : id.hashCode(); }
+    public int hashCode() {
+        return id == null ? 0 : id.hashCode();
+    }
 }

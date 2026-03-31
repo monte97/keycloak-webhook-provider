@@ -5,6 +5,7 @@ import com.google.auto.service.AutoService;
 import dev.montell.keycloak.dispatch.WebhookComponentHolder;
 import dev.montell.keycloak.dispatch.WebhookEventDispatcher;
 import dev.montell.keycloak.retention.RetentionCleanupTask;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.jbosslog.JBossLog;
 import org.keycloak.Config.Scope;
 import org.keycloak.events.EventListenerProvider;
@@ -14,16 +15,13 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.timer.TimerProvider;
 
-import java.util.concurrent.TimeUnit;
-
 /**
- * Factory for {@link WebhookEventListenerProvider}. This is the main entry point for the
- * webhook provider: it initializes the {@link WebhookEventDispatcher}, registers shared
- * components via {@link WebhookComponentHolder}, and schedules the 24-hour
- * {@link RetentionCleanupTask}.
+ * Factory for {@link WebhookEventListenerProvider}. This is the main entry point for the webhook
+ * provider: it initializes the {@link WebhookEventDispatcher}, registers shared components via
+ * {@link WebhookComponentHolder}, and schedules the 24-hour {@link RetentionCleanupTask}.
  *
- * <p>Registered as provider ID {@value #PROVIDER_ID}. Enable in Keycloak via
- * Realm Settings &rarr; Events &rarr; Event Listeners &rarr; {@code montell-webhook}.
+ * <p>Registered as provider ID {@value #PROVIDER_ID}. Enable in Keycloak via Realm Settings &rarr;
+ * Events &rarr; Event Listeners &rarr; {@code montell-webhook}.
  */
 @JBossLog
 @AutoService(EventListenerProviderFactory.class)
@@ -34,7 +32,9 @@ public class WebhookEventListenerProviderFactory implements EventListenerProvide
     private WebhookEventDispatcher dispatcher;
 
     @Override
-    public String getId() { return PROVIDER_ID; }
+    public String getId() {
+        return PROVIDER_ID;
+    }
 
     @Override
     public EventListenerProvider create(KeycloakSession session) {
@@ -50,17 +50,19 @@ public class WebhookEventListenerProviderFactory implements EventListenerProvide
         WebhookComponentHolder.init(dispatcher.getHttpSender(), dispatcher.getRegistry());
 
         // Schedule retention cleanup every 24h
-        KeycloakModelUtils.runJobInTransaction(factory, session -> {
-            TimerProvider timer = session.getProvider(TimerProvider.class);
-            if (timer != null) {
-                timer.scheduleTask(
-                    new RetentionCleanupTask(),
-                    TimeUnit.HOURS.toMillis(24),
-                    "montell-webhook-retention-cleanup");
-            } else {
-                log.warn("TimerProvider not available — retention cleanup not scheduled");
-            }
-        });
+        KeycloakModelUtils.runJobInTransaction(
+                factory,
+                session -> {
+                    TimerProvider timer = session.getProvider(TimerProvider.class);
+                    if (timer != null) {
+                        timer.scheduleTask(
+                                new RetentionCleanupTask(),
+                                TimeUnit.HOURS.toMillis(24),
+                                "montell-webhook-retention-cleanup");
+                    } else {
+                        log.warn("TimerProvider not available — retention cleanup not scheduled");
+                    }
+                });
 
         log.infof("WebhookEventListenerProviderFactory initialized (provider-id: %s)", PROVIDER_ID);
     }

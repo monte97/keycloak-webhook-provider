@@ -7,8 +7,7 @@ import dev.montell.keycloak.model.WebhookEventModel;
 import java.time.Instant;
 
 /**
- * Adapts a {@link WebhookEventEntity} JPA entity to the {@link WebhookEventModel}
- * domain interface.
+ * Adapts a {@link WebhookEventEntity} JPA entity to the {@link WebhookEventModel} domain interface.
  */
 public class WebhookEventAdapter implements WebhookEventModel {
 
@@ -18,12 +17,37 @@ public class WebhookEventAdapter implements WebhookEventModel {
         this.entity = entity;
     }
 
-    public WebhookEventEntity getEntity() { return entity; }
+    public WebhookEventEntity getEntity() {
+        return entity;
+    }
 
-    @Override public String getId() { return entity.getId(); }
-    @Override public String getRealmId() { return entity.getRealmId(); }
-    @Override public KeycloakEventType getEventType() { return entity.getEventType(); }
-    @Override public String getKcEventId() { return entity.getKcEventId(); }
-    @Override public String getEventObject() { return entity.getEventObject(); }
-    @Override public Instant getCreatedAt() { return entity.getCreatedAt(); }
+    @Override
+    public String getId() {
+        return entity.getId();
+    }
+
+    @Override
+    public String getRealmId() {
+        return entity.getRealmId();
+    }
+
+    @Override
+    public KeycloakEventType getEventType() {
+        return entity.getEventType();
+    }
+
+    @Override
+    public String getKcEventId() {
+        return entity.getKcEventId();
+    }
+
+    @Override
+    public String getEventObject() {
+        return entity.getEventObject();
+    }
+
+    @Override
+    public Instant getCreatedAt() {
+        return entity.getCreatedAt();
+    }
 }

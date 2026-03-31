@@ -6,8 +6,7 @@ import dev.montell.keycloak.model.WebhookSendModel;
 import java.time.Instant;
 
 /**
- * Adapts a {@link WebhookSendEntity} JPA entity to the {@link WebhookSendModel}
- * domain interface.
+ * Adapts a {@link WebhookSendEntity} JPA entity to the {@link WebhookSendModel} domain interface.
  */
 public class WebhookSendAdapter implements WebhookSendModel {
 
@@ -17,15 +16,52 @@ public class WebhookSendAdapter implements WebhookSendModel {
         this.entity = entity;
     }
 
-    public WebhookSendEntity getEntity() { return entity; }
+    public WebhookSendEntity getEntity() {
+        return entity;
+    }
 
-    @Override public String getId() { return entity.getId(); }
-    @Override public String getWebhookId() { return entity.getWebhookId(); }
-    @Override public String getWebhookEventId() { return entity.getWebhookEventId(); }
-    @Override public String getEventType() { return entity.getEventType(); }
-    @Override public Integer getHttpStatus() { return entity.getHttpStatus(); }
-    @Override public boolean isSuccess() { return entity.isSuccess(); }
-    @Override public int getRetries() { return entity.getRetries(); }
-    @Override public Instant getSentAt() { return entity.getSentAt(); }
-    @Override public Instant getLastAttemptAt() { return entity.getLastAttemptAt(); }
+    @Override
+    public String getId() {
+        return entity.getId();
+    }
+
+    @Override
+    public String getWebhookId() {
+        return entity.getWebhookId();
+    }
+
+    @Override
+    public String getWebhookEventId() {
+        return entity.getWebhookEventId();
+    }
+
+    @Override
+    public String getEventType() {
+        return entity.getEventType();
+    }
+
+    @Override
+    public Integer getHttpStatus() {
+        return entity.getHttpStatus();
+    }
+
+    @Override
+    public boolean isSuccess() {
+        return entity.isSuccess();
+    }
+
+    @Override
+    public int getRetries() {
+        return entity.getRetries();
+    }
+
+    @Override
+    public Instant getSentAt() {
+        return entity.getSentAt();
+    }
+
+    @Override
+    public Instant getLastAttemptAt() {
+        return entity.getLastAttemptAt();
+    }
 }

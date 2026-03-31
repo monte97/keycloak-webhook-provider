@@ -1,22 +1,21 @@
 package dev.montell.keycloak.unit;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import dev.montell.keycloak.resources.WebhooksResource;
 import jakarta.ws.rs.core.Response;
+import java.net.URI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.models.ClientModel;
-import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakContext;
+import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakUriInfo;
 import org.keycloak.models.RealmModel;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.net.URI;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class WebhooksResourceUiTest {
@@ -48,7 +47,9 @@ class WebhooksResourceUiTest {
         String body = (String) response.getEntity();
         assertTrue(body.contains("window.__KC_REALM__ = \"test-realm\""), "Should contain realm");
         assertTrue(body.contains("window.__KC_BASE__ = \"/auth\""), "Should contain base path");
-        assertTrue(body.contains("<base href=\"/auth/realms/test-realm/webhooks/ui/\">"), "Should contain base tag");
+        assertTrue(
+                body.contains("<base href=\"/auth/realms/test-realm/webhooks/ui/\">"),
+                "Should contain base tag");
     }
 
     @Test

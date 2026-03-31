@@ -12,22 +12,22 @@ import org.keycloak.models.AbstractKeycloakTransaction;
 import org.keycloak.models.KeycloakSession;
 
 /**
- * Keycloak {@link EventListenerProvider} SPI implementation that captures realm events
- * and enqueues them for asynchronous webhook delivery.
+ * Keycloak {@link EventListenerProvider} SPI implementation that captures realm events and enqueues
+ * them for asynchronous webhook delivery.
  *
- * <p>Events are enriched via {@link EventEnricher} and dispatched only after the
- * Keycloak request transaction commits (via {@code enlistAfterCommit}), ensuring
- * consistency between Keycloak state and webhook notifications.
+ * <p>Events are enriched via {@link EventEnricher} and dispatched only after the Keycloak request
+ * transaction commits (via {@code enlistAfterCommit}), ensuring consistency between Keycloak state
+ * and webhook notifications.
  */
 @JBossLog
 public class WebhookEventListenerProvider implements EventListenerProvider {
 
-    private final KeycloakSession       session;
+    private final KeycloakSession session;
     private final WebhookEventDispatcher dispatcher;
 
-    public WebhookEventListenerProvider(KeycloakSession session,
-                                         WebhookEventDispatcher dispatcher) {
-        this.session    = session;
+    public WebhookEventListenerProvider(
+            KeycloakSession session, WebhookEventDispatcher dispatcher) {
+        this.session = session;
         this.dispatcher = dispatcher;
     }
 
@@ -35,7 +35,7 @@ public class WebhookEventListenerProvider implements EventListenerProvider {
     public void onEvent(Event event) {
         if (event.getType() == null) return;
         String kcEventId = event.getId();
-        String realmId   = event.getRealmId();
+        String realmId = event.getRealmId();
         WebhookPayload payload = EventEnricher.enrich(event, session);
         enlistAfterCommit(() -> dispatcher.enqueue(payload, kcEventId, realmId));
     }
@@ -54,10 +54,18 @@ public class WebhookEventListenerProvider implements EventListenerProvider {
 
     /** Enqueues {@code task} to run only if the current Keycloak transaction commits. */
     private void enlistAfterCommit(Runnable task) {
-        session.getTransactionManager().enlistAfterCompletion(
-            new AbstractKeycloakTransaction() {
-                @Override protected void commitImpl()   { task.run(); }
-                @Override protected void rollbackImpl() { /* no-op */ }
-            });
+        session.getTransactionManager()
+                .enlistAfterCompletion(
+                        new AbstractKeycloakTransaction() {
+                            @Override
+                            protected void commitImpl() {
+                                task.run();
+                            }
+
+                            @Override
+                            protected void rollbackImpl() {
+                                /* no-op */
+                            }
+                        });
     }
 }

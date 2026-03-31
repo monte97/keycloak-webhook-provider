@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.montell.keycloak.event.WebhookPayload;
+import dev.montell.keycloak.model.WebhookEventModel;
 import dev.montell.keycloak.model.WebhookModel;
+import dev.montell.keycloak.model.WebhookSendModel;
 import dev.montell.keycloak.spi.WebhookProvider;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
@@ -15,8 +17,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.jbosslog.JBossLog;
-import dev.montell.keycloak.model.WebhookEventModel;
-import dev.montell.keycloak.model.WebhookSendModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -28,14 +28,15 @@ import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluato
 import org.keycloak.services.resources.admin.permissions.AdminPermissions;
 
 /**
- * JAX-RS resource providing 16 REST endpoints for webhook management, event/send history,
- * circuit breaker control, and delivery operations. Mounted at
- * {@code /realms/{realm}/webhooks} via {@link WebhooksResourceProviderFactory}.
+ * JAX-RS resource providing 16 REST endpoints for webhook management, event/send history, circuit
+ * breaker control, and delivery operations. Mounted at {@code /realms/{realm}/webhooks} via {@link
+ * WebhooksResourceProviderFactory}.
  *
  * <p>Authorization uses Keycloak's {@link AdminPermissionEvaluator} with lazy initialization:
+ *
  * <ul>
- *   <li>{@code manage-realm} role: create, update, delete webhooks; get secret; test/resend</li>
- *   <li>{@code view-realm} role: read webhooks, events, sends, circuit state</li>
+ *   <li>{@code manage-realm} role: create, update, delete webhooks; get secret; test/resend
+ *   <li>{@code view-realm} role: read webhooks, events, sends, circuit state
  * </ul>
  */
 @JBossLog
@@ -43,12 +44,13 @@ import org.keycloak.services.resources.admin.permissions.AdminPermissions;
 @Consumes(MediaType.APPLICATION_JSON)
 public class WebhooksResource {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-        .registerModule(new JavaTimeModule())
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private static final ObjectMapper MAPPER =
+            new ObjectMapper()
+                    .registerModule(new JavaTimeModule())
+                    .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private final KeycloakSession session;
-    private final RealmModel      realm;
+    private final RealmModel realm;
 
     private AuthenticationManager.AuthResult cachedAuthResult;
     private AdminPermissionEvaluator permissions;
@@ -56,7 +58,7 @@ public class WebhooksResource {
 
     public WebhooksResource(KeycloakSession session, RealmModel realm) {
         this.session = session;
-        this.realm   = realm;
+        this.realm = realm;
     }
 
     private WebhookProvider provider() {
@@ -66,16 +68,18 @@ public class WebhooksResource {
     // --- GET / ---
     @GET
     public List<WebhookRepresentation> listWebhooks(
-            @QueryParam("first") @DefaultValue("0")   Integer first,
-            @QueryParam("max")   @DefaultValue("100") Integer max) {
+            @QueryParam("first") @DefaultValue("0") Integer first,
+            @QueryParam("max") @DefaultValue("100") Integer max) {
         requireViewEvents();
-        return provider().getWebhooksStream(realm, first, max)
-            .map(WebhookRepresentation::from)
-            .toList();
+        return provider()
+                .getWebhooksStream(realm, first, max)
+                .map(WebhookRepresentation::from)
+                .toList();
     }
 
     // --- GET /count ---
-    @GET @Path("count")
+    @GET
+    @Path("count")
     public Response countWebhooks() {
         requireViewEvents();
         return Response.ok(provider().getWebhooksCount(realm)).build();
@@ -95,7 +99,7 @@ public class WebhooksResource {
         } catch (Exception e) {
             return Response.status(400).entity("invalid url").build();
         }
-        var user   = authResult().getUser();
+        var user = authResult().getUser();
         WebhookModel w = provider().createWebhook(realm, rep.url, user);
         applyRepresentation(w, rep);
         URI location = uriInfo.getAbsolutePathBuilder().path(w.getId()).build();
@@ -103,7 +107,8 @@ public class WebhooksResource {
     }
 
     // --- GET /{id} ---
-    @GET @Path("{id}")
+    @GET
+    @Path("{id}")
     public WebhookRepresentation getWebhook(@PathParam("id") String id) {
         requireViewEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
@@ -112,48 +117,56 @@ public class WebhooksResource {
     }
 
     // --- GET /{id}/secret ---
-    @GET @Path("{id}/secret")
+    @GET
+    @Path("{id}/secret")
     public Response getSecret(@PathParam("id") String id) {
         requireManageEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException();
-        return Response.ok(java.util.Map.of(
-            "type", "secret",
-            "configured", w.getSecret() != null
-        )).build();
+        return Response.ok(java.util.Map.of("type", "secret", "configured", w.getSecret() != null))
+                .build();
     }
 
     // --- GET /{id}/events ---
-    @GET @Path("{id}/events")
-    public Response getEvents(@PathParam("id") String id,
-            @QueryParam("first") @DefaultValue("0")  Integer first,
-            @QueryParam("max")   @DefaultValue("20") Integer max) {
+    @GET
+    @Path("{id}/events")
+    public Response getEvents(
+            @PathParam("id") String id,
+            @QueryParam("first") @DefaultValue("0") Integer first,
+            @QueryParam("max") @DefaultValue("20") Integer max) {
         requireViewEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException("webhook not found: " + id);
-        var events = provider().getEventsByWebhookId(realm, id, first, max)
-            .map(this::toEventMap)
-            .toList();
+        var events =
+                provider()
+                        .getEventsByWebhookId(realm, id, first, max)
+                        .map(this::toEventMap)
+                        .toList();
         return Response.ok(events).build();
     }
 
     // --- GET /{id}/sends ---
-    @GET @Path("{id}/sends")
-    public Response getSends(@PathParam("id") String id,
-            @QueryParam("first")   @DefaultValue("0")  Integer first,
-            @QueryParam("max")     @DefaultValue("20") Integer max,
+    @GET
+    @Path("{id}/sends")
+    public Response getSends(
+            @PathParam("id") String id,
+            @QueryParam("first") @DefaultValue("0") Integer first,
+            @QueryParam("max") @DefaultValue("20") Integer max,
             @QueryParam("success") Boolean success) {
         requireViewEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException("webhook not found: " + id);
-        var sends = provider().getSendsByWebhook(realm, id, first, max, success)
-            .map(this::toSendMap)
-            .toList();
+        var sends =
+                provider()
+                        .getSendsByWebhook(realm, id, first, max, success)
+                        .map(this::toSendMap)
+                        .toList();
         return Response.ok(sends).build();
     }
 
     // --- GET /events/{type}/{kid} ---
-    @GET @Path("events/{type}/{kid}")
+    @GET
+    @Path("events/{type}/{kid}")
     public Response getEventByKcId(@PathParam("type") String type, @PathParam("kid") String kid) {
         requireViewEvents();
         if (!"USER".equals(type) && !"ADMIN".equals(type))
@@ -166,7 +179,8 @@ public class WebhooksResource {
     }
 
     // --- GET /sends/{type}/{kid} ---
-    @GET @Path("sends/{type}/{kid}")
+    @GET
+    @Path("sends/{type}/{kid}")
     public Response getSendsByKcId(@PathParam("type") String type, @PathParam("kid") String kid) {
         requireViewEvents();
         if (!"USER".equals(type) && !"ADMIN".equals(type))
@@ -175,31 +189,33 @@ public class WebhooksResource {
         if (event == null) throw new NotFoundException("event not found");
         if (!event.getEventType().name().equals(type))
             throw new NotFoundException("event not found");
-        var sends = provider().getSendsByEvent(realm, event.getId())
-            .map(this::toSendMap)
-            .toList();
+        var sends = provider().getSendsByEvent(realm, event.getId()).map(this::toSendMap).toList();
         return Response.ok(sends).build();
     }
 
     // --- GET /{id}/circuit ---
-    @GET @Path("{id}/circuit")
+    @GET
+    @Path("{id}/circuit")
     public Response getCircuit(@PathParam("id") String id) {
         requireViewEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException("webhook not found: " + id);
         int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", 5);
-        int openSeconds      = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
+        int openSeconds = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
         var body = new java.util.LinkedHashMap<String, Object>();
         body.put("state", w.getCircuitState());
         body.put("failureCount", w.getFailureCount());
-        body.put("lastFailureAt", w.getLastFailureAt() != null ? w.getLastFailureAt().toString() : null);
+        body.put(
+                "lastFailureAt",
+                w.getLastFailureAt() != null ? w.getLastFailureAt().toString() : null);
         body.put("failureThreshold", failureThreshold);
         body.put("openSeconds", openSeconds);
         return Response.ok(body).build();
     }
 
     // --- POST /{id}/circuit/reset ---
-    @POST @Path("{id}/circuit/reset")
+    @POST
+    @Path("{id}/circuit/reset")
     public Response resetCircuit(@PathParam("id") String id) {
         requireManageEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
@@ -213,7 +229,8 @@ public class WebhooksResource {
     }
 
     // --- POST /{id}/test ---
-    @POST @Path("{id}/test")
+    @POST
+    @Path("{id}/test")
     public Response testWebhook(@PathParam("id") String id) {
         requireManageEvents();
         var sender = dev.montell.keycloak.dispatch.WebhookComponentHolder.httpSender();
@@ -221,9 +238,15 @@ public class WebhooksResource {
             return Response.status(503).entity("Webhook sender not initialized").build();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException("webhook not found: " + id);
-        var testEvent = new WebhookPayload.AccessEvent(
-            UUID.randomUUID().toString(), "test.PING", realm.getId(),
-            null, null, Instant.now(), Collections.emptyMap());
+        var testEvent =
+                new WebhookPayload.AccessEvent(
+                        UUID.randomUUID().toString(),
+                        "test.PING",
+                        realm.getId(),
+                        null,
+                        null,
+                        Instant.now(),
+                        Collections.emptyMap());
         String payload;
         try {
             payload = MAPPER.writeValueAsString(testEvent);
@@ -231,15 +254,17 @@ public class WebhooksResource {
             return Response.serverError().entity("Failed to serialize test payload").build();
         }
         var result = sender.send(w.getUrl(), payload, w.getId(), w.getSecret(), w.getAlgorithm());
-        return Response.ok(java.util.Map.of(
-            "httpStatus", result.httpStatus(),
-            "success", result.success(),
-            "durationMs", result.durationMs()
-        )).build();
+        return Response.ok(
+                        java.util.Map.of(
+                                "httpStatus", result.httpStatus(),
+                                "success", result.success(),
+                                "durationMs", result.durationMs()))
+                .build();
     }
 
     // --- POST /{id}/sends/{sid}/resend ---
-    @POST @Path("{id}/sends/{sid}/resend")
+    @POST
+    @Path("{id}/sends/{sid}/resend")
     public Response resendSingle(@PathParam("id") String id, @PathParam("sid") String sid) {
         requireManageEvents();
         var sender = dev.montell.keycloak.dispatch.WebhookComponentHolder.httpSender();
@@ -255,40 +280,56 @@ public class WebhooksResource {
 
         // Svix-style: respect circuit breaker
         int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", 5);
-        int openSeconds      = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
+        int openSeconds = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
         var cb = registryHolder.get(w, failureThreshold, openSeconds);
         if (!cb.allowRequest())
-            return Response.status(409).entity("Circuit breaker is OPEN — reset it first via POST /{id}/circuit/reset").build();
+            return Response.status(409)
+                    .entity("Circuit breaker is OPEN — reset it first via POST /{id}/circuit/reset")
+                    .build();
 
         // Load original event payload
         var event = provider().getEventById(realm, send.getWebhookEventId());
-        if (event == null)
-            return Response.status(404).entity("Original event not found").build();
+        if (event == null) return Response.status(404).entity("Original event not found").build();
 
         // Send synchronously
-        var result = sender.send(w.getUrl(), event.getEventObject(), w.getId(), w.getSecret(), w.getAlgorithm());
+        var result =
+                sender.send(
+                        w.getUrl(),
+                        event.getEventObject(),
+                        w.getId(),
+                        w.getSecret(),
+                        w.getAlgorithm());
 
         // Update CB state
         if (result.success()) cb.onSuccess();
-        else                  cb.onFailure();
+        else cb.onFailure();
         cb.applyTo(w);
         registryHolder.invalidate(id);
 
         // Update send record
-        provider().storeSend(realm, id, send.getWebhookEventId(),
-            send.getEventType(), result.httpStatus(), result.success(), send.getRetries() + 1);
+        provider()
+                .storeSend(
+                        realm,
+                        id,
+                        send.getWebhookEventId(),
+                        send.getEventType(),
+                        result.httpStatus(),
+                        result.success(),
+                        send.getRetries() + 1);
 
-        return Response.ok(java.util.Map.of(
-            "httpStatus", result.httpStatus(),
-            "success", result.success(),
-            "durationMs", result.durationMs()
-        )).build();
+        return Response.ok(
+                        java.util.Map.of(
+                                "httpStatus", result.httpStatus(),
+                                "success", result.success(),
+                                "durationMs", result.durationMs()))
+                .build();
     }
 
     // --- POST /{id}/resend-failed ---
-    @POST @Path("{id}/resend-failed")
-    public Response resendFailed(@PathParam("id") String id,
-            @QueryParam("hours") @DefaultValue("24") int hours) {
+    @POST
+    @Path("{id}/resend-failed")
+    public Response resendFailed(
+            @PathParam("id") String id, @QueryParam("hours") @DefaultValue("24") int hours) {
         requireManageEvents();
         var sender = dev.montell.keycloak.dispatch.WebhookComponentHolder.httpSender();
         var registryHolder = dev.montell.keycloak.dispatch.WebhookComponentHolder.registry();
@@ -299,7 +340,7 @@ public class WebhooksResource {
         if (w == null) throw new NotFoundException("webhook not found: " + id);
 
         int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", 5);
-        int openSeconds      = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
+        int openSeconds = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
         var cb = registryHolder.get(w, failureThreshold, openSeconds);
         if (!cb.allowRequest())
             return Response.status(409).entity("Circuit breaker is OPEN — reset it first").build();
@@ -319,24 +360,39 @@ public class WebhooksResource {
             var event = provider().getEventById(realm, send.getWebhookEventId());
             if (event == null) continue;
 
-            var result = sender.send(w.getUrl(), event.getEventObject(), w.getId(), w.getSecret(), w.getAlgorithm());
+            var result =
+                    sender.send(
+                            w.getUrl(),
+                            event.getEventObject(),
+                            w.getId(),
+                            w.getSecret(),
+                            w.getAlgorithm());
             if (result.success()) cb.onSuccess();
-            else                  cb.onFailure();
+            else cb.onFailure();
             cb.applyTo(w);
             registryHolder.invalidate(id);
 
-            provider().storeSend(realm, id, send.getWebhookEventId(),
-                send.getEventType(), result.httpStatus(), result.success(), send.getRetries() + 1);
+            provider()
+                    .storeSend(
+                            realm,
+                            id,
+                            send.getWebhookEventId(),
+                            send.getEventType(),
+                            result.httpStatus(),
+                            result.success(),
+                            send.getRetries() + 1);
 
             if (result.success()) resent++;
-            else                  failed++;
+            else failed++;
         }
 
-        return Response.ok(java.util.Map.of("resent", resent, "failed", failed, "skipped", skipped)).build();
+        return Response.ok(java.util.Map.of("resent", resent, "failed", failed, "skipped", skipped))
+                .build();
     }
 
     // --- PUT /{id} ---
-    @PUT @Path("{id}")
+    @PUT
+    @Path("{id}")
     public Response updateWebhook(@PathParam("id") String id, WebhookRepresentation rep) {
         requireManageEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
@@ -356,7 +412,8 @@ public class WebhooksResource {
     }
 
     // --- DELETE /{id} ---
-    @DELETE @Path("{id}")
+    @DELETE
+    @Path("{id}")
     public Response deleteWebhook(@PathParam("id") String id) {
         requireManageEvents();
         boolean removed = provider().removeWebhook(realm, id);
@@ -379,7 +436,8 @@ public class WebhooksResource {
         log.infof("Auto-created '%s' OIDC client in realm '%s'", UI_CLIENT_ID, realm.getName());
     }
 
-    @GET @Path("ui")
+    @GET
+    @Path("ui")
     @Produces("text/html")
     public Response serveUi() {
         ensureUiClient();
@@ -391,17 +449,24 @@ public class WebhooksResource {
             // Inject <base> so relative asset paths (./assets/) resolve to ui/assets/
             String uiBase = basePath + "/realms/" + realm.getName() + "/webhooks/ui/";
             html = html.replace("<head>", "<head><base href=\"" + uiBase + "\">");
-            html = html.replace("{{REALM}}", realm.getName())
-                       .replace("{{BASE_PATH}}", basePath);
-            return Response.ok(html).type("text/html")
-                .header("Cache-Control", "no-cache").build();
+            html = html.replace("{{REALM}}", realm.getName()).replace("{{BASE_PATH}}", basePath);
+            return Response.ok(html).type("text/html").header("Cache-Control", "no-cache").build();
         } catch (java.io.IOException e) {
             return Response.serverError().entity("Failed to read UI").build();
         }
     }
 
-    @GET @Path("ui/{path: .+}")
-    @Produces({"application/javascript", "text/css", "text/html", "image/svg+xml", "font/woff2", "application/json", "application/octet-stream"})
+    @GET
+    @Path("ui/{path: .+}")
+    @Produces({
+        "application/javascript",
+        "text/css",
+        "text/html",
+        "image/svg+xml",
+        "font/woff2",
+        "application/json",
+        "application/octet-stream"
+    })
     public Response serveUiAsset(@PathParam("path") String path) {
         if (path.contains("..") || path.contains("\0")) {
             return Response.status(400).entity("Invalid path").build();
@@ -410,18 +475,19 @@ public class WebhooksResource {
             if (is == null) return Response.status(404).entity("Not found").build();
             byte[] bytes = is.readAllBytes();
             String contentType = guessContentType(path);
-            String cacheControl = path.startsWith("assets/")
-                ? "public, max-age=31536000, immutable"
-                : "no-cache";
-            return Response.ok(bytes).type(contentType)
-                .header("Cache-Control", cacheControl).build();
+            String cacheControl =
+                    path.startsWith("assets/") ? "public, max-age=31536000, immutable" : "no-cache";
+            return Response.ok(bytes)
+                    .type(contentType)
+                    .header("Cache-Control", cacheControl)
+                    .build();
         } catch (java.io.IOException e) {
             return Response.serverError().entity("Failed to read asset").build();
         }
     }
 
     private String guessContentType(String path) {
-        if (path.endsWith(".js"))  return "application/javascript";
+        if (path.endsWith(".js")) return "application/javascript";
         if (path.endsWith(".css")) return "text/css";
         if (path.endsWith(".svg")) return "image/svg+xml";
         if (path.endsWith(".html")) return "text/html";
@@ -459,19 +525,25 @@ public class WebhooksResource {
 
     // --- helpers ---
     private void applyRepresentation(WebhookModel w, WebhookRepresentation rep) {
-        if (rep.url        != null)  w.setUrl(rep.url);
-        if (rep.secret     != null)  w.setSecret(rep.secret);
-        if (rep.algorithm  != null)  w.setAlgorithm(rep.algorithm);
-        if (rep.enabled    != null)  w.setEnabled(rep.enabled);
-        if (rep.eventTypes != null)  w.setEventTypes(rep.eventTypes);
-        if (rep.retryMaxElapsedSeconds  != null) w.setRetryMaxElapsedSeconds(rep.retryMaxElapsedSeconds);
-        if (rep.retryMaxIntervalSeconds != null) w.setRetryMaxIntervalSeconds(rep.retryMaxIntervalSeconds);
+        if (rep.url != null) w.setUrl(rep.url);
+        if (rep.secret != null) w.setSecret(rep.secret);
+        if (rep.algorithm != null) w.setAlgorithm(rep.algorithm);
+        if (rep.enabled != null) w.setEnabled(rep.enabled);
+        if (rep.eventTypes != null) w.setEventTypes(rep.eventTypes);
+        if (rep.retryMaxElapsedSeconds != null)
+            w.setRetryMaxElapsedSeconds(rep.retryMaxElapsedSeconds);
+        if (rep.retryMaxIntervalSeconds != null)
+            w.setRetryMaxIntervalSeconds(rep.retryMaxIntervalSeconds);
     }
 
     private int getRealmIntAttribute(String key, int defaultValue) {
         String val = realm.getAttribute(key);
         if (val == null) return defaultValue;
-        try { return Integer.parseInt(val); } catch (NumberFormatException e) { return defaultValue; }
+        try {
+            return Integer.parseInt(val);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     protected AuthenticationManager.AuthResult authResult() {
@@ -481,8 +553,8 @@ public class WebhooksResource {
 
     private void initAuth() {
         if (authInitialized) return;
-        cachedAuthResult = new AppAuthManager.BearerTokenAuthenticator(session)
-            .setRealm(realm).authenticate();
+        cachedAuthResult =
+                new AppAuthManager.BearerTokenAuthenticator(session).setRealm(realm).authenticate();
         if (cachedAuthResult == null) {
             throw new NotAuthorizedException("Bearer");
         }

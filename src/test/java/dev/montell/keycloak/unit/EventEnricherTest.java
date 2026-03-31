@@ -1,8 +1,11 @@
 // src/test/java/dev/montell/keycloak/unit/EventEnricherTest.java
 package dev.montell.keycloak.unit;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import dev.montell.keycloak.event.EventEnricher;
 import dev.montell.keycloak.event.WebhookPayload;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.events.Event;
@@ -11,10 +14,6 @@ import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.events.admin.OperationType;
 import org.keycloak.events.admin.ResourceType;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class EventEnricherTest {
@@ -45,7 +44,7 @@ class EventEnricherTest {
 
         WebhookPayload.AccessEvent result = EventEnricher.enrich(event, null);
 
-        assertEquals("user-42",    result.userId());
+        assertEquals("user-42", result.userId());
         assertEquals("session-99", result.sessionId());
     }
 
@@ -87,9 +86,9 @@ class EventEnricherTest {
 
         WebhookPayload.AdminEvent result = EventEnricher.enrich(event, null);
 
-        assertEquals("admin.USER-CREATE",  result.type());
-        assertEquals("CREATE",             result.operationType());
-        assertEquals("users/abc",          result.resourcePath());
+        assertEquals("admin.USER-CREATE", result.type());
+        assertEquals("CREATE", result.operationType());
+        assertEquals("users/abc", result.resourcePath());
         assertNull(result.authDetails());
         assertNull(result.representation());
     }

@@ -5,8 +5,8 @@ import dev.montell.keycloak.model.WebhookModel;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * In-memory cache of {@link CircuitBreaker} instances per webhook with 5-second TTL.
- * Avoids repeated DB reads in burst scenarios. State is eventually consistent (spec).
+ * In-memory cache of {@link CircuitBreaker} instances per webhook with 5-second TTL. Avoids
+ * repeated DB reads in burst scenarios. State is eventually consistent (spec).
  */
 public class CircuitBreakerRegistry {
 
@@ -20,7 +20,7 @@ public class CircuitBreakerRegistry {
 
     public CircuitBreakerRegistry(int failureThreshold, int openSeconds) {
         this.failureThreshold = failureThreshold;
-        this.openSeconds      = openSeconds;
+        this.openSeconds = openSeconds;
     }
 
     /** Returns the cached CircuitBreaker or loads a fresh one from the WebhookModel. */
@@ -29,8 +29,8 @@ public class CircuitBreakerRegistry {
     }
 
     /**
-     * Returns the cached CircuitBreaker or loads a fresh one using the provided thresholds.
-     * Use this overload when realm-level attributes override the registry defaults.
+     * Returns the cached CircuitBreaker or loads a fresh one using the provided thresholds. Use
+     * this overload when realm-level attributes override the registry defaults.
      */
     public CircuitBreaker get(WebhookModel webhook, int failureThreshold, int openSeconds) {
         CachedEntry entry = cache.get(webhook.getId());

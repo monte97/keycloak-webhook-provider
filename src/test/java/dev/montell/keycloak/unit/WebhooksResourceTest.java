@@ -1,6 +1,10 @@
 // src/test/java/dev/montell/keycloak/unit/WebhooksResourceTest.java
 package dev.montell.keycloak.unit;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import dev.montell.keycloak.dispatch.CircuitBreaker;
 import dev.montell.keycloak.dispatch.CircuitBreakerRegistry;
 import dev.montell.keycloak.dispatch.WebhookComponentHolder;
@@ -14,6 +18,10 @@ import dev.montell.keycloak.sender.HttpWebhookSender;
 import dev.montell.keycloak.spi.WebhookProvider;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,15 +32,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -45,13 +44,19 @@ class WebhooksResourceTest {
         }
 
         @Override
-        protected void requireViewEvents() { /* no-op */ }
+        protected void requireViewEvents() {
+            /* no-op */
+        }
 
         @Override
-        protected void requireManageEvents() { /* no-op */ }
+        protected void requireManageEvents() {
+            /* no-op */
+        }
 
         @Override
-        protected AuthenticationManager.AuthResult authResult() { return null; }
+        protected AuthenticationManager.AuthResult authResult() {
+            return null;
+        }
     }
 
     @Mock KeycloakSession session;
@@ -225,7 +230,7 @@ class WebhooksResourceTest {
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         when(sender.send(anyString(), payloadCaptor.capture(), eq("wh-1"), isNull(), isNull()))
-            .thenReturn(new HttpSendResult(200, true, 42L));
+                .thenReturn(new HttpSendResult(200, true, 42L));
 
         Response resp = resource.testWebhook("wh-1");
 
@@ -238,15 +243,19 @@ class WebhooksResourceTest {
 
         // Verify payload is valid JSON with AccessEvent structure
         String payload = payloadCaptor.getValue();
-        assertDoesNotThrow(() -> {
-            var mapper = new com.fasterxml.jackson.databind.ObjectMapper()
-                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-            var node = mapper.readTree(payload);
-            assertEquals("test.PING", node.get("type").asText());
-            assertEquals("test-realm", node.get("realmId").asText());
-            assertNotNull(node.get("uid"));
-            assertNotNull(node.get("occurredAt"));
-        });
+        assertDoesNotThrow(
+                () -> {
+                    var mapper =
+                            new com.fasterxml.jackson.databind.ObjectMapper()
+                                    .registerModule(
+                                            new com.fasterxml.jackson.datatype.jsr310
+                                                    .JavaTimeModule());
+                    var node = mapper.readTree(payload);
+                    assertEquals("test.PING", node.get("type").asText());
+                    assertEquals("test-realm", node.get("realmId").asText());
+                    assertNotNull(node.get("uid"));
+                    assertNotNull(node.get("occurredAt"));
+                });
     }
 
     @Test
@@ -285,7 +294,7 @@ class WebhooksResourceTest {
         WebhookComponentHolder.init(sender, realRegistry);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
-            .thenReturn(new HttpSendResult(200, true, 10L));
+                .thenReturn(new HttpSendResult(200, true, 10L));
 
         Response resp = resource.resendSingle("wh-1", "send-1");
 
@@ -352,12 +361,12 @@ class WebhooksResourceTest {
         WebhookEventModel e2 = mockEvent("ev-2", "wh-1");
 
         when(provider.getFailedSendsSince(eq(realm), eq("wh-1"), any(Instant.class)))
-            .thenReturn(Stream.of(s1, s2));
+                .thenReturn(Stream.of(s1, s2));
         when(provider.getEventById(realm, "ev-1")).thenReturn(e1);
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
-            .thenReturn(new HttpSendResult(200, true, 5L));
+                .thenReturn(new HttpSendResult(200, true, 5L));
 
         Response resp = resource.resendFailed("wh-1", 24);
 
@@ -487,12 +496,12 @@ class WebhooksResourceTest {
         WebhookEventModel e2 = mockEvent("ev-2", "wh-1");
 
         when(provider.getFailedSendsSince(eq(realm), eq("wh-1"), any(Instant.class)))
-            .thenReturn(Stream.of(s1, s2, s3));
+                .thenReturn(Stream.of(s1, s2, s3));
         when(provider.getEventById(realm, "ev-1")).thenReturn(e1);
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
-            .thenReturn(new HttpSendResult(500, false, 5L));
+                .thenReturn(new HttpSendResult(500, false, 5L));
 
         Response resp = resource.resendFailed("wh-1", 24);
 
@@ -500,8 +509,8 @@ class WebhooksResourceTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) resp.getEntity();
         assertEquals(0, body.get("resent"));
-        assertEquals(2, body.get("failed"));   // both attempted before CB opens
-        assertEquals(1, body.get("skipped"));  // third skipped because CB opened
+        assertEquals(2, body.get("failed")); // both attempted before CB opens
+        assertEquals(1, body.get("skipped")); // third skipped because CB opened
         // third event should never be loaded (CB blocked it)
         verify(provider, never()).getEventById(realm, "ev-3");
     }

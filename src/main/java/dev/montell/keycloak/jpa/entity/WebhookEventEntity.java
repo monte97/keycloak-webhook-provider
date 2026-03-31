@@ -6,15 +6,19 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @NamedQueries({
-    @NamedQuery(name = "getWebhookEventByKcId",
-        query = "SELECT e FROM WebhookEventEntity e WHERE e.realmId = :realmId AND e.kcEventId = :kcEventId"),
-    @NamedQuery(name = "getWebhookEventsByWebhookId",
-        query = "SELECT DISTINCT e FROM WebhookEventEntity e JOIN WebhookSendEntity s ON s.webhookEventId = e.id WHERE s.webhookId = :webhookId ORDER BY e.createdAt DESC")
+    @NamedQuery(
+            name = "getWebhookEventByKcId",
+            query =
+                    "SELECT e FROM WebhookEventEntity e WHERE e.realmId = :realmId AND e.kcEventId = :kcEventId"),
+    @NamedQuery(
+            name = "getWebhookEventsByWebhookId",
+            query =
+                    "SELECT DISTINCT e FROM WebhookEventEntity e JOIN WebhookSendEntity s ON s.webhookEventId = e.id WHERE s.webhookId = :webhookId ORDER BY e.createdAt DESC")
 })
 /**
- * JPA entity mapped to the {@code WEBHOOK_EVENT} table. Stores captured Keycloak events
- * with their full JSON payload. The {@code KC_EVENT_ID} column has a unique constraint
- * (nullable for admin events that lack a stable ID).
+ * JPA entity mapped to the {@code WEBHOOK_EVENT} table. Stores captured Keycloak events with their
+ * full JSON payload. The {@code KC_EVENT_ID} column has a unique constraint (nullable for admin
+ * events that lack a stable ID).
  */
 @Entity
 @Table(name = "WEBHOOK_EVENT")
@@ -47,17 +51,49 @@ public class WebhookEventEntity {
         if (createdAt == null) createdAt = Instant.now();
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public String getRealmId() { return realmId; }
-    public void setRealmId(String realmId) { this.realmId = realmId; }
-    public KeycloakEventType getEventType() { return eventType; }
-    public void setEventType(KeycloakEventType eventType) { this.eventType = eventType; }
-    public String getKcEventId() { return kcEventId; }
-    public void setKcEventId(String kcEventId) { this.kcEventId = kcEventId; }
-    public String getEventObject() { return eventObject; }
-    public void setEventObject(String eventObject) { this.eventObject = eventObject; }
-    public Instant getCreatedAt() { return createdAt; }
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getRealmId() {
+        return realmId;
+    }
+
+    public void setRealmId(String realmId) {
+        this.realmId = realmId;
+    }
+
+    public KeycloakEventType getEventType() {
+        return eventType;
+    }
+
+    public void setEventType(KeycloakEventType eventType) {
+        this.eventType = eventType;
+    }
+
+    public String getKcEventId() {
+        return kcEventId;
+    }
+
+    public void setKcEventId(String kcEventId) {
+        this.kcEventId = kcEventId;
+    }
+
+    public String getEventObject() {
+        return eventObject;
+    }
+
+    public void setEventObject(String eventObject) {
+        this.eventObject = eventObject;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -67,5 +103,7 @@ public class WebhookEventEntity {
     }
 
     @Override
-    public int hashCode() { return id == null ? 0 : id.hashCode(); }
+    public int hashCode() {
+        return id == null ? 0 : id.hashCode();
+    }
 }

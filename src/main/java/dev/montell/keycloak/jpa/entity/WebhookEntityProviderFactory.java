@@ -12,8 +12,8 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.RealmModel;
 
 /**
- * Factory for {@link WebhookEntityProvider}. Also registers a listener for
- * {@link RealmModel.RealmRemovedEvent} to clean up all webhook data when a realm is deleted.
+ * Factory for {@link WebhookEntityProvider}. Also registers a listener for {@link
+ * RealmModel.RealmRemovedEvent} to clean up all webhook data when a realm is deleted.
  */
 @JBossLog
 @AutoService(JpaEntityProviderFactory.class)
@@ -35,15 +35,16 @@ public class WebhookEntityProviderFactory implements JpaEntityProviderFactory {
     @Override
     public void postInit(KeycloakSessionFactory factory) {
         // Clean up webhooks when a realm is removed
-        factory.register(event -> {
-            if (event instanceof RealmModel.RealmRemovedEvent removed) {
-                KeycloakSession session = removed.getKeycloakSession();
-                WebhookProvider provider = session.getProvider(WebhookProvider.class);
-                if (provider != null) {
-                    provider.removeWebhooks(removed.getRealm());
-                }
-            }
-        });
+        factory.register(
+                event -> {
+                    if (event instanceof RealmModel.RealmRemovedEvent removed) {
+                        KeycloakSession session = removed.getKeycloakSession();
+                        WebhookProvider provider = session.getProvider(WebhookProvider.class);
+                        if (provider != null) {
+                            provider.removeWebhooks(removed.getRealm());
+                        }
+                    }
+                });
     }
 
     @Override

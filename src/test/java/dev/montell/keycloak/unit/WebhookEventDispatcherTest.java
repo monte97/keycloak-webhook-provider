@@ -1,21 +1,20 @@
 package dev.montell.keycloak.unit;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import dev.montell.keycloak.dispatch.WebhookEventDispatcher;
 import dev.montell.keycloak.event.WebhookPayload;
-import org.junit.jupiter.api.Test;
-
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.Test;
 
 class WebhookEventDispatcherTest {
 
     private static WebhookPayload.AccessEvent samplePayload() {
         return new WebhookPayload.AccessEvent(
-            "uid-1", "access.LOGIN", "realm-1", "user-1", null, Instant.now(), Map.of());
+                "uid-1", "access.LOGIN", "realm-1", "user-1", null, Instant.now(), Map.of());
     }
 
     @Test
@@ -41,11 +40,15 @@ class WebhookEventDispatcherTest {
     @Test
     void enqueue_returns_without_blocking() throws InterruptedException {
         var executor = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
-        var latch    = new java.util.concurrent.CountDownLatch(1);
-        executor.submit(() -> {
-            latch.countDown();
-            try { Thread.sleep(60_000); } catch (InterruptedException ignored) {}
-        });
+        var latch = new java.util.concurrent.CountDownLatch(1);
+        executor.submit(
+                () -> {
+                    latch.countDown();
+                    try {
+                        Thread.sleep(60_000);
+                    } catch (InterruptedException ignored) {
+                    }
+                });
         latch.await(); // ensure the one thread is occupied
 
         WebhookEventDispatcher dispatcher = new WebhookEventDispatcher(null, null, executor);

@@ -6,8 +6,6 @@ import dev.montell.keycloak.jpa.entity.*;
 import dev.montell.keycloak.model.*;
 import dev.montell.keycloak.spi.WebhookProvider;
 import jakarta.persistence.*;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -17,12 +15,12 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 
 /**
- * JPA-backed implementation of {@link WebhookProvider}. Uses Keycloak's existing
- * {@link EntityManager} and datasource for all persistence operations.
+ * JPA-backed implementation of {@link WebhookProvider}. Uses Keycloak's existing {@link
+ * EntityManager} and datasource for all persistence operations.
  *
- * <p>Notable implementation detail: {@link #storeEvent} uses a JDBC savepoint to handle
- * duplicate {@code KC_EVENT_ID} values idempotently. This is required because PostgreSQL
- * marks the entire transaction as aborted after a constraint violation.
+ * <p>Notable implementation detail: {@link #storeEvent} uses a JDBC savepoint to handle duplicate
+ * {@code KC_EVENT_ID} values idempotently. This is required because PostgreSQL marks the entire
+ * transaction as aborted after a constraint violation.
  */
 @JBossLog
 public class JpaWebhookProvider implements WebhookProvider {
@@ -56,10 +54,11 @@ public class JpaWebhookProvider implements WebhookProvider {
 
     @Override
     public Stream<WebhookModel> getWebhooksStream(RealmModel realm, Integer first, Integer max) {
-        TypedQuery<WebhookEntity> q = em.createNamedQuery("getWebhooksByRealmId", WebhookEntity.class);
+        TypedQuery<WebhookEntity> q =
+                em.createNamedQuery("getWebhooksByRealmId", WebhookEntity.class);
         q.setParameter("realmId", realm.getId());
         if (first != null) q.setFirstResult(first);
-        if (max != null)   q.setMaxResults(max);
+        if (max != null) q.setMaxResults(max);
         return q.getResultStream().map(WebhookAdapter::new);
     }
 
@@ -82,16 +81,16 @@ public class JpaWebhookProvider implements WebhookProvider {
     @Override
     public void removeWebhooks(RealmModel realm) {
         em.createNamedQuery("removeAllWebhooksByRealmId")
-          .setParameter("realmId", realm.getId())
-          .executeUpdate();
+                .setParameter("realmId", realm.getId())
+                .executeUpdate();
         em.clear(); // required after bulk DELETE to avoid stale L1 cache entries
     }
 
     // --- Event audit trail ---
 
     @Override
-    public WebhookEventModel storeEvent(RealmModel realm, KeycloakEventType type,
-                                        String kcEventId, String payloadJson) {
+    public WebhookEventModel storeEvent(
+            RealmModel realm, KeycloakEventType type, String kcEventId, String payloadJson) {
         // Use a JDBC savepoint so that a unique constraint violation on KC_EVENT_ID can be
         // recovered from within the same transaction (required on PostgreSQL which otherwise
         // marks the entire transaction as aborted after a constraint error).
@@ -120,13 +119,17 @@ public class JpaWebhookProvider implements WebhookProvider {
                 try {
                     session.doWork(conn -> conn.rollback(spFinal));
                 } catch (Exception rollbackEx) {
-                    log.warnf("Failed to rollback savepoint for kcEventId=%s: %s", kcEventId, rollbackEx.getMessage());
+                    log.warnf(
+                            "Failed to rollback savepoint for kcEventId=%s: %s",
+                            kcEventId, rollbackEx.getMessage());
                 }
             }
             em.clear();
             WebhookEventModel existing = getEventByKcId(realm, kcEventId);
             if (existing == null) {
-                log.warnf("storeEvent fallback returned null for kcEventId=%s — unexpected state", kcEventId);
+                log.warnf(
+                        "storeEvent fallback returned null for kcEventId=%s — unexpected state",
+                        kcEventId);
             }
             return existing;
         }
@@ -135,10 +138,11 @@ public class JpaWebhookProvider implements WebhookProvider {
     @Override
     public WebhookEventModel getEventByKcId(RealmModel realm, String kcEventId) {
         try {
-            WebhookEventEntity e = em.createNamedQuery("getWebhookEventByKcId", WebhookEventEntity.class)
-                .setParameter("realmId", realm.getId())
-                .setParameter("kcEventId", kcEventId)
-                .getSingleResult();
+            WebhookEventEntity e =
+                    em.createNamedQuery("getWebhookEventByKcId", WebhookEventEntity.class)
+                            .setParameter("realmId", realm.getId())
+                            .setParameter("kcEventId", kcEventId)
+                            .getSingleResult();
             return new WebhookEventAdapter(e);
         } catch (NoResultException nre) {
             return null;
@@ -153,32 +157,35 @@ public class JpaWebhookProvider implements WebhookProvider {
     }
 
     @Override
-    public Stream<WebhookEventModel> getEventsByWebhookId(RealmModel realm, String webhookId,
-                                                           Integer first, Integer max) {
+    public Stream<WebhookEventModel> getEventsByWebhookId(
+            RealmModel realm, String webhookId, Integer first, Integer max) {
         WebhookEntity w = em.find(WebhookEntity.class, webhookId);
         if (w == null || !w.getRealmId().equals(realm.getId())) return Stream.empty();
-        TypedQuery<WebhookEventEntity> q = em.createNamedQuery("getWebhookEventsByWebhookId", WebhookEventEntity.class);
+        TypedQuery<WebhookEventEntity> q =
+                em.createNamedQuery("getWebhookEventsByWebhookId", WebhookEventEntity.class);
         q.setParameter("webhookId", webhookId);
         if (first != null) q.setFirstResult(first);
-        if (max != null)   q.setMaxResults(max);
+        if (max != null) q.setMaxResults(max);
         return q.getResultStream().map(WebhookEventAdapter::new);
     }
 
     @Override
-    public Stream<WebhookSendModel> getSendsByWebhook(RealmModel realm, String webhookId,
-                                                       Integer first, Integer max, Boolean success) {
-        TypedQuery<WebhookSendEntity> q = em.createNamedQuery("getWebhookSendsByWebhookIdFiltered", WebhookSendEntity.class);
+    public Stream<WebhookSendModel> getSendsByWebhook(
+            RealmModel realm, String webhookId, Integer first, Integer max, Boolean success) {
+        TypedQuery<WebhookSendEntity> q =
+                em.createNamedQuery("getWebhookSendsByWebhookIdFiltered", WebhookSendEntity.class);
         q.setParameter("webhookId", webhookId);
         q.setParameter("success", success);
         if (first != null) q.setFirstResult(first);
-        if (max != null)   q.setMaxResults(max);
+        if (max != null) q.setMaxResults(max);
         return q.getResultStream().map(WebhookSendAdapter::new);
     }
 
     @Override
-    public Stream<WebhookSendModel> getFailedSendsSince(RealmModel realm, String webhookId,
-                                                         java.time.Instant since) {
-        TypedQuery<WebhookSendEntity> q = em.createNamedQuery("getFailedSendsSince", WebhookSendEntity.class);
+    public Stream<WebhookSendModel> getFailedSendsSince(
+            RealmModel realm, String webhookId, java.time.Instant since) {
+        TypedQuery<WebhookSendEntity> q =
+                em.createNamedQuery("getFailedSendsSince", WebhookSendEntity.class);
         q.setParameter("webhookId", webhookId);
         q.setParameter("since", since);
         return q.getResultStream().map(WebhookSendAdapter::new);
@@ -188,9 +195,15 @@ public class JpaWebhookProvider implements WebhookProvider {
 
     @Override
     public WebhookSendModel storeSend(
-            RealmModel realm, // realm parameter accepted for API uniformity; scoping is via webhookId FK
-            String webhookId, String webhookEventId,
-            String eventType, int httpStatus, boolean success, int retries) {
+            RealmModel
+                    realm, // realm parameter accepted for API uniformity; scoping is via webhookId
+            // FK
+            String webhookId,
+            String webhookEventId,
+            String eventType,
+            int httpStatus,
+            boolean success,
+            int retries) {
         String id = WebhookSendEntity.buildId(webhookId, webhookEventId);
         WebhookSendEntity e = em.find(WebhookSendEntity.class, id);
         boolean isNew = (e == null);
@@ -205,34 +218,38 @@ public class JpaWebhookProvider implements WebhookProvider {
         e.setSuccess(success);
         e.setRetries(retries);
         e.setLastAttemptAt(java.time.Instant.now());
-        if (isNew) em.persist(e); // existing entities are already managed; dirty-check handles updates
+        if (isNew)
+            em.persist(e); // existing entities are already managed; dirty-check handles updates
         em.flush();
         return new WebhookSendAdapter(e);
     }
 
     @Override
     public WebhookSendModel getSendById(
-            RealmModel realm, // realm accepted for API uniformity; no direct realm column on WEBHOOK_SEND
+            RealmModel realm, // realm accepted for API uniformity; no direct realm column on
+            // WEBHOOK_SEND
             String id) {
         WebhookSendEntity e = em.find(WebhookSendEntity.class, id);
         return e != null ? new WebhookSendAdapter(e) : null;
     }
 
     @Override
-    public Stream<WebhookSendModel> getSendsByWebhook(RealmModel realm, String webhookId,
-                                                       Integer first, Integer max) {
-        TypedQuery<WebhookSendEntity> q = em.createNamedQuery("getWebhookSendsByWebhookId", WebhookSendEntity.class);
+    public Stream<WebhookSendModel> getSendsByWebhook(
+            RealmModel realm, String webhookId, Integer first, Integer max) {
+        TypedQuery<WebhookSendEntity> q =
+                em.createNamedQuery("getWebhookSendsByWebhookId", WebhookSendEntity.class);
         q.setParameter("webhookId", webhookId);
         if (first != null) q.setFirstResult(first);
-        if (max != null)   q.setMaxResults(max);
+        if (max != null) q.setMaxResults(max);
         return q.getResultStream().map(WebhookSendAdapter::new);
     }
 
     @Override
     public Stream<WebhookSendModel> getSendsByEvent(RealmModel realm, String webhookEventId) {
         return em.createNamedQuery("getWebhookSendsByEventId", WebhookSendEntity.class)
-            .setParameter("webhookEventId", webhookEventId)
-            .getResultStream().map(WebhookSendAdapter::new);
+                .setParameter("webhookEventId", webhookEventId)
+                .getResultStream()
+                .map(WebhookSendAdapter::new);
     }
 
     @Override

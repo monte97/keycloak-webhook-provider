@@ -8,8 +8,8 @@ import java.util.Set;
 
 /**
  * JSON DTO for webhook REST API requests and responses. Fields are public for Jackson
- * serialization. The {@code secret} field is intentionally excluded from {@link #from}
- * responses; use the dedicated {@code GET /{id}/secret} endpoint instead.
+ * serialization. The {@code secret} field is intentionally excluded from {@link #from} responses;
+ * use the dedicated {@code GET /{id}/secret} endpoint instead.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class WebhookRepresentation {
@@ -25,19 +25,20 @@ public class WebhookRepresentation {
     public Instant createdAt;
     public Integer retryMaxElapsedSeconds;
     public Integer retryMaxIntervalSeconds;
+
     // secret not included in from() — dedicated endpoint GET /{id}/secret
 
     public static WebhookRepresentation from(WebhookModel m) {
         WebhookRepresentation r = new WebhookRepresentation();
-        r.id                      = m.getId();
-        r.url                     = m.getUrl();
-        r.algorithm               = m.getAlgorithm();
-        r.enabled                 = m.isEnabled();
-        r.eventTypes              = m.getEventTypes();
-        r.circuitState            = m.getCircuitState();
-        r.failureCount            = m.getFailureCount();
-        r.createdAt               = m.getCreatedAt();
-        r.retryMaxElapsedSeconds  = m.getRetryMaxElapsedSeconds();
+        r.id = m.getId();
+        r.url = m.getUrl();
+        r.algorithm = m.getAlgorithm();
+        r.enabled = m.isEnabled();
+        r.eventTypes = m.getEventTypes();
+        r.circuitState = m.getCircuitState();
+        r.failureCount = m.getFailureCount();
+        r.createdAt = m.getCreatedAt();
+        r.retryMaxElapsedSeconds = m.getRetryMaxElapsedSeconds();
         r.retryMaxIntervalSeconds = m.getRetryMaxIntervalSeconds();
         return r;
     }

@@ -7,22 +7,26 @@ import java.util.HashSet;
 import java.util.Set;
 
 @NamedQueries({
-    @NamedQuery(name = "getWebhooksByRealmId",
-        query = "SELECT w FROM WebhookEntity w WHERE w.realmId = :realmId ORDER BY w.createdAt ASC"),
-    @NamedQuery(name = "countWebhooksByRealmId",
-        query = "SELECT COUNT(w) FROM WebhookEntity w WHERE w.realmId = :realmId"),
+    @NamedQuery(
+            name = "getWebhooksByRealmId",
+            query =
+                    "SELECT w FROM WebhookEntity w WHERE w.realmId = :realmId ORDER BY w.createdAt ASC"),
+    @NamedQuery(
+            name = "countWebhooksByRealmId",
+            query = "SELECT COUNT(w) FROM WebhookEntity w WHERE w.realmId = :realmId"),
     // NOTE: bulk DELETE bypasses the JPA first-level cache. Callers must call em.clear()
     // after executing this query if the EntityManager session is reused afterward.
-    @NamedQuery(name = "removeAllWebhooksByRealmId",
-        query = "DELETE FROM WebhookEntity w WHERE w.realmId = :realmId")
+    @NamedQuery(
+            name = "removeAllWebhooksByRealmId",
+            query = "DELETE FROM WebhookEntity w WHERE w.realmId = :realmId")
 })
 /**
- * JPA entity mapped to the {@code WEBHOOK} table. Stores webhook configuration,
- * circuit breaker state, and retry parameters. Event type subscriptions are stored
- * in the {@code WEBHOOK_EVENT_TYPE} collection table.
+ * JPA entity mapped to the {@code WEBHOOK} table. Stores webhook configuration, circuit breaker
+ * state, and retry parameters. Event type subscriptions are stored in the {@code
+ * WEBHOOK_EVENT_TYPE} collection table.
  *
- * <p>Uses ID-based {@code equals}/{@code hashCode} (not {@code @Data}) to avoid
- * issues with JPA proxy objects and lazy-loaded collections.
+ * <p>Uses ID-based {@code equals}/{@code hashCode} (not {@code @Data}) to avoid issues with JPA
+ * proxy objects and lazy-loaded collections.
  */
 @Entity
 @Table(name = "WEBHOOK")
@@ -73,8 +77,7 @@ public class WebhookEntity {
 
     @ElementCollection(fetch = FetchType.EAGER)
     @Column(name = "EVENT_TYPE")
-    @CollectionTable(name = "WEBHOOK_EVENT_TYPE",
-        joinColumns = @JoinColumn(name = "WEBHOOK_ID"))
+    @CollectionTable(name = "WEBHOOK_EVENT_TYPE", joinColumns = @JoinColumn(name = "WEBHOOK_ID"))
     private Set<String> eventTypes = new HashSet<>();
 
     @PrePersist
@@ -90,35 +93,121 @@ public class WebhookEntity {
     }
 
     // getters/setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public String getRealmId() { return realmId; }
-    public void setRealmId(String realmId) { this.realmId = realmId; }
-    public String getUrl() { return url; }
-    public void setUrl(String url) { this.url = url; }
-    public String getSecret() { return secret; }
-    public void setSecret(String secret) { this.secret = secret; }
-    public String getAlgorithm() { return algorithm; }
-    public void setAlgorithm(String algorithm) { this.algorithm = algorithm; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public String getCircuitState() { return circuitState; }
-    public void setCircuitState(String circuitState) { this.circuitState = circuitState; }
-    public int getFailureCount() { return failureCount; }
-    public void setFailureCount(int failureCount) { this.failureCount = failureCount; }
-    public Instant getLastFailureAt() { return lastFailureAt; }
-    public void setLastFailureAt(Instant lastFailureAt) { this.lastFailureAt = lastFailureAt; }
-    public String getCreatedBy() { return createdBy; }
-    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
-    public Integer getRetryMaxElapsedSeconds() { return retryMaxElapsedSeconds; }
-    public void setRetryMaxElapsedSeconds(Integer s) { this.retryMaxElapsedSeconds = s; }
-    public Integer getRetryMaxIntervalSeconds() { return retryMaxIntervalSeconds; }
-    public void setRetryMaxIntervalSeconds(Integer s) { this.retryMaxIntervalSeconds = s; }
-    public Set<String> getEventTypes() { return eventTypes; }
-    public void setEventTypes(Set<String> eventTypes) { this.eventTypes = eventTypes; }
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getRealmId() {
+        return realmId;
+    }
+
+    public void setRealmId(String realmId) {
+        this.realmId = realmId;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getSecret() {
+        return secret;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
+    }
+
+    public String getAlgorithm() {
+        return algorithm;
+    }
+
+    public void setAlgorithm(String algorithm) {
+        this.algorithm = algorithm;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public String getCircuitState() {
+        return circuitState;
+    }
+
+    public void setCircuitState(String circuitState) {
+        this.circuitState = circuitState;
+    }
+
+    public int getFailureCount() {
+        return failureCount;
+    }
+
+    public void setFailureCount(int failureCount) {
+        this.failureCount = failureCount;
+    }
+
+    public Instant getLastFailureAt() {
+        return lastFailureAt;
+    }
+
+    public void setLastFailureAt(Instant lastFailureAt) {
+        this.lastFailureAt = lastFailureAt;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public Integer getRetryMaxElapsedSeconds() {
+        return retryMaxElapsedSeconds;
+    }
+
+    public void setRetryMaxElapsedSeconds(Integer s) {
+        this.retryMaxElapsedSeconds = s;
+    }
+
+    public Integer getRetryMaxIntervalSeconds() {
+        return retryMaxIntervalSeconds;
+    }
+
+    public void setRetryMaxIntervalSeconds(Integer s) {
+        this.retryMaxIntervalSeconds = s;
+    }
+
+    public Set<String> getEventTypes() {
+        return eventTypes;
+    }
+
+    public void setEventTypes(Set<String> eventTypes) {
+        this.eventTypes = eventTypes;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -128,5 +217,7 @@ public class WebhookEntity {
     }
 
     @Override
-    public int hashCode() { return id == null ? 0 : id.hashCode(); }
+    public int hashCode() {
+        return id == null ? 0 : id.hashCode();
+    }
 }

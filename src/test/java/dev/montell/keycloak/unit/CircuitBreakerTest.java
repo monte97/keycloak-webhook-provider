@@ -1,17 +1,17 @@
 // src/test/java/dev/montell/keycloak/unit/CircuitBreakerTest.java
 package dev.montell.keycloak.unit;
 
-import dev.montell.keycloak.dispatch.CircuitBreaker;
-import dev.montell.keycloak.model.WebhookModel;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
-import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+import dev.montell.keycloak.dispatch.CircuitBreaker;
+import dev.montell.keycloak.model.WebhookModel;
+import java.time.Instant;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class CircuitBreakerTest {
 
     @Test
@@ -24,8 +24,10 @@ class CircuitBreakerTest {
     @Test
     void opens_after_threshold_consecutive_failures() {
         CircuitBreaker cb = new CircuitBreaker(3, 60);
-        cb.onFailure(); assertEquals(CircuitBreaker.CLOSED, cb.getState());
-        cb.onFailure(); assertEquals(CircuitBreaker.CLOSED, cb.getState());
+        cb.onFailure();
+        assertEquals(CircuitBreaker.CLOSED, cb.getState());
+        cb.onFailure();
+        assertEquals(CircuitBreaker.CLOSED, cb.getState());
         cb.onFailure(); // 3rd = threshold
         assertEquals(CircuitBreaker.OPEN, cb.getState());
         assertFalse(cb.allowRequest());
@@ -101,7 +103,7 @@ class CircuitBreakerTest {
         cb.onFailure(t1); // OPEN at t1
 
         assertTrue(cb.allowRequest(t1.plusSeconds(61))); // probe allowed
-        cb.onFailure(t1.plusSeconds(61));                // probe fails — OPEN, timer reset to t1+61
+        cb.onFailure(t1.plusSeconds(61)); // probe fails — OPEN, timer reset to t1+61
         assertEquals(CircuitBreaker.OPEN, cb.getState());
         assertEquals(t1.plusSeconds(61), cb.getLastFailureAt());
 

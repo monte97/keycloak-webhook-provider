@@ -5,45 +5,45 @@ import dev.montell.keycloak.model.WebhookModel;
 import java.time.Instant;
 
 /**
- * State machine for a single webhook's circuit breaker.
- * State: CLOSED (normal) ──N failures──▶ OPEN ──openSeconds──▶ probe ──success──▶ CLOSED
- *                                                                        └──fail──▶ OPEN (reset timer)
+ * State machine for a single webhook's circuit breaker. State: CLOSED (normal) ──N failures──▶ OPEN
+ * ──openSeconds──▶ probe ──success──▶ CLOSED └──fail──▶ OPEN (reset timer)
  *
- * State is persisted to {@link WebhookModel} via {@link #applyTo(WebhookModel)}.
+ * <p>State is persisted to {@link WebhookModel} via {@link #applyTo(WebhookModel)}.
  */
 public class CircuitBreaker {
 
-    public static final String CLOSED    = "CLOSED";
-    public static final String OPEN      = "OPEN";
+    public static final String CLOSED = "CLOSED";
+    public static final String OPEN = "OPEN";
     public static final String HALF_OPEN = "HALF_OPEN";
 
-    private String  state;
-    private int     failureCount;
+    private String state;
+    private int failureCount;
     private Instant lastFailureAt;
 
     private final int failureThreshold;
     private final int openSeconds;
 
     public CircuitBreaker(int failureThreshold, int openSeconds) {
-        this.state            = CLOSED;
-        this.failureCount     = 0;
-        this.lastFailureAt    = null;
+        this.state = CLOSED;
+        this.failureCount = 0;
+        this.lastFailureAt = null;
         this.failureThreshold = failureThreshold;
-        this.openSeconds      = openSeconds;
+        this.openSeconds = openSeconds;
     }
 
     /** Load state from a persisted WebhookModel. */
-    public static CircuitBreaker fromWebhook(WebhookModel w, int failureThreshold, int openSeconds) {
+    public static CircuitBreaker fromWebhook(
+            WebhookModel w, int failureThreshold, int openSeconds) {
         CircuitBreaker cb = new CircuitBreaker(failureThreshold, openSeconds);
-        cb.state         = w.getCircuitState() != null ? w.getCircuitState() : CLOSED;
-        cb.failureCount  = w.getFailureCount();
+        cb.state = w.getCircuitState() != null ? w.getCircuitState() : CLOSED;
+        cb.failureCount = w.getFailureCount();
         cb.lastFailureAt = w.getLastFailureAt();
         return cb;
     }
 
     /**
-     * Returns true if a request should be attempted now.
-     * CLOSED → always. HALF_OPEN → always (probe). OPEN → only after {@code openSeconds}.
+     * Returns true if a request should be attempted now. CLOSED → always. HALF_OPEN → always
+     * (probe). OPEN → only after {@code openSeconds}.
      */
     public boolean allowRequest() {
         return allowRequest(Instant.now());
@@ -56,8 +56,8 @@ public class CircuitBreaker {
 
     /** Called on send success: reset to CLOSED. */
     public void onSuccess() {
-        state         = CLOSED;
-        failureCount  = 0;
+        state = CLOSED;
+        failureCount = 0;
         lastFailureAt = null;
     }
 
@@ -79,7 +79,15 @@ public class CircuitBreaker {
         w.setLastFailureAt(lastFailureAt);
     }
 
-    public String  getState()          { return state; }
-    public int     getFailureCount()   { return failureCount; }
-    public Instant getLastFailureAt()  { return lastFailureAt; }
+    public String getState() {
+        return state;
+    }
+
+    public int getFailureCount() {
+        return failureCount;
+    }
+
+    public Instant getLastFailureAt() {
+        return lastFailureAt;
+    }
 }

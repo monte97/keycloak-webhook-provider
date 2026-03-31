@@ -1,8 +1,9 @@
 package dev.montell.keycloak.unit;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import dev.montell.keycloak.dispatch.ExponentialBackOff;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 class ExponentialBackOffTest {
 
@@ -54,7 +55,8 @@ class ExponentialBackOffTest {
     @Test
     void returns_STOP_immediately_when_maxElapsed_is_zero() {
         // maxElapsed=0: elapsed >= 0 is always true → STOP immediately
-        // Mutation ">=" → ">" would require elapsed > 0, which is false at t=0 → doesn't return STOP
+        // Mutation ">=" → ">" would require elapsed > 0, which is false at t=0 → doesn't return
+        // STOP
         ExponentialBackOff bo = noJitter(500, 180_000, 0);
         assertEquals(ExponentialBackOff.STOP, bo.nextBackOffMillis());
     }
@@ -63,8 +65,10 @@ class ExponentialBackOffTest {
     void jitter_is_symmetric_around_interval() {
         // 50 samples from interval=10000, factor=0.5 → range [5000, 15000]
         // Kills all 5 arithmetic mutations in applyRandomization:
-        //   min < 9000 kills: delta = * → / (≈0 → range ~[10000,10000]), low = - → + (→ range [15000,15000])
-        //   max > 11000 kills: high = + → - (→ range [5000,5000]), return formula * → / (→ range ~[5000,5000])
+        //   min < 9000 kills: delta = * → / (≈0 → range ~[10000,10000]), low = - → + (→ range
+        // [15000,15000])
+        //   max > 11000 kills: high = + → - (→ range [5000,5000]), return formula * → / (→ range
+        // ~[5000,5000])
         //   max <= 15001 kills: return formula - → + (→ range [5000,25000])
         long min = Long.MAX_VALUE;
         long max = Long.MIN_VALUE;
@@ -74,7 +78,7 @@ class ExponentialBackOffTest {
             if (d < min) min = d;
             if (d > max) max = d;
         }
-        assertTrue(min < 9_000,  "min=" + min + " expected < 9000");
+        assertTrue(min < 9_000, "min=" + min + " expected < 9000");
         assertTrue(max > 11_000, "max=" + max + " expected > 11000");
         assertTrue(max <= 15_001, "max=" + max + " expected <= 15001");
     }

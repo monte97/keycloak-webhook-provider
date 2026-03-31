@@ -1,8 +1,9 @@
 package dev.montell.keycloak.unit;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import dev.montell.keycloak.sender.HmacSigner;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 class HmacSignerTest {
 
@@ -43,7 +44,8 @@ class HmacSignerTest {
 
     @Test
     void unsupported_algorithm_throws_IllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class,
-            () -> HmacSigner.sign("payload", "secret", "INVALID-ALGO"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> HmacSigner.sign("payload", "secret", "INVALID-ALGO"));
     }
 }

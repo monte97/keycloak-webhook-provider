@@ -9,8 +9,8 @@ import org.keycloak.services.resource.RealmResourceProvider;
 import org.keycloak.services.resource.RealmResourceProviderFactory;
 
 /**
- * Factory that registers the webhook REST API under
- * {@code /realms/{realm}/webhooks} (provider ID: {@value #PROVIDER_ID}).
+ * Factory that registers the webhook REST API under {@code /realms/{realm}/webhooks} (provider ID:
+ * {@value #PROVIDER_ID}).
  */
 @AutoService(RealmResourceProviderFactory.class)
 public class WebhooksResourceProviderFactory implements RealmResourceProviderFactory {
@@ -18,7 +18,9 @@ public class WebhooksResourceProviderFactory implements RealmResourceProviderFac
     public static final String PROVIDER_ID = "webhooks";
 
     @Override
-    public String getId() { return PROVIDER_ID; }
+    public String getId() {
+        return PROVIDER_ID;
+    }
 
     @Override
     public RealmResourceProvider create(KeycloakSession session) {
