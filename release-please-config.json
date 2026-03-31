@@ -2,10 +2,12 @@
   "packages": {
     ".": {
       "release-type": "maven",
+      "include-v-in-tag": true,
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
       "changelog-path": "CHANGELOG.md",
-      "extra-files": []
+      "extra-files": [],
+      "snapshot": false
     }
   }
 }
