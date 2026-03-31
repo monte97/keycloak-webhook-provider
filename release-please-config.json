@@ -1,0 +1,11 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "maven",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": []
+    }
+  }
+}

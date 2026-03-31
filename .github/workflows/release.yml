@@ -2,28 +2,38 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [master]
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  release:
+  release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: maven
+
+  publish:
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    needs: release-please
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Build JAR
         run: make package
 
-      - name: Rename JAR to release version
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          mv target/keycloak-webhook-provider-*.jar \
-             target/keycloak-webhook-provider-${VERSION}.jar
-
-      - name: Create GitHub Release
+      - name: Upload JAR to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
           files: target/keycloak-webhook-provider-*.jar
