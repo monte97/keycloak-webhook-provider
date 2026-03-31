@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <!-- JPA entities: Lombok @Getter/@Setter trigger EI_EXPOSE_REP -->
+  <Match>
+    <Package name="dev.montell.keycloak.jpa.entity"/>
+  </Match>
+
+  <!-- JPA adapters wrap mutable entities by design (Keycloak SPI pattern) -->
+  <Match>
+    <Package name="dev.montell.keycloak.jpa.adapter"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+
+  <!-- JPA provider stores EntityManager reference (Keycloak SPI pattern) -->
+  <Match>
+    <Class name="dev.montell.keycloak.jpa.JpaWebhookProvider"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
+  <!-- Keycloak SPI classes store session/realm/dispatcher by reference -->
+  <Match>
+    <Or>
+      <Class name="dev.montell.keycloak.resources.WebhooksResource"/>
+      <Class name="dev.montell.keycloak.resources.WebhooksResourceProvider"/>
+      <Class name="dev.montell.keycloak.listener.WebhookEventListenerProvider"/>
+    </Or>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
+  <!-- WebhookRepresentation is a JAX-RS DTO — public fields are intentional for JSON binding -->
+  <Match>
+    <Class name="dev.montell.keycloak.resources.WebhookRepresentation"/>
+    <Bug pattern="PA_PUBLIC_PRIMITIVE_ATTRIBUTE,URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD"/>
+  </Match>
+
+  <!-- Sealed-interface records are immutable value objects -->
+  <Match>
+    <Class name="~dev\.montell\.keycloak\.event\.WebhookPayload\$.*"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+
+  <!-- AuthDetails record -->
+  <Match>
+    <Class name="dev.montell.keycloak.event.AuthDetails"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+</FindBugsFilter>

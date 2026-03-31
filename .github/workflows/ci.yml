@@ -7,6 +7,17 @@ on:
     branches: [master]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check formatting (Spotless)
+        run: make fmt-check
+
+      - name: Static analysis (SpotBugs)
+        run: make spotbugs
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -33,7 +44,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: test
+    needs: [lint, test]
     steps:
       - uses: actions/checkout@v5
 

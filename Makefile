@@ -1,5 +1,6 @@
 .PHONY: compile test test-unit test-integration test-mutation package clean \
-       openapi-lint openapi-bundle openapi-html openapi-diff help
+       openapi-lint openapi-bundle openapi-html openapi-diff \
+       fmt fmt-check spotbugs help
 
 # ============================================================
 # Configuration
@@ -75,6 +76,22 @@ endif
 test-mutation:
 	$(MVN) test pitest:mutationCoverage
 	@echo ">>> Report: target/pit-reports/index.html"
+
+# ============================================================
+# Code quality
+# ============================================================
+
+## fmt            Apply google-java-format via Spotless
+fmt:
+	$(MVN) spotless:apply
+
+## fmt-check      Check formatting (fails if unformatted)
+fmt-check:
+	$(MVN) spotless:check
+
+## spotbugs       Run SpotBugs static analysis
+spotbugs:
+	$(MVN) compile spotbugs:check
 
 # ============================================================
 # OpenAPI
