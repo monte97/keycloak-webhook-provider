@@ -366,6 +366,7 @@ class WebhooksResourceTest {
         Map<String, Object> body = (Map<String, Object>) resp.getEntity();
         assertEquals(2, body.get("resent"));
         assertEquals(0, body.get("failed"));
+        assertEquals(0, body.get("skipped"));
     }
 
     @Test
@@ -469,21 +470,26 @@ class WebhooksResourceTest {
     // -----------------------------------------------------------------------
 
     @Test
-    void resend_bulk_stops_on_first_failure() {
-        CircuitBreakerRegistry realRegistry = new CircuitBreakerRegistry(5, 60);
+    void resend_bulk_continues_on_failure_until_circuit_opens() {
+        // threshold=2: CB opens after 2 failures
+        CircuitBreakerRegistry realRegistry = new CircuitBreakerRegistry(2, 60);
         WebhookComponentHolder.init(sender, realRegistry);
+        when(realm.getAttribute("_webhook.circuit.failure_threshold")).thenReturn("2");
 
         WebhookModel w = mockWebhook("wh-1");
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
 
         WebhookSendModel s1 = mockSend("send-1", "wh-1", "ev-1");
         WebhookSendModel s2 = mockSend("send-2", "wh-1", "ev-2");
+        WebhookSendModel s3 = mockSend("send-3", "wh-1", "ev-3");
 
         WebhookEventModel e1 = mockEvent("ev-1", "wh-1");
+        WebhookEventModel e2 = mockEvent("ev-2", "wh-1");
 
         when(provider.getFailedSendsSince(eq(realm), eq("wh-1"), any(Instant.class)))
-            .thenReturn(Stream.of(s1, s2));
+            .thenReturn(Stream.of(s1, s2, s3));
         when(provider.getEventById(realm, "ev-1")).thenReturn(e1);
+        when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
             .thenReturn(new HttpSendResult(500, false, 5L));
@@ -494,8 +500,9 @@ class WebhooksResourceTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) resp.getEntity();
         assertEquals(0, body.get("resent"));
-        assertEquals(1, body.get("failed"));
-        // second event should never be loaded
-        verify(provider, never()).getEventById(realm, "ev-2");
+        assertEquals(2, body.get("failed"));   // both attempted before CB opens
+        assertEquals(1, body.get("skipped"));  // third skipped because CB opened
+        // third event should never be loaded (CB blocked it)
+        verify(provider, never()).getEventById(realm, "ev-3");
     }
 }

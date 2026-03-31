@@ -309,7 +309,13 @@ public class WebhooksResource {
 
         int resent = 0;
         int failed = 0;
+        int skipped = 0;
         for (var send : failedSends) {
+            if (!cb.allowRequest()) {
+                skipped = failedSends.size() - resent - failed;
+                break; // circuit breaker opened during batch
+            }
+
             var event = provider().getEventById(realm, send.getWebhookEventId());
             if (event == null) continue;
 
@@ -322,15 +328,11 @@ public class WebhooksResource {
             provider().storeSend(realm, id, send.getWebhookEventId(),
                 send.getEventType(), result.httpStatus(), result.success(), send.getRetries() + 1);
 
-            if (result.success()) {
-                resent++;
-            } else {
-                failed++;
-                break; // stop on first failure
-            }
+            if (result.success()) resent++;
+            else                  failed++;
         }
 
-        return Response.ok(java.util.Map.of("resent", resent, "failed", failed)).build();
+        return Response.ok(java.util.Map.of("resent", resent, "failed", failed, "skipped", skipped)).build();
     }
 
     // --- PUT /{id} ---
