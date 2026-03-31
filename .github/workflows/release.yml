@@ -29,6 +29,12 @@ jobs:
         with:
           ref: ${{ needs.release-please.outputs.tag_name }}
 
+      - name: Set version in pom.xml
+        run: |
+          VERSION="${{ needs.release-please.outputs.tag_name }}"
+          VERSION="${VERSION#v}"
+          sed -i "0,/<version>.*<\/version>/s/<version>.*<\/version>/<version>${VERSION}<\/version>/" pom.xml
+
       - name: Build JAR
         run: make package
 
