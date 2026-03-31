@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/monte97/keycloak-webhook-provider/compare/v1.1.0...v1.2.0) (2026-03-31)
+
+
+### Features
+
+* **ui:** add retry configuration fields to webhook modal ([1b92f51](https://github.com/monte97/keycloak-webhook-provider/commit/1b92f5124f255da79b0204c1fa4727c0a4fe0aac))
+
+
+### Bug Fixes
+
+* **ci:** exclude UI asset endpoints from openapi-diff count ([b4ab090](https://github.com/monte97/keycloak-webhook-provider/commit/b4ab09098b8e227e6d3d7555a8c63224e2056ec5))
+* **ci:** use glob for release JAR upload ([3bc613b](https://github.com/monte97/keycloak-webhook-provider/commit/3bc613bc5f539369ca2b2492ca797ec46f253900))
+* replace hard-coded test payload with Jackson-serialized AccessEvent ([903a649](https://github.com/monte97/keycloak-webhook-provider/commit/903a649b5fa85eb7659abd89ed1c5a6ce7cc1001))
+* resend-failed continues until circuit breaker opens instead of stopping on first failure ([3ec7b82](https://github.com/monte97/keycloak-webhook-provider/commit/3ec7b82196d131861a61b08f1d5327575f7f9f31))
+* revert pom.xml to 1.1.0 after stale Release Please PR merge ([3995bb1](https://github.com/monte97/keycloak-webhook-provider/commit/3995bb15858c02639d5bfc93232d62ea4172b1b5))
+
+
+### Documentation
+
+* add CHANGELOG.md following Keep a Changelog format ([bb2a629](https://github.com/monte97/keycloak-webhook-provider/commit/bb2a6294829ee5e3b7aadb6f0e5454bad1694ff7))
+* add SECURITY.md with responsible disclosure policy ([f9d5eb3](https://github.com/monte97/keycloak-webhook-provider/commit/f9d5eb3c319dc7499b08e17b715525a06131a498))
+* update Release section with automated versioning workflow ([aa6f517](https://github.com/monte97/keycloak-webhook-provider/commit/aa6f5172ae1dde4d013035b73362ab2a9339921e))
+
 ## [Unreleased]
 
 ### Added
