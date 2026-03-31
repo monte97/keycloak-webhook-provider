@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build JAR
+      - name: Build JAR + SBOM (Java)
         run: make package
 
       - name: Upload JAR artifact
@@ -89,11 +89,22 @@ jobs:
           VERSION="${VERSION#v}"
           sed -i "0,/<version>.*<\/version>/s/<version>.*<\/version>/<version>${VERSION}<\/version>/" pom.xml
 
-      - name: Build JAR
+      - name: Build JAR + SBOM (Java)
         run: make package
 
-      - name: Upload JAR to GitHub Release
+      - name: Generate SBOM (frontend)
+        run: |
+          cd webhook-ui
+          npx --yes @cyclonedx/cyclonedx-npm \
+            --output-format JSON \
+            --output-file bom-ui.json \
+            --package-lock-only
+
+      - name: Upload JAR and SBOMs to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release-please.outputs.tag_name }}
-          files: target/keycloak-webhook-provider-*.jar
+          files: |
+            target/keycloak-webhook-provider-*.jar
+            target/bom.json
+            webhook-ui/bom-ui.json
