@@ -362,8 +362,50 @@ If Keycloak fails to start due to schema errors:
 
 ## Release
 
-1. Update the version in `pom.xml` (`<version>X.Y.Z</version>`)
-2. Run the full suite: `mvn verify`
-3. Build the JAR: `mvn package -Dmaven.failsafe.skip=true`
-4. The release JAR is: `target/keycloak-webhook-provider-X.Y.Z.jar`
-5. Copy it to `providers/` and rebuild Keycloak: `kc.sh build`
+Versioning is fully automated via [Release Please](https://github.com/googleapis/release-please)
+and driven by [Conventional Commits](https://www.conventionalcommits.org/).
+**You never manually edit `pom.xml` versions or create tags.**
+
+### Commit message → version bump
+
+| Prefix | Bump | Example |
+|--------|------|---------|
+| `fix:` | patch | 1.2.0 → 1.2.1 |
+| `feat:` | minor | 1.2.0 → 1.3.0 |
+| `feat!:` or `fix!:` | major | 1.2.0 → 2.0.0 |
+| `chore:`, `docs:`, `style:`, `ci:` | none | — |
+
+### Day-to-day workflow
+
+```
+# 1. Work normally — write code, commit with conventional prefixes
+git commit -m "fix: circuit breaker race condition"
+git commit -m "feat: add webhook event filtering by realm"
+
+# 2. Push to master
+git push origin master
+
+# → CI runs automatically (lint, test, mutation, build)
+# → Release Please opens/updates a Release PR on GitHub
+```
+
+### Releasing
+
+When you're ready to publish a new version:
+
+1. Go to the **Pull Requests** tab on GitHub
+2. Open the Release PR titled **`chore(master): release X.Y.Z`**
+3. Review the auto-generated `CHANGELOG.md` section
+4. **Merge** the PR
+
+After merge, automatically:
+- `pom.xml` is updated to `X.Y.Z` (no SNAPSHOT)
+- Tag `vX.Y.Z` is created
+- GitHub Release is published with the JAR attached
+
+### Notes
+
+- The Release PR stays open and accumulates commits until you merge it
+- If you push a `feat:` after a `fix:`, the PR title updates to reflect the higher bump
+- The JAR artifact is named `keycloak-webhook-provider-X.Y.Z.jar` and is attached to the GitHub Release
+- **Do not** push directly to `release-please--branches--master`
