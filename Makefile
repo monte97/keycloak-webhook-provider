@@ -17,12 +17,13 @@ OPENAPI_SPEC := docs/openapi.yaml
 OPENAPI_BUNDLE := docs/openapi-bundled.yaml
 OPENAPI_HTML := docs/openapi.html
 
-# Build mode: "docker" (default, portable) or "local" (requires Java 17 + Maven)
+# Build mode: "docker" (default, portable) or "local" (requires Java 17 + Maven on PATH)
+# In CI, use BUILD=local — Java and Node are set up by actions/setup-java and actions/setup-node.
+# Locally, set JAVA_HOME before running if you manage multiple JDKs (e.g. via sdkman or jenv).
 BUILD ?= docker
 
 ifeq ($(BUILD),local)
-  JAVA_HOME_17 := $(HOME)/.sdkman/candidates/java/17.0.0-tem
-  MVN := JAVA_HOME=$(JAVA_HOME_17) mvn
+  MVN := mvn
 else
   MVN_IMAGE := maven:3.9-eclipse-temurin-17
   MVN := $(DOCKER_RUN) -v mvn-cache:/root/.m2 $(MVN_IMAGE) mvn
@@ -150,6 +151,6 @@ help:
 	@echo "Usage: make <target> [BUILD=docker|local]"
 	@echo ""
 	@echo "  BUILD=docker (default) — runs in containers, no local deps needed"
-	@echo "  BUILD=local            — uses local Java 17 (sdkman) + Maven + Node"
+	@echo "  BUILD=local            — uses Java 17 + Maven + Node on PATH"
 	@echo ""
 	@grep -E '^## ' Makefile | sed 's/^## /  make /'
