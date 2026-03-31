@@ -129,8 +129,12 @@ endif
 ## openapi-diff   Check spec/code drift
 openapi-diff:
 	@echo ">>> Checking spec/code alignment..."
-	@JAVA_ENDPOINTS=$$(grep -E '@(GET|POST|PUT|DELETE|PATCH)' src/main/java/dev/montell/keycloak/resources/WebhooksResource.java \
-		| grep -v '//' | grep -v '"ui' | wc -l); \
+	@JAVA_ENDPOINTS=$$(grep -n -E '@(GET|POST|PUT|DELETE|PATCH)' src/main/java/dev/montell/keycloak/resources/WebhooksResource.java \
+		| grep -v '//' \
+		| awk -F: '{n=$$1+1; print n}' \
+		| while read linenum; do sed -n "$${linenum}p" src/main/java/dev/montell/keycloak/resources/WebhooksResource.java; done \
+		| grep -v '@Path("ui' \
+		| wc -l); \
 	SPEC_OPERATIONS=$$(grep -cE '^\s+(get|post|put|delete|patch):$$' $(OPENAPI_SPEC)); \
 	echo "  JAX-RS endpoints: $$JAVA_ENDPOINTS"; \
 	echo "  OpenAPI operations: $$SPEC_OPERATIONS"; \
