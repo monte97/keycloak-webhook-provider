@@ -22,10 +22,6 @@ Built for Keycloak 26.x.
 
 Download from [Releases](https://github.com/monte97/keycloak-webhook-provider/releases), copy to Keycloak's `providers/`, run `kc.sh build`.
 
-### With keycloak-kickstart
-
-[keycloak-kickstart](https://github.com/monte97/keycloak-kickstart) includes the JAR pre-configured. Clone, configure, `docker compose up`.
-
 ### Build from source
 
 ```bash
@@ -37,18 +33,7 @@ Copy `target/keycloak-webhook-provider-*.jar` to Keycloak's `providers/` and reb
 
 ## Configuration
 
-Register webhooks via the [Admin UI](#admin-ui), the REST API, or — with keycloak-kickstart — via seed YAML:
-
-```yaml
-realms:
-  - name: my-realm
-    webhooks:
-      - url: "https://your-service.example.com/webhook"
-        events:
-          - access.LOGIN
-          - access.LOGOUT
-          - admin.USER-DELETE
-```
+Register webhooks via the [Admin UI](#admin-ui) or the REST API.
 
 ### Event types
 
@@ -165,4 +150,4 @@ MIT — Copyright (c) 2026 Francesco Montelli
 
 ---
 
-Built by [Francesco Montelli](https://montelli.dev) · Part of the [Keycloak SSO Setup](https://montelli.dev/servizi/keycloak) productized service
+Built by [Francesco Montelli](https://montelli.dev) · [LinkedIn](https://www.linkedin.com/in/francesco-montelli) · [Blog](https://montelli.dev)
