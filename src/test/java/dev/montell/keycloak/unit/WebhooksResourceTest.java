@@ -223,7 +223,8 @@ class WebhooksResourceTest {
     void test_sends_ping() {
         WebhookModel w = mockWebhook("wh-1");
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
-        when(sender.send(anyString(), anyString(), eq("wh-1"), isNull(), isNull()))
+        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        when(sender.send(anyString(), payloadCaptor.capture(), eq("wh-1"), isNull(), isNull()))
             .thenReturn(new HttpSendResult(200, true, 42L));
 
         Response resp = resource.testWebhook("wh-1");
@@ -234,6 +235,18 @@ class WebhooksResourceTest {
         assertEquals(200, body.get("httpStatus"));
         assertEquals(true, body.get("success"));
         assertEquals(42L, body.get("durationMs"));
+
+        // Verify payload is valid JSON with AccessEvent structure
+        String payload = payloadCaptor.getValue();
+        assertDoesNotThrow(() -> {
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper()
+                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            var node = mapper.readTree(payload);
+            assertEquals("test.PING", node.get("type").asText());
+            assertEquals("test-realm", node.get("realmId").asText());
+            assertNotNull(node.get("uid"));
+            assertNotNull(node.get("occurredAt"));
+        });
     }
 
     @Test

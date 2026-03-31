@@ -1,12 +1,19 @@
 // src/main/java/dev/montell/keycloak/resources/WebhooksResource.java
 package dev.montell.keycloak.resources;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import dev.montell.keycloak.event.WebhookPayload;
 import dev.montell.keycloak.model.WebhookModel;
 import dev.montell.keycloak.spi.WebhookProvider;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import java.net.URI;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import lombok.extern.jbosslog.JBossLog;
 import dev.montell.keycloak.model.WebhookEventModel;
 import dev.montell.keycloak.model.WebhookSendModel;
@@ -35,6 +42,10 @@ import org.keycloak.services.resources.admin.permissions.AdminPermissions;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class WebhooksResource {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+        .registerModule(new JavaTimeModule())
+        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private final KeycloakSession session;
     private final RealmModel      realm;
@@ -210,9 +221,15 @@ public class WebhooksResource {
             return Response.status(503).entity("Webhook sender not initialized").build();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException("webhook not found: " + id);
-        String payload = "{\"type\":\"test.PING\",\"uid\":\"" + java.util.UUID.randomUUID()
-            + "\",\"realmId\":\"" + realm.getId()
-            + "\",\"occurredAt\":\"" + java.time.Instant.now() + "\"}";
+        var testEvent = new WebhookPayload.AccessEvent(
+            UUID.randomUUID().toString(), "test.PING", realm.getId(),
+            null, null, Instant.now(), Collections.emptyMap());
+        String payload;
+        try {
+            payload = MAPPER.writeValueAsString(testEvent);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return Response.serverError().entity("Failed to serialize test payload").build();
+        }
         var result = sender.send(w.getUrl(), payload, w.getId(), w.getSecret(), w.getAlgorithm());
         return Response.ok(java.util.Map.of(
             "httpStatus", result.httpStatus(),
