@@ -6,54 +6,100 @@ on:
   pull_request:
     branches: [master]
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
 
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: webhook-ui/package-lock.json
+
       - name: Check formatting (Spotless)
-        run: make fmt-check
+        run: make fmt-check BUILD=local
 
       - name: Static analysis (SpotBugs)
-        run: make spotbugs
+        run: make spotbugs BUILD=local
 
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
 
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: webhook-ui/package-lock.json
+
       - name: Unit tests (Java + UI)
-        run: make test-unit
+        run: make test-unit BUILD=local
 
       - name: OpenAPI lint
-        run: make openapi-lint
+        run: make openapi-lint BUILD=local
 
       - name: OpenAPI spec/code drift check
-        run: make openapi-diff
+        run: make openapi-diff BUILD=local
 
   mutation:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: test
     steps:
       - uses: actions/checkout@v5
 
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
       - name: Mutation testing (Pitest)
-        run: make test-mutation
+        run: make test-mutation BUILD=local
 
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [lint, test]
     steps:
       - uses: actions/checkout@v5
 
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: webhook-ui/package-lock.json
+
       - name: Build JAR + SBOM (Java)
-        run: make package
+        run: make package BUILD=local
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v5
@@ -64,6 +110,9 @@ jobs:
   release-please:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     needs: [lint, test]
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
@@ -77,11 +126,25 @@ jobs:
   publish:
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
-    needs: release-please
+    permissions:
+      contents: write
+    needs: [release-please, build]
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: webhook-ui/package-lock.json
 
       - name: Set version in pom.xml
         run: |
@@ -90,7 +153,7 @@ jobs:
           sed -i "0,/<version>.*<\/version>/s/<version>.*<\/version>/<version>${VERSION}<\/version>/" pom.xml
 
       - name: Build JAR + SBOM (Java)
-        run: make package
+        run: make package BUILD=local
 
       - name: Generate SBOM (frontend)
         run: |
