@@ -1,0 +1,97 @@
+services:
+
+  jar-downloader:
+    image: curlimages/curl:8.9.1
+    volumes:
+      - providers:/providers
+    command: >
+      sh -c "
+        echo 'Downloading latest keycloak-webhook-provider JAR...' &&
+        URL=$(curl -sf https://api.github.com/repos/monte97/keycloak-webhook-provider/releases/latest \
+          | grep browser_download_url | grep '\\.jar' | cut -d'\"' -f4) &&
+        curl -L -o /providers/keycloak-webhook-provider.jar \"$$URL\" &&
+        echo 'JAR downloaded successfully.'
+      "
+
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+    volumes:
+      - providers:/opt/keycloak/providers
+      - ./keycloak/realm-demo.json:/opt/keycloak/data/import/realm-demo.json
+    ports:
+      - "${KEYCLOAK_PORT}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      jar-downloader:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/realms/master || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  consumer:
+    image: tarampampam/webhook-tester:latest
+    ports:
+      - "${CONSUMER_PORT}:8080"
+
+  setup:
+    image: curlimages/curl:8.9.1
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      consumer:
+        condition: service_started
+    restart: "no"
+    environment:
+      KC_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_REALM: ${KC_REALM}
+      KEYCLOAK_PORT: ${KEYCLOAK_PORT}
+      CONSUMER_PORT: ${CONSUMER_PORT}
+    volumes:
+      - ./setup/run.sh:/run.sh
+    entrypoint: ["/bin/sh", "/run.sh"]
+
+  generator:
+    image: curlimages/curl:8.9.1
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      KC_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_REALM: ${KC_REALM}
+      GENERATOR_INTERVAL_SECONDS: ${GENERATOR_INTERVAL_SECONDS}
+      GENERATOR_USERS_PER_CYCLE: ${GENERATOR_USERS_PER_CYCLE}
+      GENERATOR_USER_PREFIX: ${GENERATOR_USER_PREFIX}
+    volumes:
+      - ./generator/run.sh:/run.sh
+    entrypoint: ["/bin/sh", "/run.sh"]
+
+volumes:
+  providers:
+  postgres_data:
