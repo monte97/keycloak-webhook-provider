@@ -16,24 +16,100 @@ Built for Keycloak 26.x.
 - **[Admin UI](webhook-ui/)** — embedded React + PatternFly SPA for browser-based management
 - **Persistence** — PostgreSQL via JPA/Liquibase (uses Keycloak's existing datasource)
 
-## Quick start
+## Requirements
 
-### Pre-built JAR
+- Keycloak 26.x
+- PostgreSQL (uses Keycloak's existing datasource — no separate DB needed)
 
-Download from [Releases](https://github.com/monte97/keycloak-webhook-provider/releases), copy to Keycloak's `providers/`, run `kc.sh build`.
+## Installation
 
-### Build from source
+### 1. Get the JAR
+
+**Pre-built** — download from [Releases](https://github.com/monte97/keycloak-webhook-provider/releases).
+
+**Build from source:**
 
 ```bash
-make package          # Docker-based (default), no local deps needed
+make package          # Docker-based, no local deps needed
 make package BUILD=local  # requires Java 17 + Maven + Node 20
 ```
 
-Copy `target/keycloak-webhook-provider-*.jar` to Keycloak's `providers/` and rebuild.
+### 2. Deploy
+
+**Bare-metal / VM:**
+
+```bash
+cp keycloak-webhook-provider-*.jar /opt/keycloak/providers/
+/opt/keycloak/bin/kc.sh build
+/opt/keycloak/bin/kc.sh start
+```
+
+**Docker Compose:**
+
+```yaml
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    command: start-dev
+    volumes:
+      - ./keycloak-webhook-provider-*.jar:/opt/keycloak/providers/keycloak-webhook-provider.jar
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+```
+
+The Liquibase migration runs automatically on first start and creates the `WEBHOOK`, `WEBHOOK_EVENT`, and `WEBHOOK_SEND` tables in Keycloak's schema.
+
+### 3. Enable the event listener
+
+In **Keycloak Admin Console**:
+
+1. Select your realm
+2. Go to **Realm Settings → Events → Event listeners**
+3. Add `montell-webhook` to the list
+4. Save
+
+Or via Admin CLI:
+
+```bash
+kcadm.sh update events/config -r {realm} \
+  -s 'eventsListeners=["jboss-logging","montell-webhook"]'
+```
+
+### 4. Create your first webhook
+
+Open the Admin UI at `http://localhost:8080/realms/{realm}/webhooks/ui`, or use the REST API:
+
+```bash
+TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
+  -d "client_id=admin-cli&username=admin&password=admin&grant_type=password" \
+  | jq -r '.access_token')
+
+curl -X POST "http://localhost:8080/realms/{realm}/webhooks/" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-service.example.com/webhook",
+    "secret": "your-signing-secret",
+    "enabled": true,
+    "eventTypes": ["access.LOGIN", "access.LOGOUT"]
+  }'
+```
 
 ## Configuration
 
-Register webhooks via the [Admin UI](#admin-ui) or the REST API.
+Register webhooks via the [Admin UI](#admin-ui) or the REST API (see [Installation → step 4](#4-create-your-first-webhook)).
 
 ### Event types
 
@@ -61,13 +137,13 @@ def verify(secret: str, body: bytes, signature_header: str) -> bool:
 
 ## Admin UI
 
-Access at `http://localhost:8080/auth/realms/{realm}/webhooks/ui`. Each realm has its own independent UI — no manual OIDC client setup required.
+Access at `http://localhost:8080/realms/{realm}/webhooks/ui`. Each realm has its own independent UI — no manual OIDC client setup required.
 
 See [webhook-ui/README.md](webhook-ui/README.md) for details, screenshots, and development workflow.
 
 ## REST API
 
-All endpoints under `/auth/realms/{realm}/webhooks`. Bearer token with `manage-realm` (write) or `view-realm` (read) role.
+All endpoints under `/realms/{realm}/webhooks`. Bearer token with `manage-realm` (write) or `view-realm` (read) role.
 
 Full spec: [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.1) — import into Swagger UI, Postman, or use with openapi-generator.
 
@@ -90,23 +166,7 @@ Full spec: [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.1) — import int
 | `POST` | `/{id}/sends/{sid}/resend` | Resend a specific delivery |
 | `POST` | `/{id}/resend-failed` | Bulk resend failed deliveries |
 
-### Example: create a webhook
-
-```bash
-TOKEN=$(curl -s -X POST "http://localhost:8080/auth/realms/master/protocol/openid-connect/token" \
-  -d "client_id=admin-cli&username=admin&password=admin&grant_type=password" \
-  | jq -r '.access_token')
-
-curl -X POST "http://localhost:8080/auth/realms/my-realm/webhooks/" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://your-service.example.com/webhook",
-    "secret": "your-signing-secret",
-    "enabled": true,
-    "eventTypes": ["access.LOGIN", "access.LOGOUT"]
-  }'
-```
+See [Installation → step 4](#4-create-your-first-webhook) for a full example.
 
 ## How it works
 
@@ -150,4 +210,4 @@ MIT — Copyright (c) 2026 Francesco Montelli
 
 ---
 
-Built by [Francesco Montelli](https://montelli.dev) · [LinkedIn](https://www.linkedin.com/in/francesco-montelli) · [Blog](https://montelli.dev)
+Built by [Francesco Montelli](https://montelli.dev) · [Blog](https://montelli.dev) · [LinkedIn](https://www.linkedin.com/in/francesco-montelli)
