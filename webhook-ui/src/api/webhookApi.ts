@@ -1,4 +1,12 @@
-import type { Webhook, WebhookInput, SecretStatus, CircuitState, TestResult } from './types';
+import type {
+  Webhook,
+  WebhookInput,
+  SecretStatus,
+  CircuitState,
+  TestResult,
+  WebhookSend,
+  ResendResult,
+} from './types';
 import { ApiError } from './types';
 
 interface KeycloakInstance {
@@ -57,6 +65,20 @@ export function createWebhookApi(basePath: string, realm: string, keycloak: Keyc
     },
     resetCircuit(id: string): Promise<void> {
       return request(`/${id}/circuit/reset`, { method: 'POST' });
+    },
+    getSends(
+      id: string,
+      params: { max?: number; success?: boolean } = {},
+    ): Promise<WebhookSend[]> {
+      const { max = 50, success } = params;
+      const qs =
+        success !== undefined
+          ? `?first=0&max=${max}&success=${success}`
+          : `?first=0&max=${max}`;
+      return request(`/${id}/sends${qs}`);
+    },
+    resendFailed(id: string, hours = 24): Promise<ResendResult> {
+      return request(`/${id}/resend-failed?hours=${hours}`, { method: 'POST' });
     },
   };
 }
