@@ -62,7 +62,7 @@ services:
       - postgres
 
   postgres:
-    image: postgres:16
+    image: postgres:18
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
@@ -77,14 +77,14 @@ In **Keycloak Admin Console**:
 
 1. Select your realm
 2. Go to **Realm Settings → Events → Event listeners**
-3. Add `montell-webhook` to the list
+3. Add `webhook-provider` to the list
 4. Save
 
 Or via Admin CLI:
 
 ```bash
 kcadm.sh update events/config -r {realm} \
-  -s 'eventsListeners=["jboss-logging","montell-webhook"]'
+  -s 'eventsListeners=["jboss-logging","webhook-provider"]'
 ```
 
 ### 4. Create your first webhook

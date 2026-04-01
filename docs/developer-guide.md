@@ -328,7 +328,7 @@ The project uses JBoss Logging (via Lombok `@JBossLog`). Levels:
 
 ### Webhook is not being sent
 
-1. Verify the listener is active: Keycloak Admin → Realm Settings → Events → Event Listeners must include `montell-webhook`
+1. Verify the listener is active: Keycloak Admin → Realm Settings → Events → Event Listeners must include `webhook-provider`
 2. Check that the webhook is `enabled: true`
 3. Verify the event type matches: `GET /webhooks/{id}` shows `eventTypes`
 4. Check the circuit breaker: `GET /webhooks/{id}/circuit` — if OPEN, reset with `POST /webhooks/{id}/circuit/reset`

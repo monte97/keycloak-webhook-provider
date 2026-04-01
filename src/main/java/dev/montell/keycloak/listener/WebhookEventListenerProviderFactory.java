@@ -21,13 +21,13 @@ import org.keycloak.timer.TimerProvider;
  * {@link WebhookComponentHolder}, and schedules the 24-hour {@link RetentionCleanupTask}.
  *
  * <p>Registered as provider ID {@value #PROVIDER_ID}. Enable in Keycloak via Realm Settings &rarr;
- * Events &rarr; Event Listeners &rarr; {@code montell-webhook}.
+ * Events &rarr; Event Listeners &rarr; {@code webhook-provider}.
  */
 @JBossLog
 @AutoService(EventListenerProviderFactory.class)
 public class WebhookEventListenerProviderFactory implements EventListenerProviderFactory {
 
-    public static final String PROVIDER_ID = "montell-webhook";
+    public static final String PROVIDER_ID = "webhook-provider";
 
     private WebhookEventDispatcher dispatcher;
 
@@ -58,7 +58,7 @@ public class WebhookEventListenerProviderFactory implements EventListenerProvide
                         timer.scheduleTask(
                                 new RetentionCleanupTask(),
                                 TimeUnit.HOURS.toMillis(24),
-                                "montell-webhook-retention-cleanup");
+                                "webhook-provider-retention-cleanup");
                     } else {
                         log.warn("TimerProvider not available — retention cleanup not scheduled");
                     }
