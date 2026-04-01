@@ -1,0 +1,17 @@
+{
+  "realm": "demo",
+  "enabled": true,
+  "eventsEnabled": true,
+  "eventsListeners": ["jboss-logging", "webhook-provider"],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "clients": [
+    {
+      "clientId": "demo-client",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false
+    }
+  ]
+}
