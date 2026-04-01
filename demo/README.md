@@ -5,7 +5,12 @@ A self-contained Docker Compose environment that boots Keycloak with the webhook
 ## Prerequisites
 
 - Docker with Compose v2 (`docker compose version`)
-- Ports `8080` and `3000` free (configurable in `.env`)
+- Ports `8080` and `3000` free by default — change them in `.env` if already in use:
+
+```env
+KEYCLOAK_PORT=8080   # change if 8080 is taken
+CONSUMER_PORT=3000   # change if 3000 is taken
+```
 
 ## Quick start
 
@@ -20,12 +25,12 @@ Wait ~90 seconds for Keycloak to boot. Then:
 make urls
 ```
 
-Output:
+Output (ports reflect your `.env`):
 
 ```
- Keycloak Admin:    http://localhost:8080  (admin / admin)
- Webhook Admin UI:  http://localhost:8080/realms/demo/webhooks/ui
- Webhook Inspector: http://localhost:3000/<uuid>
+ Keycloak Admin:    http://localhost:<KEYCLOAK_PORT>  (admin / admin)
+ Webhook Admin UI:  http://localhost:<KEYCLOAK_PORT>/realms/demo/webhooks/ui  (webhook-admin / webhook-admin)
+ Webhook Inspector: http://localhost:<CONSUMER_PORT>/s/<uuid>
 ```
 
 Open the **Webhook Inspector** URL in the browser. Within 15 seconds you'll see incoming webhook payloads from the event generator.
@@ -38,7 +43,7 @@ Open the **Webhook Inspector** URL in the browser. Within 15 seconds you'll see 
 make urls
 ```
 
-Copy the **Webhook Inspector** URL (`http://localhost:<CONSUMER_PORT>/<uuid>`) and open it in the browser.
+Copy the **Webhook Inspector** URL (`http://localhost:<CONSUMER_PORT>/s/<uuid>`) and open it in the browser.
 
 **2. Watch the generator**:
 
