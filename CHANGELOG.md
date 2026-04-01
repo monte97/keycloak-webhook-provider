@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/monte97/keycloak-webhook-provider/compare/v1.2.2...v1.3.0) (2026-04-01)
+
+
+### Features
+
+* **demo:** add shareable Docker Compose demo stack ([4e5ccab](https://github.com/monte97/keycloak-webhook-provider/commit/4e5ccab96bc2223820f8a0070bbe14a907250515))
+
+
+### Bug Fixes
+
+* **demo:** fix stack startup issues found during smoke test ([157f4ab](https://github.com/monte97/keycloak-webhook-provider/commit/157f4ab6cae0979f48a80b37a43356829fc461b6))
+* **demo:** move .env files into demo/ directory ([7ba89f1](https://github.com/monte97/keycloak-webhook-provider/commit/7ba89f1fe3205511b4d119df0a18944c807237a3))
+
+
+### Documentation
+
+* add demo stack design spec ([1e653b1](https://github.com/monte97/keycloak-webhook-provider/commit/1e653b121d3c673fc7d8ea56cd3571ebdcaa91db))
+* add demo stack implementation plan ([ee50e3e](https://github.com/monte97/keycloak-webhook-provider/commit/ee50e3e58d08007815f3f34375ca8e3fba1a0602))
+* update spec postgres version to 18 ([e14d23e](https://github.com/monte97/keycloak-webhook-provider/commit/e14d23e9d4b86c15fd66cc11eb48a037169424d2))
+
 ## [1.2.2](https://github.com/monte97/keycloak-webhook-provider/compare/v1.2.1...v1.2.2) (2026-04-01)
 
 
