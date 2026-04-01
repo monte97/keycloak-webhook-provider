@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2](https://github.com/monte97/keycloak-webhook-provider/compare/v1.2.1...v1.2.2) (2026-04-01)
+
+
+### Bug Fixes
+
+* rename event listener ID from montell-webhook to webhook-provider ([9c7e72f](https://github.com/monte97/keycloak-webhook-provider/commit/9c7e72fd601d7eaaa357a78e9c5cbd34c7e29f93))
+
+
+### Documentation
+
+* expand README with full deployment guide and personal contacts ([6e3fb40](https://github.com/monte97/keycloak-webhook-provider/commit/6e3fb40c39ab7146aa957c20de73aaa5b602e191))
+
 ## [1.2.1](https://github.com/monte97/keycloak-webhook-provider/compare/v1.2.0...v1.2.1) (2026-03-31)
 
 
