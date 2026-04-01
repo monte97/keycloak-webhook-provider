@@ -27,7 +27,7 @@ A shareable Docker Compose stack that acts as both an interactive demo and a man
 
 | Service | Image | Role |
 |---------|-------|------|
-| `postgres` | `postgres:16` | Keycloak database |
+| `postgres` | `postgres:18` | Keycloak database |
 | `keycloak` | `quay.io/keycloak/keycloak:26.0.0` | Keycloak 26 + webhook-provider JAR |
 | `consumer` | `tarampampam/webhook-tester` | Webhook inspector with web UI (MIT) |
 | `generator` | `curlimages/curl` | Automated event generator loop |
