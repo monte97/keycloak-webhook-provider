@@ -428,10 +428,12 @@ public class WebhooksResource {
     private void ensureUiClient() {
         if (realm.getClientByClientId(UI_CLIENT_ID) != null) return;
         var client = realm.addClient(UI_CLIENT_ID);
+        client.setProtocol("openid-connect");
         client.setPublicClient(true);
         client.setDirectAccessGrantsEnabled(true);
         client.setRedirectUris(java.util.Set.of("*"));
         client.setWebOrigins(java.util.Set.of("+"));
+        client.setFullScopeAllowed(true);
         client.setEnabled(true);
         log.infof("Auto-created '%s' OIDC client in realm '%s'", UI_CLIENT_ID, realm.getName());
     }
