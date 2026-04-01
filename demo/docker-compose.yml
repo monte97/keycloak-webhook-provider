@@ -2,16 +2,11 @@ services:
 
   jar-downloader:
     image: curlimages/curl:8.9.1
+    user: root
     volumes:
       - providers:/providers
-    command: >
-      sh -c "
-        echo 'Downloading latest keycloak-webhook-provider JAR...' &&
-        URL=$(curl -sf https://api.github.com/repos/monte97/keycloak-webhook-provider/releases/latest \
-          | grep browser_download_url | grep '\\.jar' | cut -d'\"' -f4) &&
-        curl -L -o /providers/keycloak-webhook-provider.jar \"$$URL\" &&
-        echo 'JAR downloaded successfully.'
-      "
+      - ./jar-downloader/run.sh:/run.sh
+    entrypoint: ["/bin/sh", "/run.sh"]
 
   postgres:
     image: postgres:18
@@ -20,7 +15,7 @@ services:
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: keycloak
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U keycloak"]
       interval: 5s
@@ -48,7 +43,7 @@ services:
       jar-downloader:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/realms/master || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20

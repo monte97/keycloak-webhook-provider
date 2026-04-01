@@ -7,7 +7,7 @@ CONSUMER_URL="http://consumer:8080"
 echo "==> Creating webhook-tester session..."
 SESSION=$(curl -sf -X POST "${CONSUMER_URL}/api/session" \
   -H "Content-Type: application/json" \
-  -d '{}')
+  -d '{"status_code":200}')
 UUID=$(echo "$SESSION" | grep -o '"uuid":"[^"]*"' | cut -d'"' -f4)
 
 if [ -z "$UUID" ]; then
@@ -17,8 +17,8 @@ fi
 echo "    Session UUID: $UUID"
 
 echo "==> Getting Keycloak admin token..."
-TOKEN=$(curl -sf -X POST "${KC_URL}/realms/master/protocol/openid-connect/token" \
-  -d "client_id=admin-cli&username=admin&password=${KC_ADMIN_PASSWORD}&grant_type=password" \
+TOKEN=$(curl -sf -X POST "${KC_URL}/realms/${KC_REALM}/protocol/openid-connect/token" \
+  -d "client_id=admin-cli&username=webhook-admin&password=webhook-admin&grant_type=password" \
   | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
 
 if [ -z "$TOKEN" ]; then

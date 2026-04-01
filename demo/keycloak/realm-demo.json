@@ -12,6 +12,27 @@
       "publicClient": true,
       "directAccessGrantsEnabled": true,
       "standardFlowEnabled": false
+    },
+    {
+      "clientId": "admin-cli",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "webhook-admin",
+      "enabled": true,
+      "email": "webhook-admin@demo.local",
+      "firstName": "Webhook",
+      "lastName": "Admin",
+      "requiredActions": [],
+      "credentials": [{"type": "password", "value": "webhook-admin", "temporary": false}],
+      "clientRoles": {
+        "realm-management": ["manage-events", "view-events", "manage-realm", "view-realm"]
+      }
     }
   ]
 }
