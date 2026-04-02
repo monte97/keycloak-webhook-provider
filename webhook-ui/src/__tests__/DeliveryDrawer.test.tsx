@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { Drawer } from '@patternfly/react-core';
 import { DeliveryDrawer } from '../components/DeliveryDrawer';
 import type { Webhook, WebhookSend, CircuitState } from '../api/types';
 import type { WebhookApiClient } from '../api/webhookApi';
@@ -85,12 +86,14 @@ describe('DeliveryDrawer', () => {
 
   it('renders sends table with success and failed rows', async () => {
     render(
-      <DeliveryDrawer
-        webhook={webhook}
-        api={api}
-        onClose={onClose}
-        onCircuitReset={onCircuitReset}
-      />,
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
     );
 
     await waitFor(() => {
@@ -103,12 +106,14 @@ describe('DeliveryDrawer', () => {
 
   it('renders circuit state', async () => {
     render(
-      <DeliveryDrawer
-        webhook={webhook}
-        api={api}
-        onClose={onClose}
-        onCircuitReset={onCircuitReset}
-      />,
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
     );
 
     await waitFor(() => {
@@ -120,12 +125,14 @@ describe('DeliveryDrawer', () => {
   it('shows Reset circuit button when circuit is OPEN', async () => {
     api = makeApi({ getCircuit: vi.fn().mockResolvedValue(openCircuit) });
     render(
-      <DeliveryDrawer
-        webhook={webhook}
-        api={api}
-        onClose={onClose}
-        onCircuitReset={onCircuitReset}
-      />,
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
     );
 
     await waitFor(() => {
@@ -135,12 +142,14 @@ describe('DeliveryDrawer', () => {
 
   it('does not show Reset circuit button when circuit is CLOSED', async () => {
     render(
-      <DeliveryDrawer
-        webhook={webhook}
-        api={api}
-        onClose={onClose}
-        onCircuitReset={onCircuitReset}
-      />,
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
     );
 
     await waitFor(() => screen.getByText('CLOSED'));
@@ -149,12 +158,14 @@ describe('DeliveryDrawer', () => {
 
   it('Failed filter button calls getSends with success=false', async () => {
     render(
-      <DeliveryDrawer
-        webhook={webhook}
-        api={api}
-        onClose={onClose}
-        onCircuitReset={onCircuitReset}
-      />,
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
     );
 
     await waitFor(() => screen.getByText('200'));
@@ -167,12 +178,14 @@ describe('DeliveryDrawer', () => {
 
   it('Resend failed (24h) button calls resendFailed and reloads sends', async () => {
     render(
-      <DeliveryDrawer
-        webhook={webhook}
-        api={api}
-        onClose={onClose}
-        onCircuitReset={onCircuitReset}
-      />,
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
     );
 
     await waitFor(() => screen.getByText('200'));
@@ -188,12 +201,14 @@ describe('DeliveryDrawer', () => {
   it('Reset circuit button calls resetCircuit and onCircuitReset', async () => {
     api = makeApi({ getCircuit: vi.fn().mockResolvedValue(openCircuit) });
     render(
-      <DeliveryDrawer
-        webhook={webhook}
-        api={api}
-        onClose={onClose}
-        onCircuitReset={onCircuitReset}
-      />,
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
     );
 
     await waitFor(() => screen.getByRole('button', { name: /reset circuit/i }));
@@ -208,12 +223,14 @@ describe('DeliveryDrawer', () => {
   it('shows inline error when getSends rejects', async () => {
     api = makeApi({ getSends: vi.fn().mockRejectedValue(new Error('Network error')) });
     render(
-      <DeliveryDrawer
-        webhook={webhook}
-        api={api}
-        onClose={onClose}
-        onCircuitReset={onCircuitReset}
-      />,
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
     );
 
     await waitFor(() => {
@@ -222,14 +239,16 @@ describe('DeliveryDrawer', () => {
   });
 
   it('renders nothing when webhook is null', () => {
-    const { container } = render(
-      <DeliveryDrawer
-        webhook={null}
-        api={api}
-        onClose={onClose}
-        onCircuitReset={onCircuitReset}
-      />,
+    render(
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={null}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
     );
-    expect(container.firstChild).toBeNull();
+    expect(screen.queryByRole('complementary')).toBeNull();
   });
 });

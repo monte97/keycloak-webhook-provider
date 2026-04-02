@@ -9,7 +9,6 @@ import {
   Alert,
   Label,
   Title,
-  DrawerContext,
 } from '@patternfly/react-core';
 import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 import type { Webhook, WebhookSend, CircuitState } from '../api/types';
@@ -127,7 +126,6 @@ export function DeliveryDrawer({
   if (!webhook) return null;
 
   return (
-    <DrawerContext.Provider value={{ isExpanded: true, isStatic: false, isInline: false }}>
     <DrawerPanelContent minSize="420px">
       <DrawerHead>
         <Title
@@ -279,6 +277,5 @@ export function DeliveryDrawer({
         )}
       </div>
     </DrawerPanelContent>
-    </DrawerContext.Provider>
   );
 }
