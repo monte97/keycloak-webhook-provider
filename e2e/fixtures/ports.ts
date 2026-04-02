@@ -14,6 +14,7 @@ function readPorts(): Ports {
 }
 
 interface E2EFixtures {
+  _ports: Ports;
   keycloakUrl: string;
   consumerPublicUrl: string;
   adminToken: string;
@@ -21,14 +22,16 @@ interface E2EFixtures {
 }
 
 export const test = base.extend<E2EFixtures>({
-  keycloakUrl: async ({}, use) => {
-    const { keycloakPort } = readPorts();
-    await use(`http://localhost:${keycloakPort}`);
+  _ports: async ({}, use) => {
+    await use(readPorts());
   },
 
-  consumerPublicUrl: async ({}, use) => {
-    const { consumerPort } = readPorts();
-    await use(`http://localhost:${consumerPort}`);
+  keycloakUrl: async ({ _ports }, use) => {
+    await use(`http://localhost:${_ports.keycloakPort}`);
+  },
+
+  consumerPublicUrl: async ({ _ports }, use) => {
+    await use(`http://localhost:${_ports.consumerPort}`);
   },
 
   // Keycloak master-realm admin (can manage users, trigger events)
@@ -41,6 +44,10 @@ export const test = base.extend<E2EFixtures>({
         body: 'client_id=admin-cli&username=admin&password=admin&grant_type=password',
       },
     );
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`adminToken fetch failed: HTTP ${res.status} — ${body}`);
+    }
     const data = (await res.json()) as { access_token: string };
     await use(data.access_token);
   },
@@ -55,6 +62,10 @@ export const test = base.extend<E2EFixtures>({
         body: 'client_id=admin-cli&username=webhook-admin&password=webhook-admin&grant_type=password',
       },
     );
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`webhookAdminToken fetch failed: HTTP ${res.status} — ${body}`);
+    }
     const data = (await res.json()) as { access_token: string };
     await use(data.access_token);
   },
