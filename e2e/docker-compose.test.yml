@@ -1,10 +1,22 @@
 # Overrides demo/docker-compose.yml for E2E tests:
 # - Random ports: pass KEYCLOAK_PORT=0 CONSUMER_PORT=0 to docker compose up
 # - Disables setup and generator (tests manage their own state via admin API)
+# - Uses locally-built JAR (target/keycloak-webhook-provider-*.jar) instead of
+#   downloading from GitHub, so local source changes are tested immediately.
 #
 # Usage: docker compose -f demo/docker-compose.yml -f e2e/docker-compose.test.yml \
 #          -p e2e-test up -d (with KEYCLOAK_PORT=0 CONSUMER_PORT=0 in env)
 services:
+  # Copy the locally-built JAR into the shared providers volume instead of
+  # downloading from GitHub releases.
+  jar-downloader:
+    image: alpine:3.20
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["find /local-jar -maxdepth 1 -name 'keycloak-webhook-provider-*.jar' ! -name 'original-*' | sort -V | tail -1 | xargs -I{} cp {} /providers/keycloak-webhook-provider.jar && echo 'Local JAR installed.'"]
+    volumes:
+      - providers:/providers
+      - ../target:/local-jar:ro
+
   setup:
     entrypoint: ["true"]
     command: []

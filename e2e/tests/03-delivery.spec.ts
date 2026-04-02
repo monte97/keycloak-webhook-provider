@@ -64,7 +64,9 @@ test('Delivery drawer shows sends table after event delivery', async ({
   const eventSearch = page.getByPlaceholder('Search event types...');
   await eventSearch.click();
   await eventSearch.fill('*');
-  await page.locator('li[role="option"]').first().click();
+  const dropdown = page.locator('[role="listbox"]');
+  await expect(dropdown).toBeVisible({ timeout: 5_000 });
+  await dropdown.locator('[role="option"]').first().click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Webhook created')).toBeVisible();
 
@@ -75,20 +77,22 @@ test('Delivery drawer shows sends table after event delivery', async ({
   //    10s is generous — typically takes < 2s on connection-refused URLs, < 1s on success.
   await page.waitForTimeout(10_000);
 
-  // 5. Click the webhook row to open the drawer (filter by unique uuid substring)
+  // 5. Click the URL cell to open the drawer (filter row by unique uuid substring).
+  // Avoid row.click() — it hits the center which may land on the "Enabled" cell
+  // (stopPropagation). Clicking the first gridcell (URL) propagates to the row's onClick.
   const row = page.getByRole('row').filter({ hasText: uuid });
-  await row.click();
+  await row.getByRole('gridcell').first().click();
 
   // 6. Verify drawer content
   await expect(page.getByText('Delivery history')).toBeVisible({ timeout: 5_000 });
-  await expect(page.getByRole('table', { name: 'Delivery history' })).toBeVisible();
+  await expect(page.getByRole('grid', { name: 'Delivery history' })).toBeVisible();
 
   // At least one row in the sends table (not "No deliveries found")
   await expect(page.getByText('No deliveries found')).not.toBeVisible();
 
   // 7. Filter buttons are present
   await expect(page.getByRole('button', { name: 'All' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Failed' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Failed', exact: true })).toBeVisible();
 
   // 8. "Resend failed (24h)" button is present
   await expect(page.getByRole('button', { name: 'Resend failed (24h)' })).toBeVisible();
@@ -115,26 +119,28 @@ test('Delivery drawer filter toggles to Failed', async ({
   await expect(createBtn.first()).toBeVisible({ timeout: 15_000 });
   await createBtn.first().click();
   await page.getByLabel('URL').fill(webhookUrl);
-  const eventSearch = page.getByPlaceholder('Search event types...');
-  await eventSearch.click();
-  await eventSearch.fill('*');
-  await page.locator('li[role="option"]').first().click();
+  const eventSearch2 = page.getByPlaceholder('Search event types...');
+  await eventSearch2.click();
+  await eventSearch2.fill('*');
+  const dropdown2 = page.locator('[role="listbox"]');
+  await expect(dropdown2).toBeVisible({ timeout: 5_000 });
+  await dropdown2.locator('[role="option"]').first().click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Webhook created')).toBeVisible();
 
   await triggerEvents(keycloakUrl, adminToken, 1);
   await page.waitForTimeout(10_000);
 
-  // Open drawer — filter by unique uuid to avoid matching other consumer:8080 rows
+  // Open drawer — click URL cell (first gridcell) to avoid stopPropagation on Enabled cell
   const row = page.getByRole('row').filter({ hasText: uuid });
-  await row.click();
+  await row.getByRole('gridcell').first().click();
   await expect(page.getByText('Delivery history')).toBeVisible();
 
-  // Click "Failed" filter
-  await page.getByRole('button', { name: 'Failed' }).click();
+  // Click "Failed" filter — exact:true to avoid matching "Resend failed (24h)" button
+  await page.getByRole('button', { name: 'Failed', exact: true }).click();
 
   // Table reloads — wait for table to be visible
-  await expect(page.getByRole('table', { name: 'Delivery history' })).toBeVisible();
+  await expect(page.getByRole('grid', { name: 'Delivery history' })).toBeVisible();
 
   // Since all deliveries succeeded, "No deliveries found" should appear
   await expect(page.getByText('No deliveries found')).toBeVisible({ timeout: 5_000 });

@@ -44,10 +44,15 @@ test('Circuit opens after repeated failures and resets to CLOSED', async ({
   await createBtn.first().click();
 
   await page.getByLabel('URL').fill(UNREACHABLE_URL);
+  // Use admin.* (not *) so that only admin events (user create/delete) trigger dispatches.
+  // Using * would also catch access events (CODE_TO_TOKEN, TOKEN_REFRESH) from keycloak-js
+  // silent auth on each page reload, which would re-open the circuit after the reset.
   const eventSearch = page.getByPlaceholder('Search event types...');
   await eventSearch.click();
-  await eventSearch.fill('*');
-  await page.locator('li[role="option"]').first().click();
+  await eventSearch.fill('admin.*');
+  const dropdown = page.locator('[role="listbox"]');
+  await expect(dropdown).toBeVisible({ timeout: 5_000 });
+  await dropdown.locator('[role="option"]').first().click();
 
   // Short retry window so failures accumulate fast: 1s total
   await page.getByLabel('Max retry duration (seconds)').fill('1');
@@ -79,13 +84,28 @@ test('Circuit opens after repeated failures and resets to CLOSED', async ({
   await row.getByText('OPEN').click();
 
   // Popover with failure count and reset button
-  await expect(page.getByText(/\d+ failures/)).toBeVisible();
+  await expect(page.getByText(/\d+ failures/).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reset to CLOSED' })).toBeVisible();
 
   // 5. Reset the circuit
+  // Clicking the OPEN badge also bubbles to the row's onClick → delivery drawer opens.
+  // Close the drawer first so the popover button is not obscured by the drawer panel,
+  // allowing a normal (non-forced) click that reliably triggers the React event handler.
+  await page.getByRole('button', { name: 'Close drawer panel' }).click();
+  await expect(page.getByRole('button', { name: 'Close drawer panel' })).not.toBeVisible({ timeout: 3_000 });
+
   await page.getByRole('button', { name: 'Reset to CLOSED' }).click();
 
-  // 6. Circuit badge returns to CLOSED
-  await expect(row.getByText('CLOSED')).toBeVisible({ timeout: 5_000 });
-  await expect(row.getByText('OPEN')).not.toBeVisible();
+  // Wait for the success toast — this confirms the POST /circuit/reset API call completed
+  // before we reload. Reloading too early cancels the in-flight request.
+  await expect(page.getByText('Circuit breaker reset')).toBeVisible({ timeout: 5_000 });
+
+  // 6. Reload to get fresh server state and verify the circuit persisted as CLOSED.
+  //    Use networkidle — keycloak-js does a silent redirect on reload that generates a
+  //    second navigation (#state=...&code=... callback), which must settle before the table renders.
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+  const resetRow = page.getByRole('row').filter({ hasText: UNREACHABLE_URL });
+  await expect(resetRow.locator('.pf-v5-c-label__text', { hasText: /^CLOSED$/ })).toBeVisible({ timeout: 10_000 });
+  await expect(resetRow.locator('.pf-v5-c-label__text', { hasText: /^OPEN$/ })).not.toBeVisible();
 });

@@ -155,9 +155,14 @@ export function WebhookTable({ api }: { api: WebhookApiClient }) {
     }
   };
 
-  const handleCircuitReset = async (_webhookId: string) => {
-    addAlert('success', 'Circuit breaker reset');
-    fetchWebhooks();
+  const handleCircuitReset = async (webhookId: string) => {
+    try {
+      await api.resetCircuit(webhookId);
+      addAlert('success', 'Circuit breaker reset');
+      fetchWebhooks();
+    } catch (e) {
+      addAlert('danger', e instanceof ApiError ? e.message : 'Reset failed');
+    }
   };
 
   if (loading) return null;

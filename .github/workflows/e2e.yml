@@ -15,6 +15,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: webhook-ui/package-lock.json
+
+      - name: Build JAR from source
+        run: make package BUILD=local
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
