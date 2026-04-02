@@ -64,7 +64,7 @@ test('Delivery drawer shows sends table after event delivery', async ({
   const eventSearch = page.getByPlaceholder('Search event types...');
   await eventSearch.click();
   await eventSearch.fill('*');
-  await page.getByRole('option').first().click();
+  await page.locator('li[role="option"]').first().click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Webhook created')).toBeVisible();
 
@@ -118,7 +118,7 @@ test('Delivery drawer filter toggles to Failed', async ({
   const eventSearch = page.getByPlaceholder('Search event types...');
   await eventSearch.click();
   await eventSearch.fill('*');
-  await page.getByRole('option').first().click();
+  await page.locator('li[role="option"]').first().click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Webhook created')).toBeVisible();
 

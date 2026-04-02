@@ -47,7 +47,7 @@ test('Circuit opens after repeated failures and resets to CLOSED', async ({
   const eventSearch = page.getByPlaceholder('Search event types...');
   await eventSearch.click();
   await eventSearch.fill('*');
-  await page.getByRole('option').first().click();
+  await page.locator('li[role="option"]').first().click();
 
   // Short retry window so failures accumulate fast: 1s total
   await page.getByLabel('Max retry duration (seconds)').fill('1');

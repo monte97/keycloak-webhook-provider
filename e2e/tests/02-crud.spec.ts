@@ -16,11 +16,11 @@ async function fillWebhookForm(
   url: string,
 ) {
   await page.getByLabel('URL').fill(url);
-  // Select event type '*' (all events) — click first to open the dropdown, then pick first option
+  // Select event type '*' — open dropdown, then click the PatternFly li[role=option] (not native <option>)
   const eventSearch = page.getByPlaceholder('Search event types...');
   await eventSearch.click();
   await eventSearch.fill('*');
-  await page.getByRole('option').first().click();
+  await page.locator('li[role="option"]').first().click();
 }
 
 test('Create webhook', async ({ page, keycloakUrl }) => {
