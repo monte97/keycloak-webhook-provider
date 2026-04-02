@@ -20,6 +20,9 @@ import {
   DropdownList,
   MenuToggle,
   Title,
+  Drawer,
+  DrawerContent,
+  DrawerContentBody,
 } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { PlusCircleIcon, CubesIcon, EllipsisVIcon } from '@patternfly/react-icons';
@@ -28,6 +31,7 @@ import type { Webhook, WebhookInput } from '../api/types';
 import type { WebhookApiClient } from '../api/webhookApi';
 import { CircuitBadge } from './CircuitBadge';
 import { WebhookModal } from './WebhookModal';
+import { DeliveryDrawer } from './DeliveryDrawer';
 
 interface AlertItem {
   key: number;
@@ -49,12 +53,16 @@ export function WebhookTable({ api }: { api: WebhookApiClient }) {
   const [deleteTarget, setDeleteTarget] = useState<Webhook | null>(null);
   const [openKebab, setOpenKebab] = useState<string | null>(null);
   const [readOnly, setReadOnly] = useState(false);
+  const [drawerWebhook, setDrawerWebhook] = useState<Webhook | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchWebhooks = useCallback(async () => {
     try {
       const data = await api.list();
       setWebhooks(data);
+      setDrawerWebhook((prev) =>
+        prev ? (data.find((w) => w.id === prev.id) ?? prev) : null,
+      );
     } catch {
       // Silently fail on poll errors
     } finally {
@@ -202,96 +210,132 @@ export function WebhookTable({ api }: { api: WebhookApiClient }) {
         ))}
       </AlertGroup>
 
-      <Toolbar>
-        <ToolbarContent>
-          <ToolbarItem>
-            <Title headingLevel="h1" size="xl">
-              Webhooks
-            </Title>
-          </ToolbarItem>
-          <ToolbarItem align={{ default: 'alignRight' }}>
-            <Button variant="primary" icon={<PlusCircleIcon />} onClick={handleCreate}>
-              Create webhook
-            </Button>
-          </ToolbarItem>
-        </ToolbarContent>
-      </Toolbar>
+      <Drawer isExpanded={drawerWebhook !== null} position="right">
+        <DrawerContent
+          panelContent={
+            <DeliveryDrawer
+              webhook={drawerWebhook}
+              api={api}
+              onClose={() => setDrawerWebhook(null)}
+              onCircuitReset={handleCircuitReset}
+            />
+          }
+        >
+          <DrawerContentBody>
+            <Toolbar>
+              <ToolbarContent>
+                <ToolbarItem>
+                  <Title headingLevel="h1" size="xl">
+                    Webhooks
+                  </Title>
+                </ToolbarItem>
+                <ToolbarItem align={{ default: 'alignRight' }}>
+                  <Button variant="primary" icon={<PlusCircleIcon />} onClick={handleCreate}>
+                    Create webhook
+                  </Button>
+                </ToolbarItem>
+              </ToolbarContent>
+            </Toolbar>
 
-      <Table aria-label="Webhooks">
-        <Thead>
-          <Tr>
-            <Th>URL</Th>
-            <Th>Enabled</Th>
-            <Th>Circuit</Th>
-            <Th>Events</Th>
-            <Th>Actions</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {webhooks.map((wh) => (
-            <Tr key={wh.id}>
-              <Td dataLabel="URL">
-                <Tooltip content={wh.url}>
-                  <span style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
-                    {wh.url}
-                  </span>
-                </Tooltip>
-              </Td>
-              <Td dataLabel="Enabled">
-                <Switch
-                  isChecked={wh.enabled}
-                  onChange={() => handleToggleEnabled(wh)}
-                  isDisabled={readOnly}
-                  aria-label={`Toggle ${wh.url}`}
-                />
-              </Td>
-              <Td dataLabel="Circuit">
-                <CircuitBadge
-                  state={wh.circuitState}
-                  failureCount={wh.failureCount}
-                  webhookId={wh.id}
-                  onReset={handleCircuitReset}
-                />
-              </Td>
-              <Td dataLabel="Events">
-                <Tooltip content={wh.eventTypes.join(', ')}>
-                  <span>{wh.eventTypes.length} event{wh.eventTypes.length !== 1 ? 's' : ''}</span>
-                </Tooltip>
-              </Td>
-              <Td dataLabel="Actions">
-                <Dropdown
-                  isOpen={openKebab === wh.id}
-                  onSelect={() => setOpenKebab(null)}
-                  onOpenChange={(open) => setOpenKebab(open ? wh.id : null)}
-                  toggle={(toggleRef) => (
-                    <MenuToggle
-                      ref={toggleRef}
-                      variant="plain"
-                      onClick={() => setOpenKebab(openKebab === wh.id ? null : wh.id)}
-                      aria-label="Actions"
-                    >
-                      <EllipsisVIcon />
-                    </MenuToggle>
-                  )}
-                  popperProps={{ position: 'right' }}
-                >
-                  <DropdownList>
-                    <DropdownItem key="edit" onClick={() => handleEdit(wh)}>
-                      Edit
-                    </DropdownItem>
-                    <DropdownItem key="test" onClick={() => handleTest(wh)}>
-                      Test ping
-                    </DropdownItem>
-                    <DropdownItem key="delete" onClick={() => setDeleteTarget(wh)} isDanger>
-                      Delete
-                    </DropdownItem>
-                  </DropdownList>
-                </Dropdown>
-              </Td>
-            </Tr>
-          ))}
-        </Tbody>
-      </Table>
+            <Table aria-label="Webhooks">
+              <Thead>
+                <Tr>
+                  <Th>URL</Th>
+                  <Th>Enabled</Th>
+                  <Th>Circuit</Th>
+                  <Th>Events</Th>
+                  <Th>Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {webhooks.map((wh) => (
+                  <Tr
+                    key={wh.id}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setDrawerWebhook(wh)}
+                  >
+                    <Td dataLabel="URL">
+                      <Tooltip content={wh.url}>
+                        <span
+                          style={{
+                            maxWidth: 300,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-block',
+                          }}
+                        >
+                          {wh.url}
+                        </span>
+                      </Tooltip>
+                    </Td>
+                    <Td dataLabel="Enabled" onClick={(e) => e.stopPropagation()}>
+                      <Switch
+                        isChecked={wh.enabled}
+                        onChange={() => handleToggleEnabled(wh)}
+                        isDisabled={readOnly}
+                        aria-label={`Toggle ${wh.url}`}
+                      />
+                    </Td>
+                    <Td dataLabel="Circuit">
+                      <CircuitBadge
+                        state={wh.circuitState}
+                        failureCount={wh.failureCount}
+                        webhookId={wh.id}
+                        onReset={handleCircuitReset}
+                      />
+                    </Td>
+                    <Td dataLabel="Events">
+                      <Tooltip content={wh.eventTypes.join(', ')}>
+                        <span>
+                          {wh.eventTypes.length} event
+                          {wh.eventTypes.length !== 1 ? 's' : ''}
+                        </span>
+                      </Tooltip>
+                    </Td>
+                    <Td dataLabel="Actions" onClick={(e) => e.stopPropagation()}>
+                      <Dropdown
+                        isOpen={openKebab === wh.id}
+                        onSelect={() => setOpenKebab(null)}
+                        onOpenChange={(open) => setOpenKebab(open ? wh.id : null)}
+                        toggle={(toggleRef) => (
+                          <MenuToggle
+                            ref={toggleRef}
+                            variant="plain"
+                            onClick={() =>
+                              setOpenKebab(openKebab === wh.id ? null : wh.id)
+                            }
+                            aria-label="Actions"
+                          >
+                            <EllipsisVIcon />
+                          </MenuToggle>
+                        )}
+                        popperProps={{ position: 'right' }}
+                      >
+                        <DropdownList>
+                          <DropdownItem key="edit" onClick={() => handleEdit(wh)}>
+                            Edit
+                          </DropdownItem>
+                          <DropdownItem key="test" onClick={() => handleTest(wh)}>
+                            Test ping
+                          </DropdownItem>
+                          <DropdownItem
+                            key="delete"
+                            onClick={() => setDeleteTarget(wh)}
+                            isDanger
+                          >
+                            Delete
+                          </DropdownItem>
+                        </DropdownList>
+                      </Dropdown>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </DrawerContentBody>
+        </DrawerContent>
+      </Drawer>
 
       <WebhookModal
         mode={modalMode}
