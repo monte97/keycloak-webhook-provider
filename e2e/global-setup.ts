@@ -37,9 +37,6 @@ async function globalSetup(): Promise<void> {
       CONSUMER_PORT: '0',
       KC_ADMIN_PASSWORD: 'admin',
       KC_REALM: 'demo',
-      GENERATOR_INTERVAL_SECONDS: '15',
-      GENERATOR_USERS_PER_CYCLE: '1',
-      GENERATOR_USER_PREFIX: 'demo-user',
     },
   });
 
@@ -49,7 +46,13 @@ async function globalSetup(): Promise<void> {
       .toString()
       .trim();
     // output format: "0.0.0.0:XXXXX" or ":::XXXXX"
-    return parseInt(out.split(':').pop()!, 10);
+    const port = parseInt(out.split(':').pop()!, 10);
+    if (!Number.isFinite(port) || port <= 0) {
+      throw new Error(
+        `Could not determine host port for service '${service}': got ${JSON.stringify(out)}`,
+      );
+    }
+    return port;
   };
 
   const keycloakPort = readPort('keycloak');
@@ -61,30 +64,33 @@ async function globalSetup(): Promise<void> {
 
   // 3. Poll Keycloak health
   const kcBase = `http://localhost:${keycloakPort}`;
-  await pollHealth(`${kcBase}/health/ready`);
+  await pollHealth(`${kcBase}/realms/master`);
   console.log('[setup] Keycloak is ready');
 
   // 4. Authenticate as webhook-admin and save storage state
   const browser = await chromium.launch();
-  const context = await browser.newContext();
-  const page = await context.newPage();
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
 
-  const uiUrl = `${kcBase}/realms/demo/webhooks/ui`;
-  await page.goto(uiUrl);
+    const uiUrl = `${kcBase}/realms/demo/webhooks/ui`;
+    await page.goto(uiUrl);
 
-  // keycloak-js redirects to Keycloak login page (login-required mode)
-  await page.waitForURL(/\/realms\/demo\/protocol\/openid-connect\/auth/);
+    // keycloak-js redirects to Keycloak login page (login-required mode)
+    await page.waitForURL(/\/realms\/demo\/protocol\/openid-connect\/auth/);
 
-  await page.fill('#username', 'webhook-admin');
-  await page.fill('#password', 'webhook-admin');
-  await page.click('[type=submit]');
+    await page.fill('#username', 'webhook-admin');
+    await page.fill('#password', 'webhook-admin');
+    await page.click('[type=submit]');
 
-  // Wait for redirect back to the UI and app to render
-  await page.waitForURL((url) => url.href.startsWith(uiUrl));
-  await page.waitForLoadState('networkidle');
+    // Wait for redirect back to the UI and app to render
+    await page.waitForURL((url) => url.href.startsWith(uiUrl));
+    await page.waitForLoadState('networkidle');
 
-  await context.storageState({ path: path.join(__dirname, '.auth.json') });
-  await browser.close();
+    await context.storageState({ path: path.join(__dirname, '.auth.json') });
+  } finally {
+    await browser.close();
+  }
 
   console.log('[setup] auth saved');
 }
