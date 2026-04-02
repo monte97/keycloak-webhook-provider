@@ -142,7 +142,7 @@ export function DeliveryDrawer({
 
       <div style={{ padding: '0 24px 24px' }}>
         {/* Circuit breaker section */}
-        <Title headingLevel="h3" size="sm" style={{ marginBottom: 8 }}>
+        <Title headingLevel="h3" size="md" style={{ marginBottom: 8 }}>
           Circuit breaker
         </Title>
         {loadingCircuit && (
@@ -205,7 +205,7 @@ export function DeliveryDrawer({
             marginBottom: 8,
           }}
         >
-          <Title headingLevel="h3" size="sm">
+          <Title headingLevel="h3" size="md">
             Delivery history
           </Title>
           <div style={{ display: 'flex', gap: 8 }}>
