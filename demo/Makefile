@@ -1,4 +1,4 @@
-.PHONY: up down restart logs logs-setup logs-generator status urls clean help
+.PHONY: up down restart logs logs-setup logs-generator status urls clean help test-e2e
 
 # ============================================================
 # keycloak-webhook-provider — demo stack
@@ -47,3 +47,7 @@ help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@grep -E '^## ' Makefile | sed 's/^## /  make /'
+
+## test-e2e        Run Playwright E2E suite (boots demo stack automatically)
+test-e2e:
+	cd .. && npm --prefix e2e test

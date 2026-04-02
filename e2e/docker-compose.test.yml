@@ -1,0 +1,14 @@
+# Overrides demo/docker-compose.yml for E2E tests:
+# - Random ports: pass KEYCLOAK_PORT=0 CONSUMER_PORT=0 to docker compose up
+# - Disables setup and generator (tests manage their own state via admin API)
+#
+# Usage: docker compose -f demo/docker-compose.yml -f e2e/docker-compose.test.yml \
+#          -p e2e-test up -d (with KEYCLOAK_PORT=0 CONSUMER_PORT=0 in env)
+services:
+  setup:
+    entrypoint: ["true"]
+    command: []
+
+  generator:
+    entrypoint: ["true"]
+    command: []
