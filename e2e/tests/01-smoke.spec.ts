@@ -5,7 +5,7 @@ test('UI loads without redirect to login', async ({ page, keycloakUrl }) => {
   await page.waitForLoadState('networkidle');
 
   // Should NOT be on the Keycloak login page
-  expect(page.url()).not.toContain('/protocol/openid-connect/auth');
+  await expect(page).not.toHaveURL(/\/protocol\/openid-connect\/auth/);
 });
 
 test('Webhook list or empty state is visible', async ({ page, keycloakUrl }) => {
