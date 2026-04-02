@@ -1,0 +1,17 @@
+# Overrides demo/docker-compose.yml for E2E tests:
+# - Random host ports on keycloak and consumer (avoids conflicts)
+# - Disables setup and generator (tests manage their own state)
+services:
+  keycloak:
+    ports:
+      - "0:8080"
+
+  consumer:
+    ports:
+      - "0:8080"
+
+  setup:
+    entrypoint: ["true"]
+
+  generator:
+    entrypoint: ["true"]
