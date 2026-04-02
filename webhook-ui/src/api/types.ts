@@ -40,6 +40,24 @@ export interface TestResult {
   durationMs: number;
 }
 
+export interface WebhookSend {
+  id: string;
+  webhookId: string;
+  webhookEventId: string;
+  eventType: string;
+  httpStatus: number;
+  success: boolean;
+  retries: number;
+  sentAt: string;
+  lastAttemptAt: string;
+}
+
+export interface ResendResult {
+  resent: number;
+  failed: number;
+  skipped: number;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,

@@ -94,4 +94,49 @@ describe('webhookApi', () => {
       expect.objectContaining({ method: 'POST' }),
     );
   });
+
+  it('getSends() fetches sends with max param', async () => {
+    const sends = [{ id: 's1', success: true, httpStatus: 200 }];
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(sends), { status: 200 }),
+    );
+
+    const result = await api.getSends('abc', { max: 50 });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/auth/realms/my-realm/webhooks/abc/sends?first=0&max=50',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+      }),
+    );
+    expect(result).toEqual(sends);
+  });
+
+  it('getSends() appends success=false when requested', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify([]), { status: 200 }),
+    );
+
+    await api.getSends('abc', { max: 50, success: false });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/auth/realms/my-realm/webhooks/abc/sends?first=0&max=50&success=false',
+      expect.anything(),
+    );
+  });
+
+  it('resendFailed() POSTs to resend-failed with hours param', async () => {
+    const result = { resent: 3, failed: 0, skipped: 0 };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(result), { status: 200 }),
+    );
+
+    const res = await api.resendFailed('abc', 24);
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/auth/realms/my-realm/webhooks/abc/resend-failed?hours=24',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(res).toEqual(result);
+  });
 });
