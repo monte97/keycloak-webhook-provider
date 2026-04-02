@@ -38,6 +38,8 @@ function createMockApi(webhooks: Webhook[] = mockWebhooks) {
     test: vi.fn().mockResolvedValue({ httpStatus: 200, success: true, durationMs: 42 }),
     getCircuit: vi.fn(),
     resetCircuit: vi.fn().mockResolvedValue(undefined),
+    getSends: vi.fn().mockResolvedValue([]),
+    resendFailed: vi.fn().mockResolvedValue({ resent: 0, failed: 0, skipped: 0 }),
   };
 }
 
