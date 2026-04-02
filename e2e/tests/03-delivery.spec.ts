@@ -29,10 +29,11 @@ async function triggerEvents(
     const location = createRes.headers.get('location')!;
     const userId = location.split('/').pop()!;
 
-    await fetch(`${keycloakUrl}/admin/realms/demo/users/${userId}`, {
+    const deleteRes = await fetch(`${keycloakUrl}/admin/realms/demo/users/${userId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${adminToken}` },
     });
+    if (!deleteRes.ok) throw new Error(`Delete user failed: ${deleteRes.status}`);
   }
 }
 
