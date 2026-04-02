@@ -5,6 +5,8 @@ const WEBHOOK_URL_BASE = 'https://e2e.example.com/hook';
 async function openCreateModal(page: import('@playwright/test').Page) {
   // Either from empty state button or toolbar button
   const btn = page.getByRole('button', { name: 'Create webhook' });
+  // Wait for the button to appear — stable signal that the app has rendered
+  await expect(btn.first()).toBeVisible({ timeout: 15_000 });
   await btn.first().click();
   await expect(page.getByRole('dialog', { name: 'Create webhook' })).toBeVisible();
 }
@@ -23,8 +25,6 @@ test('Create webhook', async ({ page, keycloakUrl }) => {
   const url = `${WEBHOOK_URL_BASE}-create-${Date.now()}`;
 
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
-
   await openCreateModal(page);
   await fillWebhookForm(page, url);
   await page.getByRole('button', { name: 'Save' }).click();
@@ -41,7 +41,6 @@ test('Edit webhook URL', async ({ page, keycloakUrl }) => {
   const updatedUrl = `${WEBHOOK_URL_BASE}-edit-updated-${Date.now()}`;
 
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
 
   // Create webhook first
   await openCreateModal(page);
@@ -69,8 +68,6 @@ test('Toggle webhook enabled/disabled', async ({ page, keycloakUrl }) => {
   const url = `${WEBHOOK_URL_BASE}-toggle-${Date.now()}`;
 
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
-
   await openCreateModal(page);
   await fillWebhookForm(page, url);
   await page.getByRole('button', { name: 'Save' }).click();
@@ -93,8 +90,6 @@ test('Delete webhook', async ({ page, keycloakUrl }) => {
   const url = `${WEBHOOK_URL_BASE}-delete-${Date.now()}`;
 
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
-
   await openCreateModal(page);
   await fillWebhookForm(page, url);
   await page.getByRole('button', { name: 'Save' }).click();
