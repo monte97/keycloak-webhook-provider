@@ -12,7 +12,7 @@ const COMPOSE =
 async function pollHealth(url: string, timeoutMs = 120_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let last = '';
-  while (Date.now() < deadline) {
+  while (true) {
     try {
       const res = await fetch(url);
       if (res.ok) return;
@@ -20,6 +20,7 @@ async function pollHealth(url: string, timeoutMs = 120_000): Promise<void> {
     } catch (e) {
       last = String(e);
     }
+    if (Date.now() + 5_000 >= deadline) break;
     await new Promise((r) => setTimeout(r, 5_000));
   }
   throw new Error(`Keycloak not ready after ${timeoutMs}ms — last error: ${last}`);
@@ -47,7 +48,7 @@ async function globalSetup(): Promise<void> {
       .trim();
     // output format: "0.0.0.0:XXXXX" or ":::XXXXX"
     const port = parseInt(out.split(':').pop()!, 10);
-    if (!Number.isFinite(port) || port <= 0) {
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
       throw new Error(
         `Could not determine host port for service '${service}': got ${JSON.stringify(out)}`,
       );
@@ -81,10 +82,10 @@ async function globalSetup(): Promise<void> {
 
     await page.fill('#username', 'webhook-admin');
     await page.fill('#password', 'webhook-admin');
-    await page.click('[type=submit]');
-
-    // Wait for redirect back to the UI and app to render
-    await page.waitForURL((url) => url.href.startsWith(uiUrl));
+    await Promise.all([
+      page.waitForURL((url) => url.href.startsWith(uiUrl)),
+      page.click('[type=submit]'),
+    ]);
     await page.waitForLoadState('networkidle');
 
     await context.storageState({ path: path.join(__dirname, '.auth.json') });
