@@ -16,11 +16,17 @@ async function fillWebhookForm(
   url: string,
 ) {
   await page.getByLabel('URL').fill(url);
-  // Select event type '*' — open dropdown, then click the PatternFly li[role=option] (not native <option>)
+  // Open the PatternFly Select dropdown and pick '*' (first option in the list).
+  // fill('*') triggers TextInputGroupMain.onChange → setEventSelectOpen(true).
+  // PatternFly renders: <ul role="listbox"> (SelectList) → <li> → <button role="option"> (MenuItem).
+  // Use CSS attribute selectors (not getByRole) to avoid matching hidden native <option>
+  // elements from the Algorithm <select>, which also have ARIA role "option".
   const eventSearch = page.getByPlaceholder('Search event types...');
   await eventSearch.click();
   await eventSearch.fill('*');
-  await page.locator('li[role="option"]').first().click();
+  const dropdown = page.locator('[role="listbox"]');
+  await expect(dropdown).toBeVisible({ timeout: 5_000 });
+  await dropdown.locator('[role="option"]').first().click();
 }
 
 test('Create webhook', async ({ page, keycloakUrl }) => {
@@ -35,7 +41,7 @@ test('Create webhook', async ({ page, keycloakUrl }) => {
   await expect(page.getByText('Webhook created')).toBeVisible();
 
   // Row appears in table
-  await expect(page.getByRole('cell', { name: url })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('gridcell', { name: url, exact: true })).toBeVisible({ timeout: 5_000 });
 });
 
 test('Edit webhook URL', async ({ page, keycloakUrl }) => {
@@ -49,7 +55,7 @@ test('Edit webhook URL', async ({ page, keycloakUrl }) => {
   await fillWebhookForm(page, originalUrl);
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Webhook created')).toBeVisible();
-  await expect(page.getByRole('cell', { name: originalUrl })).toBeVisible();
+  await expect(page.getByRole('gridcell', { name: originalUrl, exact: true })).toBeVisible();
 
   // Open kebab menu for this row and click Edit
   const row = page.getByRole('row').filter({ hasText: originalUrl });
@@ -63,7 +69,7 @@ test('Edit webhook URL', async ({ page, keycloakUrl }) => {
   await page.getByRole('button', { name: 'Save' }).click();
 
   await expect(page.getByText('Webhook updated')).toBeVisible();
-  await expect(page.getByRole('cell', { name: updatedUrl })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('gridcell', { name: updatedUrl, exact: true })).toBeVisible({ timeout: 5_000 });
 });
 
 test('Toggle webhook enabled/disabled', async ({ page, keycloakUrl }) => {
@@ -81,10 +87,12 @@ test('Toggle webhook enabled/disabled', async ({ page, keycloakUrl }) => {
 
   await expect(toggle).toBeChecked(); // enabled by default
 
-  await toggle.click();
+  // PatternFly Switch renders an SVG track that intercepts pointer events;
+  // force the click to reach the underlying checkbox input.
+  await toggle.click({ force: true });
   await expect(toggle).not.toBeChecked(); // now disabled
 
-  await toggle.click();
+  await toggle.click({ force: true });
   await expect(toggle).toBeChecked(); // re-enabled
 });
 
@@ -96,7 +104,7 @@ test('Delete webhook', async ({ page, keycloakUrl }) => {
   await fillWebhookForm(page, url);
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Webhook created')).toBeVisible();
-  await expect(page.getByRole('cell', { name: url })).toBeVisible();
+  await expect(page.getByRole('gridcell', { name: url, exact: true })).toBeVisible();
 
   // Delete via kebab menu
   const row = page.getByRole('row').filter({ hasText: url });
@@ -108,5 +116,5 @@ test('Delete webhook', async ({ page, keycloakUrl }) => {
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
 
   await expect(page.getByText('Webhook deleted')).toBeVisible();
-  await expect(page.getByRole('cell', { name: url })).not.toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('gridcell', { name: url, exact: true })).not.toBeVisible({ timeout: 5_000 });
 });
