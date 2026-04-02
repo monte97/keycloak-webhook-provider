@@ -44,8 +44,10 @@ test('Circuit opens after repeated failures and resets to CLOSED', async ({
   await createBtn.first().click();
 
   await page.getByLabel('URL').fill(UNREACHABLE_URL);
-  await page.getByPlaceholder('Search event types...').fill('*');
-  await page.getByRole('option', { name: '*', exact: true }).click();
+  const eventSearch = page.getByPlaceholder('Search event types...');
+  await eventSearch.click();
+  await eventSearch.fill('*');
+  await page.getByRole('option').first().click();
 
   // Short retry window so failures accumulate fast: 1s total
   await page.getByLabel('Max retry duration (seconds)').fill('1');

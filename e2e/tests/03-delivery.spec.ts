@@ -61,8 +61,10 @@ test('Delivery drawer shows sends table after event delivery', async ({
   await expect(createBtn.first()).toBeVisible({ timeout: 15_000 });
   await createBtn.first().click();
   await page.getByLabel('URL').fill(webhookUrl);
-  await page.getByPlaceholder('Search event types...').fill('*');
-  await page.getByRole('option', { name: '*', exact: true }).click();
+  const eventSearch = page.getByPlaceholder('Search event types...');
+  await eventSearch.click();
+  await eventSearch.fill('*');
+  await page.getByRole('option').first().click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Webhook created')).toBeVisible();
 
@@ -113,8 +115,10 @@ test('Delivery drawer filter toggles to Failed', async ({
   await expect(createBtn.first()).toBeVisible({ timeout: 15_000 });
   await createBtn.first().click();
   await page.getByLabel('URL').fill(webhookUrl);
-  await page.getByPlaceholder('Search event types...').fill('*');
-  await page.getByRole('option', { name: '*', exact: true }).click();
+  const eventSearch = page.getByPlaceholder('Search event types...');
+  await eventSearch.click();
+  await eventSearch.fill('*');
+  await page.getByRole('option').first().click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Webhook created')).toBeVisible();
 

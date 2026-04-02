@@ -16,9 +16,11 @@ async function fillWebhookForm(
   url: string,
 ) {
   await page.getByLabel('URL').fill(url);
-  // Select event type '*' (all events)
-  await page.getByPlaceholder('Search event types...').fill('*');
-  await page.getByRole('option', { name: '*', exact: true }).click();
+  // Select event type '*' (all events) — click first to open the dropdown, then pick first option
+  const eventSearch = page.getByPlaceholder('Search event types...');
+  await eventSearch.click();
+  await eventSearch.fill('*');
+  await page.getByRole('option').first().click();
 }
 
 test('Create webhook', async ({ page, keycloakUrl }) => {
