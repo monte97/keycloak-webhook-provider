@@ -20,7 +20,7 @@ async function pollHealth(url: string, timeoutMs = 120_000): Promise<void> {
     } catch (e) {
       last = String(e);
     }
-    if (Date.now() + 5_000 >= deadline) break;
+    if (Date.now() >= deadline) break;
     await new Promise((r) => setTimeout(r, 5_000));
   }
   throw new Error(`Keycloak not ready after ${timeoutMs}ms — last error: ${last}`);
