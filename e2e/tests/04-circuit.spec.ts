@@ -16,8 +16,11 @@ async function createUser(keycloakUrl: string, adminToken: string): Promise<stri
     }),
   });
   if (!res.ok) throw new Error(`Create user failed: ${res.status}`);
-  const location = res.headers.get('location')!;
-  return location.split('/').pop()!;
+  const location = res.headers.get('location');
+  if (!location) throw new Error('Create user: missing Location header');
+  const userId = location.split('/').pop();
+  if (!userId) throw new Error('Create user: malformed Location header');
+  return userId;
 }
 
 async function deleteUser(keycloakUrl: string, adminToken: string, userId: string): Promise<void> {
@@ -62,7 +65,7 @@ test('Circuit opens after repeated failures and resets to CLOSED', async ({
   //    Re-find the row after each reload — locators are resolved lazily in Playwright.
   await expect(async () => {
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(
       page.getByRole('row').filter({ hasText: UNREACHABLE_URL }).getByText('OPEN'),
     ).toBeVisible();
