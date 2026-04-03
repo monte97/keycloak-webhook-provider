@@ -1,6 +1,8 @@
 target/
 *.class
 *.jar
+META-INF/
+webhook-ui/assets/
 .idea/
 *.iml
 .DS_Store
