@@ -73,7 +73,7 @@ public class WebhookMetrics {
         circuitState =
                 Gauge.build()
                         .name("webhook_circuit_state")
-                        .help("Circuit breaker state: 0=CLOSED, 1=HALF_OPEN, 2=OPEN")
+                        .help("Circuit breaker state: 0=CLOSED, 2=OPEN (1=HALF_OPEN reserved for future use)")
                         .labelNames("realm", "webhook_id")
                         .register(registry);
 
