@@ -179,7 +179,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    needs: [release-please, build]
+    needs: [release-please, build, e2e, mutation]
     steps:
       - uses: actions/checkout@v5
         with:
