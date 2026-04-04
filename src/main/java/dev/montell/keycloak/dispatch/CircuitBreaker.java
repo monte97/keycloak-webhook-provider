@@ -90,4 +90,8 @@ public class CircuitBreaker {
     public Instant getLastFailureAt() {
         return lastFailureAt;
     }
+
+    public int getFailureThreshold() {
+        return failureThreshold;
+    }
 }

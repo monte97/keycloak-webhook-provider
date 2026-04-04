@@ -72,7 +72,7 @@ test('Circuit opens after repeated failures and resets to CLOSED', async ({
   //    Re-find the row after each reload — locators are resolved lazily in Playwright.
   await expect(async () => {
     await page.reload();
-    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
     await expect(
       page.getByRole('row').filter({ hasText: UNREACHABLE_URL }).getByText('OPEN'),
     ).toBeVisible();

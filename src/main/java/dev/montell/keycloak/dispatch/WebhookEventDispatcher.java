@@ -10,6 +10,7 @@ import dev.montell.keycloak.model.WebhookModel;
 import dev.montell.keycloak.sender.HttpSendResult;
 import dev.montell.keycloak.sender.HttpWebhookSender;
 import dev.montell.keycloak.spi.WebhookProvider;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
@@ -281,7 +282,22 @@ public class WebhookEventDispatcher {
 
                         WebhookModel w = provider.getWebhookById(realm, webhook.getId());
                         if (w != null) {
-                            cb.applyTo(w);
+                            // Apply delta to current DB state instead of blindly
+                            // overwriting with (potentially stale) in-memory CB state.
+                            // This avoids lost updates when concurrent retry chains
+                            // hold references to different CircuitBreaker snapshots.
+                            if (result.success()) {
+                                w.setCircuitState(CircuitBreaker.CLOSED);
+                                w.setFailureCount(0);
+                                w.setLastFailureAt(null);
+                            } else {
+                                int newCount = w.getFailureCount() + 1;
+                                w.setFailureCount(newCount);
+                                w.setLastFailureAt(Instant.now());
+                                if (newCount >= cb.getFailureThreshold()) {
+                                    w.setCircuitState(CircuitBreaker.OPEN);
+                                }
+                            }
                             registry.invalidate(
                                     webhook.getId()); // evict stale TTL entry after state change
                         }
