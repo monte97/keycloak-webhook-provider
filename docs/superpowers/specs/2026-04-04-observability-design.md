@@ -1,7 +1,7 @@
 # Observability Design — Prometheus Metrics + Structured Logging
 
 **Date:** 2026-04-04  
-**Status:** Approved, pending implementation plan  
+**Status:** Implemented  
 **Scope:** Prometheus metrics endpoint + structured JSON logging via JUL
 
 ---
@@ -26,9 +26,9 @@ Full OpenTelemetry SDK integration (traces, OTLP push) is explicitly out of scop
 
 ### Endpoint
 
-`GET /webhooks/metrics` — global admin endpoint (not per-realm), served by a new JAX-RS resource alongside existing webhook resources. Requires `manage-realm` or `view-realm` permission. Produces `text/plain; version=0.0.4` (Prometheus text format).
+`GET /realms/{realm}/webhooks/metrics` — served by the existing `WebhooksResource` class. Requires `view-realm` permission (checked via `requireViewEvents()`). Prometheus scrapes a single realm (e.g., `/realms/master/webhooks/metrics`) to get metrics from all realms — the realm in the path is for auth routing only, not for filtering; all metrics are stored globally in `CollectorRegistry.defaultRegistry`.
 
-Realm is a **label** on each metric, not a path segment. A single Prometheus scrape job covers all realms; filtering is done via `{realm="demo"}` in PromQL.
+**Content type:** `text/plain; version=0.0.4; charset=utf-8` (the Prometheus client library adds `;charset=utf-8` to the standard format).
 
 ### Metrics
 
