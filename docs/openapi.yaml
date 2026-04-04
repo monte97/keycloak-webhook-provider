@@ -498,6 +498,33 @@ paths:
               schema:
                 type: string
 
+  /metrics:
+    get:
+      operationId: getMetrics
+      summary: Prometheus metrics
+      description: |
+        Returns all webhook metrics in Prometheus text format 0.0.4.
+        Metrics are global across all realms; the realm in the path is used
+        for authentication routing only.
+      tags: [Observability]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Prometheus text format metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                # HELP webhook_events_received_total Keycloak events received and enqueued for dispatch
+                # TYPE webhook_events_received_total counter
+                webhook_events_received_total{realm="master",event_type="admin.USER-CREATE"} 42.0
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 components:
   securitySchemes:
     bearerAuth:
