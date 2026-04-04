@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.montell.keycloak.event.EventPatternMatcher;
 import dev.montell.keycloak.event.WebhookPayload;
+import dev.montell.keycloak.logging.AuditLogger;
 import dev.montell.keycloak.metrics.WebhookMetrics;
 import dev.montell.keycloak.model.KeycloakEventType;
 import dev.montell.keycloak.model.WebhookModel;
@@ -125,6 +126,7 @@ public class WebhookEventDispatcher {
                     "Webhook dispatch queue full (%d pending), dropping event: %s",
                     maxPending, payload.type());
             metrics.recordEventDropped(realmId);
+            AuditLogger.eventDropped(realmId, payload.type(), pendingTasks.get());
             return;
         }
         pendingTasks.incrementAndGet();
@@ -273,6 +275,27 @@ public class WebhookEventDispatcher {
 
         metrics.recordDispatch(realmId, result.success(), durationSeconds);
 
+        if (result.success()) {
+            AuditLogger.dispatchSuccess(
+                    realmId,
+                    webhook.getId(),
+                    eventType,
+                    attempt,
+                    webhook.getUrl(),
+                    result.httpStatus(),
+                    durationSeconds);
+        } else {
+            AuditLogger.dispatchFailure(
+                    realmId,
+                    webhook.getId(),
+                    eventType,
+                    attempt,
+                    webhook.getUrl(),
+                    result.httpStatus(),
+                    null,
+                    durationSeconds);
+        }
+
         if (result.success()) cb.onSuccess();
         else cb.onFailure();
 
@@ -317,6 +340,12 @@ public class WebhookEventDispatcher {
                             registry.invalidate(
                                     webhook.getId()); // evict stale TTL entry after state change
                             metrics.setCircuitState(realmId, webhook.getId(), w.getCircuitState());
+                            if ("OPEN".equals(w.getCircuitState())) {
+                                AuditLogger.circuitOpened(
+                                        realmId, webhook.getId(), w.getFailureCount());
+                            } else if ("CLOSED".equals(w.getCircuitState()) && result.success()) {
+                                AuditLogger.circuitReset(realmId, webhook.getId());
+                            }
                         }
                     });
         } catch (Exception e) {
@@ -333,6 +362,8 @@ public class WebhookEventDispatcher {
                         "Scheduling retry %d for webhook %s in %dms",
                         Integer.valueOf(attempt + 1), webhook.getId(), Long.valueOf(nextDelayMs));
                 metrics.recordRetry(realmId);
+                AuditLogger.retryScheduled(
+                        realmId, webhook.getId(), eventType, attempt + 1, nextDelayMs / 1000.0);
                 executor.schedule(
                         () ->
                                 sendWithRetry(
@@ -351,6 +382,7 @@ public class WebhookEventDispatcher {
                         "Max retry time exceeded for webhook %s after %d attempt(s)",
                         webhook.getId(), Integer.valueOf(attempt + 1));
                 metrics.recordRetryExhausted(realmId);
+                AuditLogger.retryExhausted(realmId, webhook.getId(), eventType, attempt + 1);
             }
         }
     }
