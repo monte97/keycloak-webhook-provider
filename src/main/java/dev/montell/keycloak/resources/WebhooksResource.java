@@ -9,8 +9,12 @@ import dev.montell.keycloak.model.WebhookEventModel;
 import dev.montell.keycloak.model.WebhookModel;
 import dev.montell.keycloak.model.WebhookSendModel;
 import dev.montell.keycloak.spi.WebhookProvider;
+import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.exporter.common.TextFormat;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Collections;
@@ -419,6 +423,23 @@ public class WebhooksResource {
         boolean removed = provider().removeWebhook(realm, id);
         if (!removed) throw new NotFoundException();
         return Response.noContent().build();
+    }
+
+    // --- GET /metrics ---
+
+    /** Prometheus metrics endpoint. Returns all webhook metrics across all realms. */
+    @GET
+    @Path("metrics")
+    @Produces("text/plain; version=0.0.4; charset=utf-8")
+    public Response metrics() {
+        requireViewEvents();
+        StringWriter writer = new StringWriter();
+        try {
+            TextFormat.write004(writer, CollectorRegistry.defaultRegistry.metricFamilySamples());
+        } catch (IOException e) {
+            return Response.serverError().build();
+        }
+        return Response.ok(writer.toString()).build();
     }
 
     // --- UI static file serving ---

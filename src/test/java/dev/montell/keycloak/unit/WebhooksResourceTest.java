@@ -8,6 +8,7 @@ import static org.mockito.Mockito.*;
 import dev.montell.keycloak.dispatch.CircuitBreaker;
 import dev.montell.keycloak.dispatch.CircuitBreakerRegistry;
 import dev.montell.keycloak.dispatch.WebhookComponentHolder;
+import dev.montell.keycloak.metrics.WebhookMetrics;
 import dev.montell.keycloak.model.KeycloakEventType;
 import dev.montell.keycloak.model.WebhookEventModel;
 import dev.montell.keycloak.model.WebhookModel;
@@ -16,7 +17,9 @@ import dev.montell.keycloak.resources.WebhooksResource;
 import dev.montell.keycloak.sender.HttpSendResult;
 import dev.montell.keycloak.sender.HttpWebhookSender;
 import dev.montell.keycloak.spi.WebhookProvider;
+import io.prometheus.client.CollectorRegistry;
 import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.List;
@@ -230,7 +233,7 @@ class WebhooksResourceTest {
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         when(sender.send(anyString(), payloadCaptor.capture(), eq("wh-1"), isNull(), isNull()))
-                .thenReturn(new HttpSendResult(200, true, 42L));
+                .thenReturn(new HttpSendResult(200, true, 42L, null));
 
         Response resp = resource.testWebhook("wh-1");
 
@@ -294,7 +297,7 @@ class WebhooksResourceTest {
         WebhookComponentHolder.init(sender, realRegistry);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
-                .thenReturn(new HttpSendResult(200, true, 10L));
+                .thenReturn(new HttpSendResult(200, true, 10L, null));
 
         Response resp = resource.resendSingle("wh-1", "send-1");
 
@@ -366,7 +369,7 @@ class WebhooksResourceTest {
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
-                .thenReturn(new HttpSendResult(200, true, 5L));
+                .thenReturn(new HttpSendResult(200, true, 5L, null));
 
         Response resp = resource.resendFailed("wh-1", 24);
 
@@ -478,6 +481,44 @@ class WebhooksResourceTest {
     // POST /{id}/resend-failed (bulk)
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // GET /metrics
+    // -----------------------------------------------------------------------
+
+    @Test
+    void metrics_returnsPrometheusTextFormat() throws Exception {
+        // Register metrics in the default registry (what the endpoint reads from).
+        // Clear first to avoid conflicts if other tests already registered.
+        CollectorRegistry.defaultRegistry.clear();
+        WebhookMetrics metrics = new WebhookMetrics(); // registers in default registry
+        metrics.recordEventReceived("demo", "admin.USER-CREATE");
+
+        Response response = resource.metrics();
+
+        assertEquals(200, response.getStatus());
+        String body = (String) response.getEntity();
+        assertTrue(body.contains("webhook_events_received_total"));
+        assertTrue(body.contains("realm=\"demo\""));
+        assertTrue(body.contains("# HELP webhook_events_received_total"));
+        assertTrue(body.contains("# TYPE webhook_events_received_total counter"));
+
+        // Verify the @Produces annotation declares the Prometheus text format content-type.
+        // JAX-RS content negotiation runs in the container, not in unit tests, so we assert
+        // the annotation value directly via reflection.
+        Produces produces =
+                WebhooksResource.class.getMethod("metrics").getAnnotation(Produces.class);
+        assertNotNull(produces, "@Produces annotation must be present on metrics()");
+        String[] values = produces.value();
+        assertEquals(1, values.length, "metrics() must declare exactly one @Produces value");
+        assertEquals(
+                "text/plain; version=0.0.4; charset=utf-8",
+                values[0],
+                "metrics() must produce Prometheus text format: text/plain; version=0.0.4; charset=utf-8");
+
+        // Clean up default registry to avoid polluting other tests
+        CollectorRegistry.defaultRegistry.clear();
+    }
+
     @Test
     void resend_bulk_continues_on_failure_until_circuit_opens() {
         // threshold=2: CB opens after 2 failures
@@ -501,7 +542,7 @@ class WebhooksResourceTest {
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
-                .thenReturn(new HttpSendResult(500, false, 5L));
+                .thenReturn(new HttpSendResult(500, false, 5L, null));
 
         Response resp = resource.resendFailed("wh-1", 24);
 

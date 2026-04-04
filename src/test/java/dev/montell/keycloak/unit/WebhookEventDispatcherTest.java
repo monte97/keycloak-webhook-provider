@@ -3,8 +3,11 @@ package dev.montell.keycloak.unit;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import dev.montell.keycloak.dispatch.CircuitBreakerRegistry;
 import dev.montell.keycloak.dispatch.WebhookEventDispatcher;
 import dev.montell.keycloak.event.WebhookPayload;
+import dev.montell.keycloak.metrics.WebhookMetrics;
+import io.prometheus.client.CollectorRegistry;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -80,5 +83,50 @@ class WebhookEventDispatcherTest {
         verify(second).submit(any(Runnable.class));
 
         realExecutor.shutdownNow();
+    }
+
+    @Test
+    void enqueue_incrementsReceivedMetric() {
+        CollectorRegistry testRegistry = new CollectorRegistry();
+        WebhookMetrics testMetrics = new WebhookMetrics(testRegistry);
+        CircuitBreakerRegistry cbRegistry = new CircuitBreakerRegistry(5, 60);
+        ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
+
+        WebhookEventDispatcher dispatcher =
+                new WebhookEventDispatcher(
+                        null, null, executor, WebhookEventDispatcher.MAX_PENDING, cbRegistry, testMetrics);
+
+        dispatcher.enqueue(samplePayload(), "kc-id-1", "realm-1");
+
+        Double value =
+                testRegistry.getSampleValue(
+                        "webhook_events_received_total",
+                        new String[] {"realm", "event_type"},
+                        new String[] {"realm-1", "access.LOGIN"});
+        assertNotNull(value, "webhook_events_received_total counter must be registered");
+        assertEquals(1.0, value, 1e-9, "Counter must be incremented once after enqueue");
+    }
+
+    @Test
+    void enqueue_incrementsDroppedMetric_whenQueueFull() {
+        CollectorRegistry testRegistry = new CollectorRegistry();
+        WebhookMetrics testMetrics = new WebhookMetrics(testRegistry);
+        CircuitBreakerRegistry cbRegistry = new CircuitBreakerRegistry(5, 60);
+        ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
+
+        // maxPending=0 means every enqueue is immediately dropped
+        WebhookEventDispatcher dispatcher =
+                new WebhookEventDispatcher(null, null, executor, 0, cbRegistry, testMetrics);
+
+        dispatcher.enqueue(samplePayload(), "kc-id-1", "realm-1");
+
+        verifyNoInteractions(executor);
+        Double value =
+                testRegistry.getSampleValue(
+                        "webhook_events_dropped_total",
+                        new String[] {"realm"},
+                        new String[] {"realm-1"});
+        assertNotNull(value, "webhook_events_dropped_total counter must be registered");
+        assertEquals(1.0, value, 1e-9, "Dropped counter must be incremented once");
     }
 }

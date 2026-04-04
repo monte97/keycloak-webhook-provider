@@ -168,6 +168,50 @@ Full spec: [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.1) — import int
 
 See [Installation → step 4](#4-create-your-first-webhook) for a full example.
 
+## Observability
+
+### Prometheus metrics
+
+A Prometheus-compatible scrape endpoint is exposed at:
+
+```
+GET /realms/{realm}/webhooks/metrics
+```
+
+Requires `view-realm` role. Metrics include counters for events received, dispatched, retried, exhausted, and dropped; a histogram for HTTP dispatch latency; a gauge for circuit breaker state per webhook; and a gauge for pending queue depth.
+
+Key metric names:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `webhook_events_received_total` | Counter | Events enqueued for dispatch |
+| `webhook_dispatches_total` | Counter | HTTP send attempts (labelled by success) |
+| `webhook_dispatch_duration_seconds` | Histogram | HTTP send latency |
+| `webhook_retries_total` | Counter | Retry attempts scheduled |
+| `webhook_retries_exhausted_total` | Counter | Retry chains terminated without success |
+| `webhook_events_dropped_total` | Counter | Events dropped due to full queue |
+| `webhook_circuit_state` | Gauge | Circuit breaker state: 0=CLOSED, 2=OPEN |
+| `webhook_queue_pending` | Gauge | Tasks currently pending in the executor |
+
+### Structured audit logging
+
+All significant dispatch events (received, success, failure, retry, circuit open/reset, drop) are written to stdout as structured JSON via JUL (`java.util.logging`). Each log entry is a single-line JSON object with fields `timestamp`, `event`, `realm`, `webhookId`, `eventType`, and relevant context fields.
+
+Example output:
+
+```json
+{"timestamp":"2026-04-04T20:00:00Z","event":"dispatch.success","realm":"myrealm","webhookId":"abc123","eventType":"access.LOGIN","attempt":0,"url":"https://example.com/hook","httpStatus":200,"durationSeconds":0.042}
+```
+
+No log aggregation agent is required — the structured output is directly ingestible by Loki, Fluentd, or any JSON-aware log shipper.
+
+### OpenTelemetry (future)
+
+Full OpenTelemetry SDK integration (distributed traces, OTLP push) is not included in this release.
+Keycloak 26 has experimental OTel support, but does not expose a documented API for SPI providers to access the initialized OTel instance. The structured logging approach used here (JUL with `JsonFormatter`) is forward-compatible with a future OTel JUL log bridge when that integration matures.
+
+To enable OTel tracing in a future release, the recommended path is to use the OTel JUL log bridge, which allows the existing structured log output to flow into an OTel pipeline without changes to provider code.
+
 ## How it works
 
 ```

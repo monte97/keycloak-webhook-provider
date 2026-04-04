@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.montell.keycloak.event.EventPatternMatcher;
 import dev.montell.keycloak.event.WebhookPayload;
+import dev.montell.keycloak.logging.AuditLogger;
+import dev.montell.keycloak.metrics.WebhookMetrics;
 import dev.montell.keycloak.model.KeycloakEventType;
 import dev.montell.keycloak.model.WebhookModel;
 import dev.montell.keycloak.sender.HttpSendResult;
@@ -37,7 +39,7 @@ import org.keycloak.models.utils.KeycloakModelUtils;
 @JBossLog
 public class WebhookEventDispatcher {
 
-    static final int MAX_PENDING = 10_000;
+    public static final int MAX_PENDING = 10_000;
 
     private static final int DEFAULT_FAILURE_THRESHOLD = 5;
     private static final int DEFAULT_OPEN_SECONDS = 60;
@@ -55,6 +57,7 @@ public class WebhookEventDispatcher {
     private final AtomicInteger pendingTasks = new AtomicInteger(0);
     private final int maxPending;
     private final CircuitBreakerRegistry registry;
+    private final WebhookMetrics metrics;
 
     /** Production constructor — creates default executor, sender, and registry. */
     public WebhookEventDispatcher(KeycloakSessionFactory factory) {
@@ -63,7 +66,8 @@ public class WebhookEventDispatcher {
                 new HttpWebhookSender(),
                 new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors()),
                 MAX_PENDING,
-                new CircuitBreakerRegistry(DEFAULT_FAILURE_THRESHOLD, DEFAULT_OPEN_SECONDS));
+                new CircuitBreakerRegistry(DEFAULT_FAILURE_THRESHOLD, DEFAULT_OPEN_SECONDS),
+                new WebhookMetrics());
     }
 
     /** Public for testing: inject mock executor. */
@@ -76,7 +80,8 @@ public class WebhookEventDispatcher {
                 httpSender,
                 executor,
                 MAX_PENDING,
-                new CircuitBreakerRegistry(DEFAULT_FAILURE_THRESHOLD, DEFAULT_OPEN_SECONDS));
+                new CircuitBreakerRegistry(DEFAULT_FAILURE_THRESHOLD, DEFAULT_OPEN_SECONDS),
+                new WebhookMetrics(new io.prometheus.client.CollectorRegistry()));
     }
 
     /** Public for testing: override maxPending (e.g. 0 to test drop). */
@@ -90,20 +95,23 @@ public class WebhookEventDispatcher {
                 httpSender,
                 executor,
                 maxPending,
-                new CircuitBreakerRegistry(DEFAULT_FAILURE_THRESHOLD, DEFAULT_OPEN_SECONDS));
+                new CircuitBreakerRegistry(DEFAULT_FAILURE_THRESHOLD, DEFAULT_OPEN_SECONDS),
+                new WebhookMetrics(new io.prometheus.client.CollectorRegistry()));
     }
 
-    WebhookEventDispatcher(
+    public WebhookEventDispatcher(
             KeycloakSessionFactory factory,
             HttpWebhookSender httpSender,
             ScheduledExecutorService executor,
             int maxPending,
-            CircuitBreakerRegistry registry) {
+            CircuitBreakerRegistry registry,
+            WebhookMetrics metrics) {
         this.factory = factory;
         this.httpSender = httpSender;
         this.executor = executor;
         this.maxPending = maxPending;
         this.registry = registry;
+        this.metrics = metrics;
     }
 
     /**
@@ -117,15 +125,21 @@ public class WebhookEventDispatcher {
             log.warnf(
                     "Webhook dispatch queue full (%d pending), dropping event: %s",
                     maxPending, payload.type());
+            metrics.recordEventDropped(realmId);
+            AuditLogger.eventDropped(realmId, payload.type(), pendingTasks.get());
             return;
         }
         pendingTasks.incrementAndGet();
+        metrics.recordEventReceived(realmId, payload.type());
+        metrics.setQueuePending(pendingTasks.get());
+        final WebhookMetrics m = metrics;
         executor.submit(
                 () -> {
                     try {
                         processAndSend(payload, kcEventId, realmId);
                     } finally {
                         pendingTasks.decrementAndGet();
+                        m.setQueuePending(pendingTasks.get());
                     }
                 });
     }
@@ -249,6 +263,7 @@ public class WebhookEventDispatcher {
             CircuitBreaker cb,
             ExponentialBackOff backOff,
             int attempt) {
+        long startNanos = System.nanoTime();
         HttpSendResult result =
                 httpSender.send(
                         webhook.getUrl(),
@@ -256,6 +271,30 @@ public class WebhookEventDispatcher {
                         webhook.getId(),
                         webhook.getSecret(),
                         webhook.getAlgorithm());
+        double durationSeconds = (System.nanoTime() - startNanos) / 1_000_000_000.0;
+
+        metrics.recordDispatch(realmId, result.success(), durationSeconds);
+
+        if (result.success()) {
+            AuditLogger.dispatchSuccess(
+                    realmId,
+                    webhook.getId(),
+                    eventType,
+                    attempt,
+                    webhook.getUrl(),
+                    result.httpStatus(),
+                    durationSeconds);
+        } else {
+            AuditLogger.dispatchFailure(
+                    realmId,
+                    webhook.getId(),
+                    eventType,
+                    attempt,
+                    webhook.getUrl(),
+                    result.httpStatus(),
+                    result.errorMessage(),
+                    durationSeconds);
+        }
 
         if (result.success()) cb.onSuccess();
         else cb.onFailure();
@@ -300,6 +339,13 @@ public class WebhookEventDispatcher {
                             }
                             registry.invalidate(
                                     webhook.getId()); // evict stale TTL entry after state change
+                            metrics.setCircuitState(realmId, webhook.getId(), w.getCircuitState());
+                            if ("OPEN".equals(w.getCircuitState())) {
+                                AuditLogger.circuitOpened(
+                                        realmId, webhook.getId(), w.getFailureCount());
+                            } else if ("CLOSED".equals(w.getCircuitState()) && result.success()) {
+                                AuditLogger.circuitReset(realmId, webhook.getId());
+                            }
                         }
                     });
         } catch (Exception e) {
@@ -315,6 +361,9 @@ public class WebhookEventDispatcher {
                 log.debugf(
                         "Scheduling retry %d for webhook %s in %dms",
                         Integer.valueOf(attempt + 1), webhook.getId(), Long.valueOf(nextDelayMs));
+                metrics.recordRetry(realmId);
+                AuditLogger.retryScheduled(
+                        realmId, webhook.getId(), eventType, attempt + 1, nextDelayMs / 1000.0);
                 executor.schedule(
                         () ->
                                 sendWithRetry(
@@ -332,6 +381,8 @@ public class WebhookEventDispatcher {
                 log.debugf(
                         "Max retry time exceeded for webhook %s after %d attempt(s)",
                         webhook.getId(), Integer.valueOf(attempt + 1));
+                metrics.recordRetryExhausted(realmId);
+                AuditLogger.retryExhausted(realmId, webhook.getId(), eventType, attempt + 1);
             }
         }
     }

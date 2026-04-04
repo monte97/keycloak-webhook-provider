@@ -6,5 +6,7 @@ package dev.montell.keycloak.sender;
  * @param httpStatus HTTP response status code, or {@code -1} on network error/timeout
  * @param success {@code true} if the response was HTTP 2xx
  * @param durationMs wall-clock time of the HTTP request in milliseconds
+ * @param errorMessage exception message on network error/timeout, {@code null} otherwise
  */
-public record HttpSendResult(int httpStatus, boolean success, long durationMs) {}
+public record HttpSendResult(
+        int httpStatus, boolean success, long durationMs, String errorMessage) {}
