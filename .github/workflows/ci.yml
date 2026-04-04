@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [master]
+    tags: ['v*']
   pull_request:
     branches: [master]
 
@@ -162,32 +163,14 @@ jobs:
           path: e2e/playwright-report/
           retention-days: 7
 
-  release-please:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    needs: test
-    outputs:
-      release_created: ${{ steps.rp.outputs.release_created }}
-      tag_name: ${{ steps.rp.outputs.tag_name }}
-    steps:
-      - id: rp
-        uses: googleapis/release-please-action@v4
-        with:
-          release-type: maven
-
   publish:
-    if: needs.release-please.outputs.release_created == 'true'
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    needs: [release-please, build, e2e, mutation]
+    needs: [build, e2e, mutation]
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - uses: actions/setup-java@v5
         with:
@@ -203,8 +186,7 @@ jobs:
 
       - name: Set version in pom.xml
         run: |
-          VERSION="${{ needs.release-please.outputs.tag_name }}"
-          VERSION="${VERSION#v}"
+          VERSION="${GITHUB_REF_NAME#v}"
           sed -i "0,/<version>.*<\/version>/s/<version>.*<\/version>/<version>${VERSION}<\/version>/" pom.xml
 
       - name: Build JAR + SBOM (Java)
@@ -221,7 +203,6 @@ jobs:
       - name: Upload JAR and SBOMs to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.release-please.outputs.tag_name }}
           files: |
             target/keycloak-webhook-provider-*.jar
             target/bom.json
