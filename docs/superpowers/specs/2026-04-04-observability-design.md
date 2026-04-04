@@ -39,8 +39,9 @@ Realm is a **label** on each metric, not a path segment. A single Prometheus scr
 | `webhook_dispatch_duration_seconds` | Histogram | `realm` | HTTP send latency (wall clock, connect + read) |
 | `webhook_retries_total` | Counter | `realm` | Retries scheduled via exponential backoff |
 | `webhook_retries_exhausted_total` | Counter | `realm` | Retry chains terminated without success |
+| `webhook_events_dropped_total` | Counter | `realm` | Events dropped due to full dispatch queue (MAX_PENDING exceeded) |
 | `webhook_circuit_state` | Gauge | `realm`, `webhook_id` | Circuit breaker state: 0=CLOSED, 1=HALF_OPEN, 2=OPEN |
-| `webhook_queue_pending` | Gauge | — | Tasks currently pending in the executor |
+| `webhook_queue_pending` | Gauge (callback) | — | Tasks currently pending in the executor (reads from `pendingTasks` AtomicInteger) |
 
 **Notes on label cardinality:**
 - `webhook_id` is only used on `webhook_circuit_state` (a gauge, one entry per webhook). It must not appear on counters or histograms to avoid cardinality explosion.
@@ -56,7 +57,8 @@ Realm is a **label** on each metric, not a path segment. A single Prometheus scr
 - `WebhookEventDispatcher.sendWithRetry()` on retry scheduled — increment `webhook_retries_total`
 - `WebhookEventDispatcher.sendWithRetry()` on `ExponentialBackOff.STOP` — increment `webhook_retries_exhausted_total`
 - `WebhookEventDispatcher.sendWithRetry()` after circuit state persist — update `webhook_circuit_state`
-- `WebhookEventDispatcher` constructor / `pendingTasks` AtomicInteger — expose as `webhook_queue_pending`
+- `WebhookEventDispatcher.enqueue()` on drop (MAX_PENDING exceeded) — increment `webhook_events_dropped_total`
+- `WebhookEventDispatcher` constructor / `pendingTasks` AtomicInteger — expose as `webhook_queue_pending` via callback gauge
 
 ### New Classes
 
@@ -105,21 +107,24 @@ One JSON object per line (logfmt-compatible with JSON parsers):
 
 | `event` | `level` | Additional fields |
 |---------|---------|-------------------|
-| `dispatch.attempt` | INFO | `attempt`, `url` (no query string) |
-| `dispatch.success` | INFO | `attempt`, `http_status`, `duration_seconds` |
-| `dispatch.failure` | WARN | `attempt`, `http_status` or `error`, `duration_seconds` |
+| `dispatch.success` | INFO | `attempt`, `url` (no query string), `http_status`, `duration_seconds` |
+| `dispatch.failure` | WARN | `attempt`, `url` (no query string), `http_status` or `error`, `duration_seconds` |
 | `retry.scheduled` | INFO | `attempt`, `delay_seconds` |
 | `retry.exhausted` | WARN | `total_attempts` |
 | `circuit.opened` | WARN | `failure_count` |
-| `circuit.half_open` | INFO | — |
 | `circuit.reset` | INFO | — |
+| `event.dropped` | WARN | `queue_size` |
 
 **Excluded from structured logs:** debug-level events, DB persist details, payload content, secrets, tokens.
 
 ### New Classes
 
-- `JsonFormatter` — extends `java.util.logging.Formatter`, serializes `LogRecord` + MDC-equivalent fields to JSON. No external JSON library — hand-rolled for the bounded field set.
+- `JsonFormatter` — extends `java.util.logging.Formatter`, serializes `LogRecord` + structured fields to JSON via Jackson (already a project dependency). Produces one JSON line per record.
 - `AuditLogger` — thin wrapper that constructs structured log records and routes them to the dedicated JUL logger. Exposes named methods: `dispatchSuccess(realm, webhookId, eventType, attempt, httpStatus, durationSeconds)`, etc.
+
+### Initialization
+
+The JUL logger is configured programmatically in `WebhookEventListenerProviderFactory.init()` (SPI factory startup): creates a `ConsoleHandler` with the custom `JsonFormatter`, attaches it to the `dev.montell.keycloak.webhook.audit` logger, and disables parent handlers to avoid duplicate output through JBoss Logging's root handler.
 
 ---
 
