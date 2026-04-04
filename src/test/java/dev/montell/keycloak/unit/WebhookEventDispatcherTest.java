@@ -94,7 +94,12 @@ class WebhookEventDispatcherTest {
 
         WebhookEventDispatcher dispatcher =
                 new WebhookEventDispatcher(
-                        null, null, executor, WebhookEventDispatcher.MAX_PENDING, cbRegistry, testMetrics);
+                        null,
+                        null,
+                        executor,
+                        WebhookEventDispatcher.MAX_PENDING,
+                        cbRegistry,
+                        testMetrics);
 
         dispatcher.enqueue(samplePayload(), "kc-id-1", "realm-1");
 
