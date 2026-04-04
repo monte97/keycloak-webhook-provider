@@ -39,7 +39,7 @@ import org.keycloak.models.utils.KeycloakModelUtils;
 @JBossLog
 public class WebhookEventDispatcher {
 
-    static final int MAX_PENDING = 10_000;
+    public static final int MAX_PENDING = 10_000;
 
     private static final int DEFAULT_FAILURE_THRESHOLD = 5;
     private static final int DEFAULT_OPEN_SECONDS = 60;
@@ -99,7 +99,7 @@ public class WebhookEventDispatcher {
                 new WebhookMetrics(new io.prometheus.client.CollectorRegistry()));
     }
 
-    WebhookEventDispatcher(
+    public WebhookEventDispatcher(
             KeycloakSessionFactory factory,
             HttpWebhookSender httpSender,
             ScheduledExecutorService executor,
