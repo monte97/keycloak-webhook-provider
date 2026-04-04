@@ -19,6 +19,7 @@ public final class AuditLogger {
 
     /** Configure the JUL handler for structured JSON output to stdout. Call once at startup. */
     public static void init() {
+        if (LOGGER.getHandlers().length > 0) return; // already configured
         LOGGER.setUseParentHandlers(false);
         ConsoleHandler handler = new ConsoleHandler();
         handler.setFormatter(new JsonFormatter());
@@ -43,7 +44,7 @@ public final class AuditLogger {
                         webhookId,
                         eventType);
         fields.put("attempt", attempt);
-        fields.put("url", url);
+        fields.put("url", stripQueryString(url));
         fields.put("http_status", httpStatus);
         fields.put("duration_seconds", durationSeconds);
         log(Level.INFO, fields);
@@ -62,7 +63,7 @@ public final class AuditLogger {
                 baseFields(
                         "dispatch.failure", "Webhook dispatch failed", realm, webhookId, eventType);
         fields.put("attempt", attempt);
-        fields.put("url", url);
+        fields.put("url", stripQueryString(url));
         if (error != null) {
             fields.put("error", error);
         } else {
@@ -114,6 +115,12 @@ public final class AuditLogger {
                         eventType);
         fields.put("queue_size", queueSize);
         log(Level.WARNING, fields);
+    }
+
+    private static String stripQueryString(String url) {
+        if (url == null) return null;
+        int q = url.indexOf('?');
+        return q >= 0 ? url.substring(0, q) : url;
     }
 
     private static Map<String, Object> baseFields(

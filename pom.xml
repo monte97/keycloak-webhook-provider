@@ -358,6 +358,12 @@
           </execution>
         </executions>
         <configuration>
+          <relocations>
+            <relocation>
+              <pattern>io.prometheus</pattern>
+              <shadedPattern>dev.montell.shaded.prometheus</shadedPattern>
+            </relocation>
+          </relocations>
           <transformers>
             <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
           </transformers>

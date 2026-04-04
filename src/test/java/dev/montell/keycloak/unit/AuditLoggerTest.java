@@ -137,4 +137,30 @@ class AuditLoggerTest {
         assertEquals("WARNING", json.get("level").asText());
         assertEquals(10000, json.get("queue_size").asInt());
     }
+
+    @Test
+    void init_isIdempotent_doesNotAddDuplicateHandlers() {
+        int before = julLogger.getHandlers().length;
+        AuditLogger.init(); // should be no-op since handlers already exist
+        AuditLogger.init(); // second call
+        assertEquals(
+                before,
+                julLogger.getHandlers().length,
+                "init() must not add handlers when logger already has handlers");
+    }
+
+    @Test
+    void dispatchSuccess_stripsQueryStringFromUrl() throws Exception {
+        AuditLogger.dispatchSuccess(
+                "demo",
+                "wh-1",
+                "admin.USER-CREATE",
+                0,
+                "http://example.com/hook?token=secret&foo=bar",
+                200,
+                0.045);
+
+        JsonNode json = capturedJson();
+        assertEquals("http://example.com/hook", json.get("url").asText());
+    }
 }
