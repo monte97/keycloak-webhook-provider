@@ -19,6 +19,7 @@ import dev.montell.keycloak.sender.HttpWebhookSender;
 import dev.montell.keycloak.spi.WebhookProvider;
 import io.prometheus.client.CollectorRegistry;
 import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.List;
@@ -500,6 +501,19 @@ class WebhooksResourceTest {
         assertTrue(body.contains("realm=\"demo\""));
         assertTrue(body.contains("# HELP webhook_events_received_total"));
         assertTrue(body.contains("# TYPE webhook_events_received_total counter"));
+
+        // Verify the @Produces annotation declares the Prometheus text format content-type.
+        // JAX-RS content negotiation runs in the container, not in unit tests, so we assert
+        // the annotation value directly via reflection.
+        Produces produces =
+                WebhooksResource.class.getMethod("metrics").getAnnotation(Produces.class);
+        assertNotNull(produces, "@Produces annotation must be present on metrics()");
+        String[] values = produces.value();
+        assertEquals(1, values.length, "metrics() must declare exactly one @Produces value");
+        assertEquals(
+                "text/plain; version=0.0.4; charset=utf-8",
+                values[0],
+                "metrics() must produce Prometheus text format: text/plain; version=0.0.4; charset=utf-8");
 
         // Clean up default registry to avoid polluting other tests
         CollectorRegistry.defaultRegistry.clear();
