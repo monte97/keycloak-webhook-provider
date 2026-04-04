@@ -292,7 +292,7 @@ public class WebhookEventDispatcher {
                     attempt,
                     webhook.getUrl(),
                     result.httpStatus(),
-                    null,
+                    result.errorMessage(),
                     durationSeconds);
         }
 

@@ -233,7 +233,7 @@ class WebhooksResourceTest {
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         when(sender.send(anyString(), payloadCaptor.capture(), eq("wh-1"), isNull(), isNull()))
-                .thenReturn(new HttpSendResult(200, true, 42L));
+                .thenReturn(new HttpSendResult(200, true, 42L, null));
 
         Response resp = resource.testWebhook("wh-1");
 
@@ -297,7 +297,7 @@ class WebhooksResourceTest {
         WebhookComponentHolder.init(sender, realRegistry);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
-                .thenReturn(new HttpSendResult(200, true, 10L));
+                .thenReturn(new HttpSendResult(200, true, 10L, null));
 
         Response resp = resource.resendSingle("wh-1", "send-1");
 
@@ -369,7 +369,7 @@ class WebhooksResourceTest {
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
-                .thenReturn(new HttpSendResult(200, true, 5L));
+                .thenReturn(new HttpSendResult(200, true, 5L, null));
 
         Response resp = resource.resendFailed("wh-1", 24);
 
@@ -542,7 +542,7 @@ class WebhooksResourceTest {
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
-                .thenReturn(new HttpSendResult(500, false, 5L));
+                .thenReturn(new HttpSendResult(500, false, 5L, null));
 
         Response resp = resource.resendFailed("wh-1", 24);
 

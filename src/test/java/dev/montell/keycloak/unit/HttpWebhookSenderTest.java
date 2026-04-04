@@ -60,6 +60,7 @@ class HttpWebhookSenderTest {
 
         assertFalse(result.success());
         assertEquals(-1, result.httpStatus());
+        assertEquals("connection refused", result.errorMessage());
     }
 
     @Test

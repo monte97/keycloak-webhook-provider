@@ -67,11 +67,11 @@ public class HttpWebhookSender {
                     httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
             long durationMs = System.currentTimeMillis() - start;
             boolean success = response.statusCode() >= 200 && response.statusCode() < 300;
-            return new HttpSendResult(response.statusCode(), success, durationMs);
+            return new HttpSendResult(response.statusCode(), success, durationMs, null);
         } catch (Exception e) {
             long durationMs = System.currentTimeMillis() - start;
             log.warnf("HTTP send failed for webhook %s url=%s: %s", webhookId, url, e.getMessage());
-            return new HttpSendResult(-1, false, durationMs);
+            return new HttpSendResult(-1, false, durationMs, e.getMessage());
         }
     }
 }
