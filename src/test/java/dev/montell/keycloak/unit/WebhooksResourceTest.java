@@ -8,6 +8,7 @@ import static org.mockito.Mockito.*;
 import dev.montell.keycloak.dispatch.CircuitBreaker;
 import dev.montell.keycloak.dispatch.CircuitBreakerRegistry;
 import dev.montell.keycloak.dispatch.WebhookComponentHolder;
+import dev.montell.keycloak.metrics.WebhookMetrics;
 import dev.montell.keycloak.model.KeycloakEventType;
 import dev.montell.keycloak.model.WebhookEventModel;
 import dev.montell.keycloak.model.WebhookModel;
@@ -16,6 +17,7 @@ import dev.montell.keycloak.resources.WebhooksResource;
 import dev.montell.keycloak.sender.HttpSendResult;
 import dev.montell.keycloak.sender.HttpWebhookSender;
 import dev.montell.keycloak.spi.WebhookProvider;
+import io.prometheus.client.CollectorRegistry;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import java.time.Instant;
@@ -477,6 +479,31 @@ class WebhooksResourceTest {
     // -----------------------------------------------------------------------
     // POST /{id}/resend-failed (bulk)
     // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // GET /metrics
+    // -----------------------------------------------------------------------
+
+    @Test
+    void metrics_returnsPrometheusTextFormat() throws Exception {
+        // Register metrics in the default registry (what the endpoint reads from).
+        // Clear first to avoid conflicts if other tests already registered.
+        CollectorRegistry.defaultRegistry.clear();
+        WebhookMetrics metrics = new WebhookMetrics(); // registers in default registry
+        metrics.recordEventReceived("demo", "admin.USER-CREATE");
+
+        Response response = resource.metrics();
+
+        assertEquals(200, response.getStatus());
+        String body = (String) response.getEntity();
+        assertTrue(body.contains("webhook_events_received_total"));
+        assertTrue(body.contains("realm=\"demo\""));
+        assertTrue(body.contains("# HELP webhook_events_received_total"));
+        assertTrue(body.contains("# TYPE webhook_events_received_total counter"));
+
+        // Clean up default registry to avoid polluting other tests
+        CollectorRegistry.defaultRegistry.clear();
+    }
 
     @Test
     void resend_bulk_continues_on_failure_until_circuit_opens() {
