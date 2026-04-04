@@ -44,4 +44,10 @@
     <Class name="dev.montell.keycloak.event.AuthDetails"/>
     <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
   </Match>
+
+  <!-- WebhookMetrics is a shared stateful collector — storing by reference is intentional -->
+  <Match>
+    <Class name="dev.montell.keycloak.dispatch.WebhookEventDispatcher"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
 </FindBugsFilter>
