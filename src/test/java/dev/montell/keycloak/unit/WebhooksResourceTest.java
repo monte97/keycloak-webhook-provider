@@ -309,7 +309,8 @@ class WebhooksResourceTest {
     @Test
     void resend_single_404_webhook() {
         when(provider.getWebhookById(realm, "missing")).thenReturn(null);
-        assertThrows(NotFoundException.class, () -> resource.resendSingle("missing", "send-1", false));
+        assertThrows(
+                NotFoundException.class, () -> resource.resendSingle("missing", "send-1", false));
     }
 
     @Test
@@ -318,7 +319,9 @@ class WebhooksResourceTest {
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         when(provider.getSendById(realm, "missing-send")).thenReturn(null);
 
-        assertThrows(NotFoundException.class, () -> resource.resendSingle("wh-1", "missing-send", false));
+        assertThrows(
+                NotFoundException.class,
+                () -> resource.resendSingle("wh-1", "missing-send", false));
     }
 
     @Test

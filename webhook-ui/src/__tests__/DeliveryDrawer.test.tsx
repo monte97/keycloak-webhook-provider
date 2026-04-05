@@ -70,6 +70,7 @@ function makeApi(overrides: Partial<WebhookApiClient> = {}): WebhookApiClient {
     resetCircuit: vi.fn().mockResolvedValue(undefined),
     getSends: vi.fn().mockResolvedValue([successSend, failedSend]),
     resendFailed: vi.fn().mockResolvedValue({ resent: 1, failed: 0, skipped: 0 }),
+    resendSingle: vi.fn().mockResolvedValue({ httpStatus: 200, success: true, durationMs: 10 }),
     ...overrides,
   } as unknown as WebhookApiClient;
 }
@@ -235,6 +236,85 @@ describe('DeliveryDrawer', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/network error/i)).toBeInTheDocument();
+    });
+  });
+
+  it('per-row Resend button calls resendSingle and reloads sends', async () => {
+    render(
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
+    );
+
+    await waitFor(() => screen.getByText('200'));
+    const resendButtons = screen.getAllByRole('button', { name: /^resend$/i });
+    expect(resendButtons).toHaveLength(2); // one per row
+
+    fireEvent.click(resendButtons[0]);
+
+    await waitFor(() => {
+      expect(api.resendSingle).toHaveBeenCalledWith('w1', 's1', false);
+    });
+    // Reloads sends after resend
+    expect(api.getSends).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows confirmation dialog when circuit is OPEN and Resend clicked', async () => {
+    api = makeApi({ getCircuit: vi.fn().mockResolvedValue(openCircuit) });
+    render(
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
+    );
+
+    await waitFor(() => screen.getByText('200'));
+    const resendButtons = screen.getAllByRole('button', { name: /^resend$/i });
+    fireEvent.click(resendButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/circuit breaker is currently OPEN/i)).toBeInTheDocument();
+    });
+    expect(screen.getByRole('checkbox', { name: /force send/i })).toBeInTheDocument();
+  });
+
+  it('confirmation dialog with force checkbox calls resendSingle with force=true', async () => {
+    api = makeApi({ getCircuit: vi.fn().mockResolvedValue(openCircuit) });
+    render(
+      <Drawer isExpanded>
+        <DeliveryDrawer
+          webhook={webhook}
+          api={api}
+          onClose={onClose}
+          onCircuitReset={onCircuitReset}
+        />
+      </Drawer>,
+    );
+
+    await waitFor(() => screen.getByText('200'));
+    const resendButtons = screen.getAllByRole('button', { name: /^resend$/i });
+    fireEvent.click(resendButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/circuit breaker is currently OPEN/i)).toBeInTheDocument();
+    });
+
+    // Check the force checkbox
+    fireEvent.click(screen.getByRole('checkbox', { name: /force send/i }));
+    // Click the confirm Resend button in the dialog
+    fireEvent.click(screen.getByRole('button', { name: /^confirm resend$/i }));
+
+    await waitFor(() => {
+      expect(api.resendSingle).toHaveBeenCalledWith('w1', 's1', true);
     });
   });
 

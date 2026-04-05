@@ -9,6 +9,9 @@ import {
   Alert,
   Label,
   Title,
+  Modal,
+  ModalVariant,
+  Checkbox,
 } from '@patternfly/react-core';
 import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 import type { Webhook, WebhookSend, CircuitState } from '../api/types';
@@ -47,6 +50,9 @@ export function DeliveryDrawer({
   const [filter, setFilter] = useState<'all' | 'failed'>('all');
   const [resending, setResending] = useState(false);
   const [resettingCircuit, setResettingCircuit] = useState(false);
+  const [resendingSendId, setResendingSendId] = useState<string | null>(null);
+  const [confirmResendId, setConfirmResendId] = useState<string | null>(null);
+  const [forceResend, setForceResend] = useState(false);
 
   useEffect(() => {
     if (!webhook) return;
@@ -120,6 +126,38 @@ export function DeliveryDrawer({
       setCircuitError(e instanceof Error ? e.message : 'Reset failed');
     } finally {
       setResettingCircuit(false);
+    }
+  };
+
+  const handleResendSingle = async (sendId: string) => {
+    if (!webhook) return;
+    if (circuit?.state === 'OPEN') {
+      setConfirmResendId(sendId);
+      setForceResend(false);
+      return;
+    }
+    setResendingSendId(sendId);
+    try {
+      await api.resendSingle(webhook.id, sendId, false);
+      await loadSends(webhook.id, filter);
+    } catch (e) {
+      setSendsError(e instanceof Error ? e.message : 'Resend failed');
+    } finally {
+      setResendingSendId(null);
+    }
+  };
+
+  const handleConfirmResend = async () => {
+    if (!webhook || !confirmResendId) return;
+    setConfirmResendId(null);
+    setResendingSendId(confirmResendId);
+    try {
+      await api.resendSingle(webhook.id, confirmResendId, forceResend);
+      await loadSends(webhook.id, filter);
+    } catch (e) {
+      setSendsError(e instanceof Error ? e.message : 'Resend failed');
+    } finally {
+      setResendingSendId(null);
     }
   };
 
@@ -246,13 +284,14 @@ export function DeliveryDrawer({
                 <Th>HTTP</Th>
                 <Th>Retries</Th>
                 <Th>Sent at</Th>
+                <Th>Actions</Th>
               </Tr>
             </Thead>
             <Tbody>
               {sends.length === 0 ? (
                 <Tr>
                   <Td
-                    colSpan={4}
+                    colSpan={5}
                     style={{ textAlign: 'center', color: '#6a6e73' }}
                   >
                     No deliveries found
@@ -269,6 +308,17 @@ export function DeliveryDrawer({
                     <Td dataLabel="HTTP">{s.httpStatus}</Td>
                     <Td dataLabel="Retries">{s.retries}</Td>
                     <Td dataLabel="Sent at">{formatRelative(s.sentAt)}</Td>
+                    <Td dataLabel="Actions">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        isLoading={resendingSendId === s.id}
+                        isDisabled={resendingSendId !== null}
+                        onClick={() => handleResendSingle(s.id)}
+                      >
+                        Resend
+                      </Button>
+                    </Td>
                   </Tr>
                 ))
               )}
@@ -276,6 +326,36 @@ export function DeliveryDrawer({
           </Table>
         )}
       </div>
+
+      {confirmResendId !== null && (
+        <Modal
+          variant={ModalVariant.small}
+          title="Confirm resend"
+          isOpen
+          onClose={() => setConfirmResendId(null)}
+          actions={[
+            <Button key="confirm" variant="primary" onClick={handleConfirmResend}>
+              Confirm resend
+            </Button>,
+            <Button key="cancel" variant="link" onClick={() => setConfirmResendId(null)}>
+              Cancel
+            </Button>,
+          ]}
+        >
+          <Alert
+            variant="warning"
+            isInline
+            title="The circuit breaker is currently OPEN. The endpoint may still be unreachable."
+            style={{ marginBottom: 16 }}
+          />
+          <Checkbox
+            id="force-resend"
+            label="Force send anyway"
+            isChecked={forceResend}
+            onChange={(_event, checked) => setForceResend(checked)}
+          />
+        </Modal>
+      )}
     </DrawerPanelContent>
   );
 }
