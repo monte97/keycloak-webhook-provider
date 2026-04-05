@@ -313,7 +313,7 @@ export function DeliveryDrawer({
                         variant="link"
                         size="sm"
                         isLoading={resendingSendId === s.id}
-                        isDisabled={resendingSendId !== null}
+                        isDisabled={resendingSendId !== null || confirmResendId !== null}
                         onClick={() => handleResendSingle(s.id)}
                       >
                         Resend

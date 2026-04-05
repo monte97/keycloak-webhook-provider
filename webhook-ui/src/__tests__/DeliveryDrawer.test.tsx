@@ -255,7 +255,7 @@ describe('DeliveryDrawer', () => {
     const resendButtons = screen.getAllByRole('button', { name: /^resend$/i });
     expect(resendButtons).toHaveLength(2); // one per row
 
-    fireEvent.click(resendButtons[0]);
+    fireEvent.click(resendButtons[0]!);
 
     await waitFor(() => {
       expect(api.resendSingle).toHaveBeenCalledWith('w1', 's1', false);
@@ -279,7 +279,7 @@ describe('DeliveryDrawer', () => {
 
     await waitFor(() => screen.getByText('200'));
     const resendButtons = screen.getAllByRole('button', { name: /^resend$/i });
-    fireEvent.click(resendButtons[0]);
+    fireEvent.click(resendButtons[0]!);
 
     await waitFor(() => {
       expect(screen.getByText(/circuit breaker is currently OPEN/i)).toBeInTheDocument();
@@ -302,7 +302,7 @@ describe('DeliveryDrawer', () => {
 
     await waitFor(() => screen.getByText('200'));
     const resendButtons = screen.getAllByRole('button', { name: /^resend$/i });
-    fireEvent.click(resendButtons[0]);
+    fireEvent.click(resendButtons[0]!);
 
     await waitFor(() => {
       expect(screen.getByText(/circuit breaker is currently OPEN/i)).toBeInTheDocument();
