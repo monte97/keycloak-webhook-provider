@@ -291,7 +291,7 @@ public class WebhooksResource {
         var cb = registryHolder.get(w, failureThreshold, openSeconds);
         if (!force && !cb.allowRequest())
             return Response.status(409)
-                    .entity("Circuit breaker is OPEN — reset it first via POST /{id}/circuit/reset")
+                    .entity("Circuit breaker is OPEN — reset it via POST /{id}/circuit/reset, or retry with ?force=true")
                     .build();
 
         // Load original event payload
