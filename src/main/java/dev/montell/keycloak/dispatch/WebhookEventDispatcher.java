@@ -226,9 +226,12 @@ public class WebhookEventDispatcher {
             CircuitBreaker cb = registry.get(webhook, cbConfig[0], cbConfig[1]);
 
             if (!cb.allowRequest()) {
+                String reason =
+                        CircuitBreaker.HALF_OPEN.equals(cb.getState())
+                                ? "probe in flight"
+                                : "circuit OPEN";
                 log.debugf(
-                        "Circuit OPEN for webhook %s — skipping %s",
-                        webhook.getId(), payload.type());
+                        "Skipping webhook %s — %s — %s", webhook.getId(), reason, payload.type());
                 continue;
             }
 
