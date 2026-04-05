@@ -3,6 +3,7 @@ package dev.montell.keycloak.dispatch;
 
 import dev.montell.keycloak.model.WebhookModel;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * State machine for a single webhook's circuit breaker. State: CLOSED (normal) ──N failures──▶ OPEN
@@ -22,6 +23,7 @@ public class CircuitBreaker {
 
     private final int failureThreshold;
     private final int openSeconds;
+    private final AtomicBoolean probeInFlight = new AtomicBoolean(false);
 
     public CircuitBreaker(int failureThreshold, int openSeconds) {
         this.state = CLOSED;
@@ -50,8 +52,18 @@ public class CircuitBreaker {
     }
 
     public boolean allowRequest(Instant now) {
-        if (CLOSED.equals(state) || HALF_OPEN.equals(state)) return true;
-        return lastFailureAt != null && now.isAfter(lastFailureAt.plusSeconds(openSeconds));
+        if (CLOSED.equals(state)) return true;
+        if (HALF_OPEN.equals(state)) {
+            return probeInFlight.compareAndSet(false, true);
+        }
+        // OPEN: check if timeout has elapsed
+        if (lastFailureAt != null && now.isAfter(lastFailureAt.plusSeconds(openSeconds))) {
+            if (probeInFlight.compareAndSet(false, true)) {
+                state = HALF_OPEN;
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Called on send success: reset to CLOSED. */
@@ -59,6 +71,7 @@ public class CircuitBreaker {
         state = CLOSED;
         failureCount = 0;
         lastFailureAt = null;
+        probeInFlight.set(false);
     }
 
     /** Called on send failure: increment count; open circuit if threshold exceeded. */
@@ -67,6 +80,12 @@ public class CircuitBreaker {
     }
 
     public void onFailure(Instant now) {
+        if (HALF_OPEN.equals(state)) {
+            state = OPEN;
+            lastFailureAt = now;
+            probeInFlight.set(false);
+            return;
+        }
         failureCount++;
         lastFailureAt = now;
         if (failureCount >= failureThreshold) state = OPEN;
