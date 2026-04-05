@@ -299,7 +299,7 @@ class WebhooksResourceTest {
         when(sender.send(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(new HttpSendResult(200, true, 10L, null));
 
-        Response resp = resource.resendSingle("wh-1", "send-1");
+        Response resp = resource.resendSingle("wh-1", "send-1", false);
 
         assertEquals(200, resp.getStatus());
         // storeSend called with retries+1 = 0+1 = 1
@@ -309,7 +309,7 @@ class WebhooksResourceTest {
     @Test
     void resend_single_404_webhook() {
         when(provider.getWebhookById(realm, "missing")).thenReturn(null);
-        assertThrows(NotFoundException.class, () -> resource.resendSingle("missing", "send-1"));
+        assertThrows(NotFoundException.class, () -> resource.resendSingle("missing", "send-1", false));
     }
 
     @Test
@@ -318,7 +318,7 @@ class WebhooksResourceTest {
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         when(provider.getSendById(realm, "missing-send")).thenReturn(null);
 
-        assertThrows(NotFoundException.class, () -> resource.resendSingle("wh-1", "missing-send"));
+        assertThrows(NotFoundException.class, () -> resource.resendSingle("wh-1", "missing-send", false));
     }
 
     @Test
@@ -338,9 +338,35 @@ class WebhooksResourceTest {
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         when(provider.getSendById(realm, "send-1")).thenReturn(s);
 
-        Response resp = resource.resendSingle("wh-1", "send-1");
+        Response resp = resource.resendSingle("wh-1", "send-1", false);
 
         assertEquals(409, resp.getStatus());
+    }
+
+    @Test
+    void resend_single_force_bypasses_open_circuit() {
+        // threshold=1 → one onFailure() opens circuit
+        CircuitBreakerRegistry realRegistry = new CircuitBreakerRegistry(1, 60);
+        WebhookComponentHolder.init(sender, realRegistry);
+
+        WebhookModel w = mockWebhook("wh-1");
+        when(w.getCircuitState()).thenReturn(CircuitBreaker.OPEN);
+        when(w.getFailureCount()).thenReturn(1);
+        when(w.getLastFailureAt()).thenReturn(Instant.now());
+
+        WebhookSendModel s = mockSend("send-1", "wh-1", "ev-1");
+        WebhookEventModel e = mockEvent("ev-1", "wh-1");
+
+        when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
+        when(provider.getSendById(realm, "send-1")).thenReturn(s);
+        when(provider.getEventById(realm, "ev-1")).thenReturn(e);
+        when(sender.send(anyString(), anyString(), anyString(), any(), any()))
+                .thenReturn(new HttpSendResult(200, true, 10L, null));
+
+        Response resp = resource.resendSingle("wh-1", "send-1", true);
+
+        assertEquals(200, resp.getStatus());
+        verify(provider).storeSend(realm, "wh-1", "ev-1", "access.LOGIN", 200, true, 1);
     }
 
     // -----------------------------------------------------------------------

@@ -269,7 +269,10 @@ public class WebhooksResource {
     // --- POST /{id}/sends/{sid}/resend ---
     @POST
     @Path("{id}/sends/{sid}/resend")
-    public Response resendSingle(@PathParam("id") String id, @PathParam("sid") String sid) {
+    public Response resendSingle(
+            @PathParam("id") String id,
+            @PathParam("sid") String sid,
+            @QueryParam("force") @DefaultValue("false") boolean force) {
         requireManageEvents();
         var sender = dev.montell.keycloak.dispatch.WebhookComponentHolder.httpSender();
         var registryHolder = dev.montell.keycloak.dispatch.WebhookComponentHolder.registry();
@@ -286,7 +289,7 @@ public class WebhooksResource {
         int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", 5);
         int openSeconds = getRealmIntAttribute("_webhook.circuit.open_seconds", 60);
         var cb = registryHolder.get(w, failureThreshold, openSeconds);
-        if (!cb.allowRequest())
+        if (!force && !cb.allowRequest())
             return Response.status(409)
                     .entity("Circuit breaker is OPEN — reset it first via POST /{id}/circuit/reset")
                     .build();
