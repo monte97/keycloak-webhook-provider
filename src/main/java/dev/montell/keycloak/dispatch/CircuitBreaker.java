@@ -17,7 +17,7 @@ public class CircuitBreaker {
     public static final String OPEN = "OPEN";
     public static final String HALF_OPEN = "HALF_OPEN";
 
-    private String state;
+    private volatile String state;
     private int failureCount;
     private Instant lastFailureAt;
 
@@ -44,8 +44,15 @@ public class CircuitBreaker {
     }
 
     /**
-     * Returns true if a request should be attempted now. CLOSED → always. HALF_OPEN → always
-     * (probe). OPEN → only after {@code openSeconds}.
+     * Returns true if a request should be attempted now.
+     *
+     * <ul>
+     *   <li>CLOSED → always allowed.</li>
+     *   <li>HALF_OPEN → only the first concurrent caller; all others are blocked until the probe
+     *       completes (success or failure).</li>
+     *   <li>OPEN → only the first caller after {@code openSeconds} have elapsed; transitions to
+     *       HALF_OPEN atomically.</li>
+     * </ul>
      */
     public boolean allowRequest() {
         return allowRequest(Instant.now());
