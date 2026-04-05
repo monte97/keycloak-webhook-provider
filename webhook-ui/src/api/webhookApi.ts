@@ -6,6 +6,7 @@ import type {
   TestResult,
   WebhookSend,
   ResendResult,
+  SendResult,
 } from './types';
 import { ApiError } from './types';
 
@@ -79,6 +80,9 @@ export function createWebhookApi(basePath: string, realm: string, keycloak: Keyc
     },
     resendFailed(id: string, hours = 24): Promise<ResendResult> {
       return request(`/${id}/resend-failed?hours=${hours}`, { method: 'POST' });
+    },
+    resendSingle(webhookId: string, sendId: string, force = false): Promise<SendResult> {
+      return request(`/${webhookId}/sends/${sendId}/resend?force=${force}`, { method: 'POST' });
     },
   };
 }

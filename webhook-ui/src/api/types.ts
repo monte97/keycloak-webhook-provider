@@ -58,6 +58,12 @@ export interface ResendResult {
   skipped: number;
 }
 
+export interface SendResult {
+  httpStatus: number;
+  success: boolean;
+  durationMs: number;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
