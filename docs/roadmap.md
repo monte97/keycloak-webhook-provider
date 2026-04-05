@@ -1,6 +1,6 @@
 # Roadmap
 
-Features ordered by impact/complexity. Each item links to the relevant design area in the codebase.
+Features ordered by impact/complexity. Items marked with 🔍 were identified by comparing with the OSS ecosystem (notably [p2-inc/keycloak-events](https://github.com/p2-inc/keycloak-events), [vymalo/keycloak-webhook](https://github.com/vymalo/keycloak-webhook), [chintanbuch/keycloak-client-webhook](https://github.com/chintanbuch/keycloak-client-webhook)).
 
 ---
 
@@ -17,6 +17,11 @@ Currently the dispatcher retries on any failed response (non-2xx) and network er
 
 **Relevant code:** `WebhookEventDispatcher.sendWithRetry()`, webhook configuration model
 
+### 🔍 Resend by delivery ID
+A REST endpoint to replay a specific past delivery attempt by ID, without having to trigger a new event. p2-inc exposes this pattern; we have the delivery history data but no dedicated resend-by-ID endpoint.
+
+**Relevant code:** `WebhooksResource`, `JpaWebhookProvider`, delivery history tables
+
 ---
 
 ## High priority, medium complexity
@@ -26,6 +31,11 @@ Events that exhaust all retries are currently dropped silently (logged and count
 
 **Relevant code:** `WebhookEventDispatcher.sendWithRetry()` on `retries_exhausted`, new `DeadLetterEntity` JPA entity, new UI section
 
+### 🔍 Catch-all system webhook
+An operator-level webhook configured via environment variables (`WEBHOOK_URI`, `WEBHOOK_SECRET`) that receives all events from all realms, regardless of per-realm subscription configuration. Useful as an auditing escape hatch or for ops monitoring. Inspired by p2-inc's system-owner webhook.
+
+**Relevant code:** `WebhookEventListenerProviderFactory`, `WebhookEventDispatcher`, new env-var based config path
+
 ### OpenTelemetry traces
 The next logical observability step after Prometheus metrics and structured logging. Keycloak 26 has experimental OTel support; the structured JUL logging in place is forward-compatible with a JUL log bridge when the integration matures.
 
@@ -34,6 +44,16 @@ The next logical observability step after Prometheus metrics and structured logg
 ---
 
 ## Medium priority, medium complexity
+
+### 🔍 Custom event publishing API
+A REST endpoint (`POST /realms/{realm}/webhooks/events`) that allows external applications to publish arbitrary events, which are then dispatched to all matching webhooks. Turns Keycloak into a general-purpose event bus for the realm. Inspired by p2-inc.
+
+**Relevant code:** new `WebhooksResource` endpoint, `WebhookEventDispatcher.enqueue()`
+
+### 🔍 Per-client webhook configuration
+Webhooks scoped to a specific OAuth client rather than the whole realm. Useful in multi-tenant SaaS scenarios where each client application needs its own webhook subscription independently of realm-level config.
+
+**Relevant code:** webhook data model, `WebhookEventListenerProvider`, UI
 
 ### Payload batching
 Group multiple events destined for the same webhook endpoint into a single HTTP request. Reduces connection overhead for endpoints receiving high event volumes.
@@ -54,8 +74,26 @@ Client certificate authentication for webhook endpoints that require it. Operato
 
 ## Low priority
 
+### 🔍 Multi-transport delivery (AMQP, Syslog)
+Deliver events to RabbitMQ/AMQP queues or Syslog (RFC 3164/5424) in addition to HTTP. Useful in enterprise environments with existing message broker infrastructure. Inspired by vymalo/keycloak-webhook.
+
 ### Rate limiting
 Cap the number of outgoing events per second per webhook. Protects slow or rate-limited consumer endpoints from being overwhelmed during event bursts.
 
 ### Event deduplication
 Idempotency keys on outgoing requests to allow consumers to safely deduplicate retried deliveries.
+
+---
+
+## Competitive context
+
+As of April 2026, the main OSS alternatives are:
+
+| Project | Stars | Differentiators |
+|---|---|---|
+| [p2-inc/keycloak-events](https://github.com/p2-inc/keycloak-events) | 287 | Multi-instance factory, catch-all webhook, custom event publishing, script listeners |
+| [vymalo/keycloak-webhook](https://github.com/vymalo/keycloak-webhook) | 101 | Multi-transport: HTTP + AMQP + Syslog |
+| [svenstaro/keycloak-http-webhook-provider](https://github.com/svenstaro/keycloak-http-webhook-provider) | 27 | Minimal reference implementation |
+| [chintanbuch/keycloak-client-webhook](https://github.com/chintanbuch/keycloak-client-webhook) | 13 | Per-client webhook scoping |
+
+**Our unique advantages:** circuit breaker with auto-recovery, embedded React/PatternFly admin UI, full per-attempt delivery history, Prometheus metrics, structured JSON audit logging.
