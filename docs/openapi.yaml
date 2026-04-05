@@ -420,7 +420,7 @@ paths:
       summary: Resend a specific delivery
       description: |
         Retries a specific failed send. Respects circuit breaker state —
-        returns 409 if the circuit is OPEN.
+        returns 409 if the circuit is OPEN (unless force=true).
       tags: [Delivery]
       parameters:
         - $ref: "#/components/parameters/webhookId"
@@ -430,6 +430,13 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: force
+          in: query
+          required: false
+          description: If true, bypass the circuit breaker OPEN check and dispatch unconditionally
+          schema:
+            type: boolean
+            default: false
       responses:
         "200":
           description: Resend result
