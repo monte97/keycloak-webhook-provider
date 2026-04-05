@@ -42,8 +42,10 @@ New query parameter:
 
 ### Files to change
 
-- `src/main/java/dev/montell/keycloak/resources/WebhooksResource.java` — add `@QueryParam("force") @DefaultValue("false") boolean force` to `resendSingle()` and pass it through
-- `src/main/java/dev/montell/keycloak/dispatch/WebhookEventDispatcher.java` — expose a way to skip the circuit breaker guard (parameter or overload) in `sendWithRetry()` or the method it delegates to
+- `src/main/java/dev/montell/keycloak/resources/WebhooksResource.java` — add `@QueryParam("force") @DefaultValue("false") boolean force` to `resendSingle()` and skip the `if (!cb.allowRequest())` block when `force=true`
+- `docs/openapi.yaml` — add `force` query parameter to the `resendSingle` operation (line ~425)
+
+Note: `resendSingle()` calls `HttpWebhookSender.send()` directly and manages the circuit breaker inline — it does **not** go through `WebhookEventDispatcher`. No dispatcher changes needed.
 
 ### Error handling
 
@@ -95,6 +97,32 @@ Add a **Resend** action button on each row of the delivery history table.
 4. On completion: call `loadSends()`, show toast
 
 The component already has access to circuit breaker state (loaded in `loadCircuit()`), so no new data fetching is needed to decide which flow to use.
+
+---
+
+## Testing
+
+### Unit tests (`src/test/java/dev/montell/keycloak/unit/WebhooksResourceTest.java`)
+
+Existing tests to update (method signature changes from `resendSingle(id, sid)` to `resendSingle(id, sid, force)`):
+
+- `resend_single_success` — update call, keep `force=false`
+- `resend_single_404_webhook` — update call
+- `resend_single_404_send` — update call
+- `resend_single_409_circuit_open` — update call, verify still returns 409 with `force=false`
+
+New tests:
+
+- `resend_single_force_bypasses_open_circuit` — circuit is OPEN, `force=true` → 200, send executed
+- `resend_single_force_false_still_409` — circuit is OPEN, `force=false` → 409 (same as existing but explicit)
+
+### Frontend tests (`webhook-ui/src/__tests__/DeliveryDrawer.test.tsx`)
+
+New tests:
+
+- Per-row Resend button renders and calls `resendSingle` on click
+- Resend button shows confirmation dialog when circuit is OPEN
+- Confirmation dialog with "Force" checkbox calls `resendSingle(id, sid, true)`
 
 ---
 
