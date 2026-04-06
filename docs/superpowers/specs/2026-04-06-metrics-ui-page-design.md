@@ -40,8 +40,8 @@ Parsing strategy:
 - `dispatches` = sum of `webhook_dispatches_total` across all label combos
 - `successRate` = `webhook_dispatches_total{...,success="true"}` / total dispatches × 100
 - `eventsReceived` = sum of `webhook_events_received_total`
-- `retries` = sum of `webhook_retry_attempts_total`
-- `exhausted` = sum of `webhook_retry_exhausted_total`
+- `retries` = sum of `webhook_retries_total`
+- `exhausted` = sum of `webhook_retries_exhausted_total`
 - `queuePending` = sum of `webhook_queue_pending` (gauge)
 
 If a metric line is absent, the corresponding field is `null`. Parse errors on individual metrics yield `null` for that field only; they do not fail the whole parse.
