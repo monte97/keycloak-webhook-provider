@@ -47,11 +47,11 @@ public class CircuitBreaker {
      * Returns true if a request should be attempted now.
      *
      * <ul>
-     *   <li>CLOSED → always allowed.</li>
+     *   <li>CLOSED → always allowed.
      *   <li>HALF_OPEN → only the first concurrent caller; all others are blocked until the probe
-     *       completes (success or failure).</li>
+     *       completes (success or failure).
      *   <li>OPEN → only the first caller after {@code openSeconds} have elapsed; transitions to
-     *       HALF_OPEN atomically.</li>
+     *       HALF_OPEN atomically.
      * </ul>
      */
     public boolean allowRequest() {
