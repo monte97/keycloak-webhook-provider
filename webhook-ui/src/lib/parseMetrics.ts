@@ -55,8 +55,8 @@ export function parseMetrics(raw: string): ParsedMetrics {
   );
 
   let successRate: number | null = null;
-  if (dispatches !== null && dispatches > 0 && successCount !== null) {
-    successRate = (successCount / dispatches) * 100;
+  if (dispatches !== null && dispatches > 0) {
+    successRate = ((successCount ?? 0) / dispatches) * 100;
   }
 
   return {

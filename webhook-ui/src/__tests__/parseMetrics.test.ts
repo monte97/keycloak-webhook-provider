@@ -69,4 +69,11 @@ webhook_dispatches_total{realm="master",success="false"} 0.0
     expect(m.dispatches).toBe(0);
     expect(m.successRate).toBeNull();
   });
+
+  it('returns 0% successRate when only failure dispatches exist', () => {
+    const text = `webhook_dispatches_total{realm="master",success="false"} 5.0\n`;
+    const m = parseMetrics(text);
+    expect(m.dispatches).toBe(5);
+    expect(m.successRate).toBeCloseTo(0.0);
+  });
 });
