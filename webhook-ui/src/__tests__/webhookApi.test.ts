@@ -139,4 +139,21 @@ describe('webhookApi', () => {
     );
     expect(res).toEqual(result);
   });
+
+  it('getMetrics() fetches raw text from /metrics', async () => {
+    const raw = '# HELP webhook_dispatches_total\nwebhook_dispatches_total{realm="master",success="true"} 42\n';
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(raw, { status: 200 }),
+    );
+
+    const result = await api.getMetrics();
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/auth/realms/my-realm/webhooks/metrics',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+      }),
+    );
+    expect(result).toBe(raw);
+  });
 });

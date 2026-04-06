@@ -71,6 +71,7 @@ function makeApi(overrides: Partial<WebhookApiClient> = {}): WebhookApiClient {
     getSends: vi.fn().mockResolvedValue([successSend, failedSend]),
     resendFailed: vi.fn().mockResolvedValue({ resent: 1, failed: 0, skipped: 0 }),
     resendSingle: vi.fn().mockResolvedValue({ httpStatus: 200, success: true, durationMs: 10 }),
+    getMetrics: vi.fn().mockResolvedValue(''),
     ...overrides,
   } as unknown as WebhookApiClient;
 }
