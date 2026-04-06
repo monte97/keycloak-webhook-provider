@@ -156,4 +156,12 @@ describe('webhookApi', () => {
     );
     expect(result).toBe(raw);
   });
+
+  it('getMetrics() throws ApiError on non-2xx response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response('unauthorized', { status: 401 })),
+    );
+    await expect(api.getMetrics()).rejects.toThrow(ApiError);
+    await expect(api.getMetrics()).rejects.toMatchObject({ status: 401 });
+  });
 });
