@@ -151,16 +151,14 @@ export function MetricsPage({ api }: { api: WebhookApiClient }) {
               <div
                 style={{
                   color:
-                    metrics?.queuePending !== null &&
-                    metrics?.queuePending !== undefined &&
-                    metrics.queuePending > 0
+                    metrics?.queuePending != null && metrics.queuePending > 0
                       ? '#f0ab00'
                       : '#3e8635',
                 }}
               >
-                {metrics?.queuePending !== null &&
-                metrics?.queuePending !== undefined &&
-                metrics.queuePending > 0
+                {metrics?.queuePending == null
+                  ? '—'
+                  : metrics.queuePending > 0
                   ? `${metrics.queuePending} pending`
                   : 'idle'}
               </div>
