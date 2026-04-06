@@ -97,7 +97,7 @@ export function MetricsPage({ api }: { api: WebhookApiClient }) {
                 style={{
                   color:
                     metrics?.successRate !== null && metrics?.successRate !== undefined
-                      ? '#3e8635'
+                      ? 'var(--pf-v5-global--success-color--100)'
                       : undefined,
                 }}
               >
@@ -130,8 +130,8 @@ export function MetricsPage({ api }: { api: WebhookApiClient }) {
                     metrics?.exhausted !== null &&
                     metrics?.exhausted !== undefined &&
                     metrics.exhausted > 0
-                      ? '#f0ab00'
-                      : '#3e8635',
+                      ? 'var(--pf-v5-global--warning-color--100)'
+                      : 'var(--pf-v5-global--success-color--100)',
                 }}
               >
                 {metrics?.exhausted !== null && metrics?.exhausted !== undefined
@@ -152,8 +152,8 @@ export function MetricsPage({ api }: { api: WebhookApiClient }) {
                 style={{
                   color:
                     metrics?.queuePending != null && metrics.queuePending > 0
-                      ? '#f0ab00'
-                      : '#3e8635',
+                      ? 'var(--pf-v5-global--warning-color--100)'
+                      : 'var(--pf-v5-global--success-color--100)',
                 }}
               >
                 {metrics?.queuePending == null

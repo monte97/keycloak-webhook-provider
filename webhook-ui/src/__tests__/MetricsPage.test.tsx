@@ -105,7 +105,9 @@ describe('MetricsPage', () => {
     await waitFor(() => screen.getAllByText('1000'));
 
     // Toggle off
-    fireEvent.click(screen.getByLabelText(/auto-refresh/i));
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText(/auto-refresh/i));
+    });
 
     // Advance timer — should NOT trigger another fetch
     const callsBefore = (api.getMetrics as ReturnType<typeof vi.fn>).mock.calls.length;
