@@ -27,6 +27,13 @@ const INTERVAL_OPTIONS = [
   { label: '60 secondi', value: 60_000 },
 ] as const;
 
+const PAGE_SIZE_OPTIONS = [
+  { label: '10', value: 10 },
+  { label: '25', value: 25 },
+  { label: '50', value: 50 },
+  { label: '100', value: 100 },
+] as const;
+
 function RetryInput({
   label,
   fieldId,
@@ -148,6 +155,25 @@ export function SettingsPage({ settings, onUpdate }: SettingsPageProps) {
                 onUpdate({ webhookDefaults: { retryMaxIntervalSeconds: val } })
               }
             />
+          </Form>
+        </CardBody>
+      </Card>
+      <Card style={{ marginTop: 16 }}>
+        <CardTitle>Cronologia consegne</CardTitle>
+        <CardBody>
+          <Form>
+            <FormGroup label="Righe per pagina" role="group">
+              {PAGE_SIZE_OPTIONS.map((opt) => (
+                <Radio
+                  key={opt.value}
+                  id={`page-size-${opt.value}`}
+                  name="delivery-history-page-size"
+                  label={opt.label}
+                  isChecked={settings.deliveryHistoryPageSize === opt.value}
+                  onChange={() => onUpdate({ deliveryHistoryPageSize: opt.value })}
+                />
+              ))}
+            </FormGroup>
           </Form>
         </CardBody>
       </Card>

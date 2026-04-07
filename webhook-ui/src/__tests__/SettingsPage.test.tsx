@@ -10,6 +10,7 @@ const defaultSettings: AppSettings = {
     retryMaxElapsedSeconds: null,
     retryMaxIntervalSeconds: null,
   },
+  deliveryHistoryPageSize: 50,
 };
 
 describe('SettingsPage', () => {
@@ -115,5 +116,32 @@ describe('SettingsPage', () => {
     render(<SettingsPage settings={settingsWithRetry} onUpdate={vi.fn()} />);
     expect(screen.getByLabelText('Max retry duration (seconds)')).toHaveValue(600);
     expect(screen.getByLabelText('Max retry interval (seconds)')).toHaveValue(120);
+  });
+
+  it('renders "Cronologia consegne" card with 4 page size radio options', () => {
+    render(<SettingsPage settings={defaultSettings} onUpdate={vi.fn()} />);
+    expect(screen.getByText('Cronologia consegne')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '10' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '25' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '50' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '100' })).toBeInTheDocument();
+  });
+
+  it('checks the page size radio matching settings.deliveryHistoryPageSize', () => {
+    render(
+      <SettingsPage
+        settings={{ ...defaultSettings, deliveryHistoryPageSize: 10 }}
+        onUpdate={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('radio', { name: '10' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '50' })).not.toBeChecked();
+  });
+
+  it('clicking a page size radio calls onUpdate with deliveryHistoryPageSize', () => {
+    const onUpdate = vi.fn();
+    render(<SettingsPage settings={defaultSettings} onUpdate={onUpdate} />);
+    fireEvent.click(screen.getByRole('radio', { name: '25' }));
+    expect(onUpdate).toHaveBeenCalledWith({ deliveryHistoryPageSize: 25 });
   });
 });
