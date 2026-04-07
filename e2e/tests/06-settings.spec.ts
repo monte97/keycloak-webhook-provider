@@ -138,3 +138,69 @@ test('Setting retry duration persists and pre-populates create modal', async ({
   await retryInputCleanup.fill('');
   await retryInputCleanup.blur();
 });
+
+test('Cronologia consegne card shows 4 radio options with 50 checked by default', async ({
+  page,
+  keycloakUrl,
+}) => {
+  await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+
+  await expect(page.getByText('Cronologia consegne')).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('radio', { name: '10' })).toBeVisible();
+  await expect(page.getByRole('radio', { name: '25' })).toBeVisible();
+  await expect(page.getByRole('radio', { name: '50' })).toBeVisible();
+  await expect(page.getByRole('radio', { name: '100' })).toBeVisible();
+
+  // Default: 50
+  await expect(page.getByRole('radio', { name: '50' })).toBeChecked();
+});
+
+test('Delivery history page size persists after reload', async ({
+  page,
+  keycloakUrl,
+}) => {
+  await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  await expect(page.getByRole('radio', { name: '50' })).toBeChecked({ timeout: 5_000 });
+
+  await page.getByRole('radio', { name: '10' }).click();
+  await expect(page.getByRole('radio', { name: '10' })).toBeChecked();
+
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  await expect(page.getByRole('radio', { name: '10' })).toBeChecked({ timeout: 5_000 });
+
+  // Reset to default
+  await page.getByRole('radio', { name: '50' }).click();
+});
+
+test('Delivery drawer shows Prev/Next pagination buttons', async ({
+  page,
+  keycloakUrl,
+}) => {
+  await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
+  await page.waitForLoadState('networkidle');
+
+  // Set page size to 10 so buttons are always visible
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  await expect(page.getByRole('radio', { name: '10' })).toBeVisible({ timeout: 5_000 });
+  await page.getByRole('radio', { name: '10' }).click();
+
+  // Open the delivery drawer (first webhook row)
+  await page.getByRole('tab', { name: 'Webhooks' }).click();
+  await page.waitForLoadState('networkidle');
+  const firstRow = page.getByRole('row').nth(1); // skip header
+  await firstRow.click();
+
+  await expect(page.getByRole('button', { name: /prev/i })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('button', { name: /next/i })).toBeVisible();
+
+  // Reset page size to default
+  await page.keyboard.press('Escape');
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  await page.getByRole('radio', { name: '50' }).click();
+});
