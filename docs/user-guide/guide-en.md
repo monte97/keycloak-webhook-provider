@@ -95,7 +95,7 @@ The success rate is displayed below the dispatch count:
 - **Green** — ≥ 95% success
 - **Amber** — < 95% success
 
-Use the **Auto-refresh** toggle to enable automatic refresh every 10 seconds.  
+Use the **Auto-refresh** toggle to enable automatic refresh. The interval is configurable in the **Settings** tab (default: 10 seconds).  
 Click **Aggiorna** to trigger an immediate refresh.
 
 ---
@@ -122,3 +122,24 @@ The response uses Prometheus text format 0.0.4 and exposes the following metric 
 | `webhook_retries_total` | counter | Retry attempts scheduled |
 | `webhook_retries_exhausted_total` | counter | Retry chains exhausted without success |
 | `webhook_queue_pending` | gauge | Tasks pending in the executor |
+
+---
+
+## 7. Settings
+
+![Settings page](screenshots/07-settings-page.png)
+
+The **Impostazioni** tab exposes UI configuration options that are persisted in the browser's `localStorage` across sessions.
+
+### Metrics auto-refresh interval
+
+Controls how often the Metrics page automatically polls the `/metrics` endpoint when **Auto-refresh** is enabled.
+
+| Option | Value |
+|--------|-------|
+| 5 secondi | 5 s |
+| **10 secondi** *(default)* | 10 s |
+| 30 secondi | 30 s |
+| 60 secondi | 60 s |
+
+Select an option and the change takes effect immediately — no save required. The setting persists after a page reload.

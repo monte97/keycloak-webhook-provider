@@ -95,7 +95,7 @@ Il tasso di successo viene mostrato sotto il contatore delle consegne:
 - **Verde** — ≥ 95% di successo
 - **Arancione** — < 95% di successo
 
-Il toggle **Auto-refresh** abilita l'aggiornamento automatico ogni 10 secondi.  
+Il toggle **Auto-refresh** abilita l'aggiornamento automatico. L'intervallo è configurabile nel tab **Impostazioni** (default: 10 secondi).  
 Il pulsante **Aggiorna** forza un aggiornamento immediato.
 
 ---
@@ -122,3 +122,24 @@ La risposta usa il formato testo Prometheus 0.0.4 ed espone le seguenti famiglie
 | `webhook_retries_total` | counter | Retry pianificati |
 | `webhook_retries_exhausted_total` | counter | Catene di retry terminate senza successo |
 | `webhook_queue_pending` | gauge | Task in attesa nell'esecutore |
+
+---
+
+## 7. Impostazioni
+
+![Pagina impostazioni](screenshots/07-settings-page.png)
+
+Il tab **Impostazioni** espone le opzioni di configurazione dell'interfaccia, persistite nel `localStorage` del browser tra una sessione e l'altra.
+
+### Intervallo auto-refresh metriche
+
+Controlla la frequenza con cui la pagina Metriche interroga automaticamente l'endpoint `/metrics` quando l'**Auto-refresh** è abilitato.
+
+| Opzione | Valore |
+|---------|--------|
+| 5 secondi | 5 s |
+| **10 secondi** *(default)* | 10 s |
+| 30 secondi | 30 s |
+| 60 secondi | 60 s |
+
+La selezione ha effetto immediato — non è richiesto alcun salvataggio. L'impostazione persiste al ricaricamento della pagina.

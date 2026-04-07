@@ -108,6 +108,12 @@ async function main() {
   }
   await shot(page, '06-metrics-raw-prometheus');
 
+  // ── 07 Settings page ────────────────────────────────────────────────────
+  const settingsTab = page.getByRole('tab', { name: 'Impostazioni' });
+  await settingsTab.click({ timeout: 10_000 });
+  await page.waitForTimeout(600);
+  await shot(page, '07-settings-page');
+
   await browser.close();
   console.log(`\nDone. Screenshots saved to: ${OUT_DIR}`);
 }
