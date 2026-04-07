@@ -3,7 +3,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { SettingsPage } from '../components/SettingsPage';
 import type { AppSettings } from '../lib/useSettings';
 
-const defaultSettings: AppSettings = { metricsRefreshInterval: 10_000 };
+const defaultSettings: AppSettings = {
+  metricsRefreshInterval: 10_000,
+  webhookDefaults: { enabled: true, retryMaxElapsedSeconds: null, retryMaxIntervalSeconds: null },
+};
 
 describe('SettingsPage', () => {
   it('renders 4 radio options', () => {
@@ -15,7 +18,7 @@ describe('SettingsPage', () => {
   });
 
   it('checks the radio matching current settings', () => {
-    render(<SettingsPage settings={{ metricsRefreshInterval: 30_000 }} onUpdate={vi.fn()} />);
+    render(<SettingsPage settings={{ metricsRefreshInterval: 30_000, webhookDefaults: { enabled: true, retryMaxElapsedSeconds: null, retryMaxIntervalSeconds: null } }} onUpdate={vi.fn()} />);
     expect(screen.getByRole('radio', { name: '30 secondi' })).toBeChecked();
     expect(screen.getByRole('radio', { name: '10 secondi' })).not.toBeChecked();
   });
