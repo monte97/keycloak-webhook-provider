@@ -57,7 +57,7 @@ export function DeliveryDrawer({
   const [forceResend, setForceResend] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const pageSizeInitRef = useRef(true);
+  const prevPageSizeRef = useRef(pageSize);
 
   useEffect(() => {
     if (!webhook) return;
@@ -69,10 +69,8 @@ export function DeliveryDrawer({
   }, [webhook?.id]);
 
   useEffect(() => {
-    if (pageSizeInitRef.current) {
-      pageSizeInitRef.current = false;
-      return;
-    }
+    if (prevPageSizeRef.current === pageSize) return;
+    prevPageSizeRef.current = pageSize;
     if (!webhook) return;
     setCurrentPage(1);
     loadSends(webhook.id, filter, 1);
