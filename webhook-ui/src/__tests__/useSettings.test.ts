@@ -11,6 +11,7 @@ describe('useSettings', () => {
     const { result } = renderHook(() => useSettings());
     expect(result.current.settings).toEqual({
       metricsRefreshInterval: 10_000,
+      deliveryHistoryPageSize: 50,
       webhookDefaults: {
         enabled: true,
         retryMaxElapsedSeconds: null,
@@ -39,6 +40,7 @@ describe('useSettings', () => {
     const { result } = renderHook(() => useSettings());
     expect(result.current.settings).toEqual({
       metricsRefreshInterval: 10_000,
+      deliveryHistoryPageSize: 50,
       webhookDefaults: {
         enabled: true,
         retryMaxElapsedSeconds: null,
@@ -52,6 +54,7 @@ describe('useSettings', () => {
     const { result } = renderHook(() => useSettings());
     expect(result.current.settings).toEqual({
       metricsRefreshInterval: 10_000,
+      deliveryHistoryPageSize: 50,
       webhookDefaults: {
         enabled: true,
         retryMaxElapsedSeconds: null,
@@ -150,5 +153,31 @@ describe('useSettings', () => {
       retryMaxElapsedSeconds: null,
       retryMaxIntervalSeconds: 60,
     });
+  });
+
+  it('DEFAULTS include deliveryHistoryPageSize 50', () => {
+    const { result } = renderHook(() => useSettings());
+    expect(result.current.settings.deliveryHistoryPageSize).toBe(50);
+  });
+
+  it('persists and reads deliveryHistoryPageSize', () => {
+    const { result } = renderHook(() => useSettings());
+    act(() => {
+      result.current.updateSettings({ deliveryHistoryPageSize: 10 });
+    });
+    expect(result.current.settings.deliveryHistoryPageSize).toBe(10);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).deliveryHistoryPageSize).toBe(10);
+  });
+
+  it('missing deliveryHistoryPageSize falls back to 50', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ metricsRefreshInterval: 10_000 }));
+    const { result } = renderHook(() => useSettings());
+    expect(result.current.settings.deliveryHistoryPageSize).toBe(50);
+  });
+
+  it('non-number deliveryHistoryPageSize falls back to 50', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ deliveryHistoryPageSize: 'lots' }));
+    const { result } = renderHook(() => useSettings());
+    expect(result.current.settings.deliveryHistoryPageSize).toBe(50);
   });
 });

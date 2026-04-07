@@ -8,6 +8,7 @@ export interface WebhookDefaults {
 
 export interface AppSettings {
   metricsRefreshInterval: number;
+  deliveryHistoryPageSize: number;
   webhookDefaults: WebhookDefaults;
 }
 
@@ -19,6 +20,7 @@ export const STORAGE_KEY = 'webhook-admin-ui-settings';
 
 const DEFAULTS: AppSettings = {
   metricsRefreshInterval: 10_000,
+  deliveryHistoryPageSize: 50,
   webhookDefaults: {
     enabled: true,
     retryMaxElapsedSeconds: null,
@@ -62,6 +64,10 @@ function readSettings(): AppSettings {
         typeof obj['metricsRefreshInterval'] === 'number'
           ? obj['metricsRefreshInterval']
           : DEFAULTS.metricsRefreshInterval,
+      deliveryHistoryPageSize:
+        typeof obj['deliveryHistoryPageSize'] === 'number'
+          ? obj['deliveryHistoryPageSize']
+          : DEFAULTS.deliveryHistoryPageSize,
       webhookDefaults: validateWebhookDefaults(obj['webhookDefaults']),
     };
   } catch {
