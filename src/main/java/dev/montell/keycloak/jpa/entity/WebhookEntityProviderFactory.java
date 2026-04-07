@@ -2,6 +2,7 @@
 package dev.montell.keycloak.jpa.entity;
 
 import com.google.auto.service.AutoService;
+import dev.montell.keycloak.jpa.EncryptionKeyProvider;
 import dev.montell.keycloak.spi.WebhookProvider;
 import lombok.extern.jbosslog.JBossLog;
 import org.keycloak.Config.Scope;
@@ -30,7 +31,9 @@ public class WebhookEntityProviderFactory implements JpaEntityProviderFactory {
     }
 
     @Override
-    public void init(Scope config) {}
+    public void init(Scope config) {
+        EncryptionKeyProvider.init();
+    }
 
     @Override
     public void postInit(KeycloakSessionFactory factory) {
