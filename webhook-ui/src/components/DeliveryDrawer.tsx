@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   DrawerPanelContent,
   DrawerHead,
@@ -22,6 +22,7 @@ interface DeliveryDrawerProps {
   api: WebhookApiClient;
   onClose: () => void;
   onCircuitReset: (id: string) => void;
+  pageSize: number;
 }
 
 function formatRelative(iso: string): string {
@@ -40,6 +41,7 @@ export function DeliveryDrawer({
   api,
   onClose,
   onCircuitReset,
+  pageSize,
 }: DeliveryDrawerProps) {
   const [sends, setSends] = useState<WebhookSend[]>([]);
   const [circuit, setCircuit] = useState<CircuitState | null>(null);
@@ -53,22 +55,42 @@ export function DeliveryDrawer({
   const [resendingSendId, setResendingSendId] = useState<string | null>(null);
   const [confirmResendId, setConfirmResendId] = useState<string | null>(null);
   const [forceResend, setForceResend] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const pageSizeInitRef = useRef(true);
 
   useEffect(() => {
     if (!webhook) return;
     setFilter('all');
-    loadSends(webhook.id, 'all');
+    setCurrentPage(1);
+    loadSends(webhook.id, 'all', 1);
     loadCircuit(webhook.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [webhook?.id]);
 
-  const loadSends = async (id: string, f: 'all' | 'failed') => {
+  useEffect(() => {
+    if (pageSizeInitRef.current) {
+      pageSizeInitRef.current = false;
+      return;
+    }
+    if (!webhook) return;
+    setCurrentPage(1);
+    loadSends(webhook.id, filter, 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageSize]);
+
+  const loadSends = async (id: string, f: 'all' | 'failed', page: number) => {
     setLoadingSends(true);
     setSendsError(null);
     try {
+      const first = (page - 1) * pageSize;
       const params =
-        f === 'failed' ? { max: 50, success: false as const } : { max: 50 };
-      setSends(await api.getSends(id, params));
+        f === 'failed'
+          ? { first, max: pageSize, success: false as const }
+          : { first, max: pageSize };
+      const result = await api.getSends(id, params);
+      setSends(result);
+      setHasMore(result.length === pageSize);
     } catch (e) {
       setSendsError(
         e instanceof Error ? e.message : 'Failed to load delivery history',
@@ -94,12 +116,14 @@ export function DeliveryDrawer({
 
   const handleFilterAll = () => {
     setFilter('all');
-    if (webhook) loadSends(webhook.id, 'all');
+    setCurrentPage(1);
+    if (webhook) loadSends(webhook.id, 'all', 1);
   };
 
   const handleFilterFailed = () => {
     setFilter('failed');
-    if (webhook) loadSends(webhook.id, 'failed');
+    setCurrentPage(1);
+    if (webhook) loadSends(webhook.id, 'failed', 1);
   };
 
   const handleResendFailed = async () => {
@@ -107,7 +131,7 @@ export function DeliveryDrawer({
     setResending(true);
     try {
       await api.resendFailed(webhook.id, 24);
-      await loadSends(webhook.id, filter);
+      await loadSends(webhook.id, filter, currentPage);
     } catch (e) {
       setSendsError(e instanceof Error ? e.message : 'Resend failed');
     } finally {
@@ -139,7 +163,7 @@ export function DeliveryDrawer({
     setResendingSendId(sendId);
     try {
       await api.resendSingle(webhook.id, sendId, false);
-      await loadSends(webhook.id, filter);
+      await loadSends(webhook.id, filter, currentPage);
     } catch (e) {
       setSendsError(e instanceof Error ? e.message : 'Resend failed');
     } finally {
@@ -153,7 +177,7 @@ export function DeliveryDrawer({
     setResendingSendId(confirmResendId);
     try {
       await api.resendSingle(webhook.id, confirmResendId, forceResend);
-      await loadSends(webhook.id, filter);
+      await loadSends(webhook.id, filter, currentPage);
     } catch (e) {
       setSendsError(e instanceof Error ? e.message : 'Resend failed');
     } finally {
@@ -277,53 +301,80 @@ export function DeliveryDrawer({
         {loadingSends && <Spinner size="sm" aria-label="Loading sends" />}
         {sendsError && <Alert variant="danger" isInline title={sendsError} />}
         {!loadingSends && !sendsError && (
-          <Table aria-label="Delivery history" variant="compact">
-            <Thead>
-              <Tr>
-                <Th>Status</Th>
-                <Th>HTTP</Th>
-                <Th>Retries</Th>
-                <Th>Sent at</Th>
-                <Th>Actions</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {sends.length === 0 ? (
+          <>
+            <Table aria-label="Delivery history" variant="compact">
+              <Thead>
                 <Tr>
-                  <Td
-                    colSpan={5}
-                    style={{ textAlign: 'center', color: '#6a6e73' }}
-                  >
-                    No deliveries found
-                  </Td>
+                  <Th>Status</Th>
+                  <Th>HTTP</Th>
+                  <Th>Retries</Th>
+                  <Th>Sent at</Th>
+                  <Th>Actions</Th>
                 </Tr>
-              ) : (
-                sends.map((s) => (
-                  <Tr key={s.id}>
-                    <Td dataLabel="Status">
-                      <Label color={s.success ? 'green' : 'red'}>
-                        {s.success ? '✓' : '✗'}
-                      </Label>
-                    </Td>
-                    <Td dataLabel="HTTP">{s.httpStatus}</Td>
-                    <Td dataLabel="Retries">{s.retries}</Td>
-                    <Td dataLabel="Sent at">{formatRelative(s.sentAt)}</Td>
-                    <Td dataLabel="Actions">
-                      <Button
-                        variant="link"
-                        size="sm"
-                        isLoading={resendingSendId === s.id}
-                        isDisabled={resendingSendId !== null || confirmResendId !== null}
-                        onClick={() => handleResendSingle(s.id)}
-                      >
-                        Resend
-                      </Button>
+              </Thead>
+              <Tbody>
+                {sends.length === 0 ? (
+                  <Tr>
+                    <Td
+                      colSpan={5}
+                      style={{ textAlign: 'center', color: '#6a6e73' }}
+                    >
+                      No deliveries found
                     </Td>
                   </Tr>
-                ))
-              )}
-            </Tbody>
-          </Table>
+                ) : (
+                  sends.map((s) => (
+                    <Tr key={s.id}>
+                      <Td dataLabel="Status">
+                        <Label color={s.success ? 'green' : 'red'}>
+                          {s.success ? '✓' : '✗'}
+                        </Label>
+                      </Td>
+                      <Td dataLabel="HTTP">{s.httpStatus}</Td>
+                      <Td dataLabel="Retries">{s.retries}</Td>
+                      <Td dataLabel="Sent at">{formatRelative(s.sentAt)}</Td>
+                      <Td dataLabel="Actions">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          isLoading={resendingSendId === s.id}
+                          isDisabled={resendingSendId !== null || confirmResendId !== null}
+                          onClick={() => handleResendSingle(s.id)}
+                        >
+                          Resend
+                        </Button>
+                      </Td>
+                    </Tr>
+                  ))
+                )}
+              </Tbody>
+            </Table>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+              <Button
+                variant="secondary"
+                isDisabled={currentPage === 1 || loadingSends}
+                onClick={() => {
+                  const p = currentPage - 1;
+                  setCurrentPage(p);
+                  loadSends(webhook.id, filter, p);
+                }}
+              >
+                ← Prev
+              </Button>
+              <span>Pagina {currentPage}</span>
+              <Button
+                variant="secondary"
+                isDisabled={!hasMore || loadingSends}
+                onClick={() => {
+                  const p = currentPage + 1;
+                  setCurrentPage(p);
+                  loadSends(webhook.id, filter, p);
+                }}
+              >
+                Next →
+              </Button>
+            </div>
+          </>
         )}
       </div>
 

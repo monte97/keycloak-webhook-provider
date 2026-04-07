@@ -94,6 +94,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -102,7 +103,7 @@ describe('DeliveryDrawer', () => {
       expect(screen.getByText('200')).toBeInTheDocument();
       expect(screen.getByText('503')).toBeInTheDocument();
     });
-    expect(api.getSends).toHaveBeenCalledWith('w1', { max: 50 });
+    expect(api.getSends).toHaveBeenCalledWith('w1', { first: 0, max: 50 });
     expect(api.getCircuit).toHaveBeenCalledWith('w1');
   });
 
@@ -114,6 +115,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -133,6 +135,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -150,6 +153,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -166,6 +170,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -174,7 +179,7 @@ describe('DeliveryDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: /^failed$/i }));
 
     await waitFor(() => {
-      expect(api.getSends).toHaveBeenCalledWith('w1', { max: 50, success: false });
+      expect(api.getSends).toHaveBeenCalledWith('w1', { first: 0, max: 50, success: false });
     });
   });
 
@@ -186,6 +191,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -209,6 +215,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -231,6 +238,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -248,6 +256,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -274,6 +283,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -297,6 +307,7 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
@@ -327,9 +338,132 @@ describe('DeliveryDrawer', () => {
           api={api}
           onClose={onClose}
           onCircuitReset={onCircuitReset}
+          pageSize={50}
         />
       </Drawer>,
     );
     expect(screen.queryByRole('complementary')).toBeNull();
+  });
+
+  describe('pagination', () => {
+    it('initial load calls getSends with first=0, max=pageSize', async () => {
+      const api = makeApi();
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={10} />
+        </Drawer>,
+      );
+      await waitFor(() => {
+        expect(api.getSends).toHaveBeenCalledWith('w1', { first: 0, max: 10 });
+      });
+    });
+
+    it('full page response enables Next button', async () => {
+      const tenSends = Array.from({ length: 10 }, (_, i) => ({ ...successSend, id: `s${i}` }));
+      const api = makeApi({ getSends: vi.fn().mockResolvedValue(tenSends) });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={10} />
+        </Drawer>,
+      );
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled();
+      });
+    });
+
+    it('partial page response disables Next button', async () => {
+      const api = makeApi({ getSends: vi.fn().mockResolvedValue([successSend]) });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={10} />
+        </Drawer>,
+      );
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
+      });
+    });
+
+    it('Prev is disabled on page 1', async () => {
+      const api = makeApi();
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={10} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByText('Pagina 1'));
+      expect(screen.getByRole('button', { name: /prev/i })).toBeDisabled();
+    });
+
+    it('clicking Next calls getSends with first=pageSize and shows page 2', async () => {
+      const tenSends = Array.from({ length: 10 }, (_, i) => ({ ...successSend, id: `s${i}` }));
+      const api = makeApi({ getSends: vi.fn().mockResolvedValue(tenSends) });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={10} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByText('Pagina 1'));
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+      await waitFor(() => {
+        expect(api.getSends).toHaveBeenCalledWith('w1', { first: 10, max: 10 });
+        expect(screen.getByText('Pagina 2')).toBeInTheDocument();
+      });
+    });
+
+    it('clicking Prev from page 2 calls getSends with first=0 and shows page 1', async () => {
+      const tenSends = Array.from({ length: 10 }, (_, i) => ({ ...successSend, id: `s${i}` }));
+      const api = makeApi({ getSends: vi.fn().mockResolvedValue(tenSends) });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={10} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByText('Pagina 1'));
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+      await waitFor(() => screen.getByText('Pagina 2'));
+      fireEvent.click(screen.getByRole('button', { name: /prev/i }));
+      await waitFor(() => {
+        expect(api.getSends).toHaveBeenLastCalledWith('w1', { first: 0, max: 10 });
+        expect(screen.getByText('Pagina 1')).toBeInTheDocument();
+      });
+    });
+
+    it('filter change resets page to 1', async () => {
+      const tenSends = Array.from({ length: 10 }, (_, i) => ({ ...successSend, id: `s${i}` }));
+      const api = makeApi({ getSends: vi.fn().mockResolvedValue(tenSends) });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={10} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByText('Pagina 1'));
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+      await waitFor(() => screen.getByText('Pagina 2'));
+      fireEvent.click(screen.getByRole('button', { name: /^failed$/i }));
+      await waitFor(() => {
+        expect(screen.getByText('Pagina 1')).toBeInTheDocument();
+      });
+    });
+
+    it('pageSize prop change resets to page 1', async () => {
+      const tenSends = Array.from({ length: 10 }, (_, i) => ({ ...successSend, id: `s${i}` }));
+      const api = makeApi({ getSends: vi.fn().mockResolvedValue(tenSends) });
+      const { rerender } = render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={10} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByText('Pagina 1'));
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+      await waitFor(() => screen.getByText('Pagina 2'));
+      rerender(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={25} />
+        </Drawer>,
+      );
+      await waitFor(() => {
+        expect(screen.getByText('Pagina 1')).toBeInTheDocument();
+      });
+    });
   });
 });
