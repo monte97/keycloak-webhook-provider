@@ -60,15 +60,6 @@ describe('useSettings', () => {
     });
   });
 
-  it('returns defaults with webhookDefaults when localStorage is empty', () => {
-    const { result } = renderHook(() => useSettings());
-    expect(result.current.settings.webhookDefaults).toEqual({
-      enabled: true,
-      retryMaxElapsedSeconds: null,
-      retryMaxIntervalSeconds: null,
-    });
-  });
-
   it('deep merges webhookDefaults without losing sibling fields', () => {
     const { result } = renderHook(() => useSettings());
     act(() => {
@@ -126,6 +117,19 @@ describe('useSettings', () => {
     expect(result.current.settings.metricsRefreshInterval).toBe(30_000);
     expect(result.current.settings.webhookDefaults).toEqual({
       enabled: true,
+      retryMaxElapsedSeconds: null,
+      retryMaxIntervalSeconds: null,
+    });
+  });
+
+  it('accepts webhookDefaults with only enabled set, defaulting absent retry fields to null', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ webhookDefaults: { enabled: false } }),
+    );
+    const { result } = renderHook(() => useSettings());
+    expect(result.current.settings.webhookDefaults).toEqual({
+      enabled: false,
       retryMaxElapsedSeconds: null,
       retryMaxIntervalSeconds: null,
     });

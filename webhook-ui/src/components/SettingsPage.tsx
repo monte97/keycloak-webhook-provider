@@ -7,11 +7,11 @@ import {
   Radio,
   Title,
 } from '@patternfly/react-core';
-import type { AppSettings } from '../lib/useSettings';
+import type { AppSettings, AppSettingsPatch } from '../lib/useSettings';
 
 interface SettingsPageProps {
   settings: AppSettings;
-  onUpdate: (patch: Partial<AppSettings>) => void;
+  onUpdate: (patch: AppSettingsPatch) => void;
 }
 
 const INTERVAL_OPTIONS = [

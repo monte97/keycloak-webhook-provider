@@ -31,15 +31,19 @@ function validateWebhookDefaults(raw: unknown): WebhookDefaults {
   const obj = raw as Record<string, unknown>;
   if (
     typeof obj['enabled'] !== 'boolean' ||
-    (obj['retryMaxElapsedSeconds'] !== null && typeof obj['retryMaxElapsedSeconds'] !== 'number') ||
-    (obj['retryMaxIntervalSeconds'] !== null && typeof obj['retryMaxIntervalSeconds'] !== 'number')
+    (obj['retryMaxElapsedSeconds'] !== null &&
+     obj['retryMaxElapsedSeconds'] !== undefined &&
+     typeof obj['retryMaxElapsedSeconds'] !== 'number') ||
+    (obj['retryMaxIntervalSeconds'] !== null &&
+     obj['retryMaxIntervalSeconds'] !== undefined &&
+     typeof obj['retryMaxIntervalSeconds'] !== 'number')
   ) {
     return DEFAULTS.webhookDefaults;
   }
   return {
     enabled: obj['enabled'] as boolean,
-    retryMaxElapsedSeconds: obj['retryMaxElapsedSeconds'] as number | null,
-    retryMaxIntervalSeconds: obj['retryMaxIntervalSeconds'] as number | null,
+    retryMaxElapsedSeconds: (obj['retryMaxElapsedSeconds'] ?? null) as number | null,
+    retryMaxIntervalSeconds: (obj['retryMaxIntervalSeconds'] ?? null) as number | null,
   };
 }
 
