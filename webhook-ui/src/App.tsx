@@ -31,7 +31,9 @@ export function App({ api }: AppProps) {
           </Tabs>
         </PageSection>
         <PageSection>
-          {activeTab === 'webhooks' && <WebhookTable api={api} />}
+          {activeTab === 'webhooks' && (
+            <WebhookTable api={api} defaults={settings.webhookDefaults} />
+          )}
           {activeTab === 'metrics' && (
             <MetricsPage api={api} refreshInterval={settings.metricsRefreshInterval} />
           )}

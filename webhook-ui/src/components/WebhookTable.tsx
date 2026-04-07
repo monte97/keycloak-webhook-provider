@@ -29,6 +29,7 @@ import { PlusCircleIcon, CubesIcon, EllipsisVIcon } from '@patternfly/react-icon
 import { ApiError } from '../api/types';
 import type { Webhook, WebhookInput } from '../api/types';
 import type { WebhookApiClient } from '../api/webhookApi';
+import type { WebhookDefaults } from '../lib/useSettings';
 import { CircuitBadge } from './CircuitBadge';
 import { WebhookModal } from './WebhookModal';
 import { DeliveryDrawer } from './DeliveryDrawer';
@@ -41,7 +42,7 @@ interface AlertItem {
 
 const POLL_INTERVAL = 30_000;
 
-export function WebhookTable({ api }: { api: WebhookApiClient }) {
+export function WebhookTable({ api, defaults }: { api: WebhookApiClient; defaults?: WebhookDefaults }) {
   const alertKeyRef = useRef(0);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,6 +187,7 @@ export function WebhookTable({ api }: { api: WebhookApiClient }) {
         <WebhookModal
           mode="create"
           isOpen={modalOpen}
+          defaults={defaults}
           onSave={handleSave}
           onClose={() => setModalOpen(false)}
         />
@@ -342,6 +344,7 @@ export function WebhookTable({ api }: { api: WebhookApiClient }) {
         isOpen={modalOpen}
         webhook={editingWebhook}
         secretConfigured={secretStatus}
+        defaults={modalMode === 'create' ? defaults : undefined}
         onSave={handleSave}
         onClose={() => setModalOpen(false)}
       />
