@@ -1,11 +1,9 @@
-// src/test/java/dev/montell/keycloak/it/JpaWebhookProviderIT.java
-package dev.montell.keycloak.it;
+// src/test/java/dev/montell/keycloak/jpa/JpaWebhookProviderIT.java
+package dev.montell.keycloak.jpa;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import dev.montell.keycloak.jpa.EncryptionKeyProvider;
-import dev.montell.keycloak.jpa.JpaWebhookProvider;
 import dev.montell.keycloak.jpa.entity.*;
 import dev.montell.keycloak.model.*;
 import jakarta.persistence.*;
