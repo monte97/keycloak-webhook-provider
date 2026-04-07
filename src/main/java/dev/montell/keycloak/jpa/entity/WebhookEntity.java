@@ -43,7 +43,7 @@ public class WebhookEntity {
     private String url;
 
     @Convert(converter = dev.montell.keycloak.jpa.SecretEncryptionConverter.class)
-    @Column(name = "SECRET")
+    @Column(name = "SECRET", length = 512)
     private String secret;
 
     @Column(name = "ALGORITHM", nullable = false)
