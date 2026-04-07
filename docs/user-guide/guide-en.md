@@ -143,3 +143,15 @@ Controls how often the Metrics page automatically polls the `/metrics` endpoint 
 | 60 secondi | 60 s |
 
 Select an option and the change takes effect immediately — no save required. The setting persists after a page reload.
+
+### Webhook defaults
+
+Default values applied when **creating** a new webhook. Existing webhooks are not affected.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **Enabled by default** | On | Whether new webhooks start active (delivering events) immediately after creation. Turn off to create webhooks in a disabled state and enable them manually when ready. |
+| **Max retry duration (seconds)** | Empty (server default: 900) | Total time window for retry attempts. Leave empty to use the server default (900 s / 15 min). |
+| **Max retry interval (seconds)** | Empty (server default: 180) | Maximum back-off interval between retry attempts. Leave empty to use the server default (180 s / 3 min). |
+
+All changes take effect immediately — no save required. Settings persist after a page reload.

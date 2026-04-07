@@ -143,3 +143,15 @@ Controlla la frequenza con cui la pagina Metriche interroga automaticamente l'en
 | 60 secondi | 60 s |
 
 La selezione ha effetto immediato — non è richiesto alcun salvataggio. L'impostazione persiste al ricaricamento della pagina.
+
+### Webhook — valori predefiniti
+
+Valori predefiniti applicati alla **creazione** di un nuovo webhook. I webhook esistenti non vengono modificati.
+
+| Impostazione | Default | Descrizione |
+|--------------|---------|-------------|
+| **Enabled by default** | Attivo | Se i nuovi webhook iniziano attivi (consegnano eventi) subito dopo la creazione. Disattivare per creare webhook in stato disabilitato e abilitarli manualmente quando pronti. |
+| **Max retry duration (seconds)** | Vuoto (default server: 900) | Finestra temporale totale per i tentativi di retry. Lasciare vuoto per usare il default del server (900 s / 15 min). |
+| **Max retry interval (seconds)** | Vuoto (default server: 180) | Intervallo massimo di back-off tra i tentativi di retry. Lasciare vuoto per usare il default del server (180 s / 3 min). |
+
+Le modifiche hanno effetto immediato — non è richiesto alcun salvataggio. Le impostazioni persistono al ricaricamento della pagina.
