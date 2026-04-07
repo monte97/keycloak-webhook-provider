@@ -86,7 +86,7 @@ test('Toggling enabled default off pre-populates create modal', async ({
 
   // Open create modal
   await page.getByRole('tab', { name: 'Webhooks' }).click();
-  await page.waitForTimeout(500);
+  await expect(page.getByRole('button', { name: /create webhook/i })).toBeVisible({ timeout: 5_000 });
   await page.getByRole('button', { name: /create webhook/i }).click();
   await page.waitForSelector('[role="dialog"]');
 
@@ -95,6 +95,11 @@ test('Toggling enabled default off pre-populates create modal', async ({
   await expect(enabledSwitch).not.toBeChecked();
 
   await page.keyboard.press('Escape');
+
+  // Reset setting to avoid leaking state to subsequent tests
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  await expect(page.getByLabel('Enabled by default')).toBeVisible({ timeout: 5_000 });
+  await page.getByLabel('Enabled by default').click();
 });
 
 test('Setting retry duration persists and pre-populates create modal', async ({
@@ -119,7 +124,7 @@ test('Setting retry duration persists and pre-populates create modal', async ({
 
   // Open create modal and verify pre-population
   await page.getByRole('tab', { name: 'Webhooks' }).click();
-  await page.waitForTimeout(500);
+  await expect(page.getByRole('button', { name: /create webhook/i })).toBeVisible({ timeout: 5_000 });
   await page.getByRole('button', { name: /create webhook/i }).click();
   await page.waitForSelector('[role="dialog"]');
   await expect(page.locator('#retryMaxElapsed')).toHaveValue('600');
