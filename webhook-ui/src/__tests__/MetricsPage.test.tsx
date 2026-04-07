@@ -55,13 +55,13 @@ describe('MetricsPage', () => {
 
   it('shows spinner on initial load', () => {
     api = makeApi({ getMetrics: vi.fn().mockReturnValue(new Promise(() => {})) });
-    render(<MetricsPage api={api} />);
+    render(<MetricsPage api={api} refreshInterval={10_000} />);
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
   it('shows 4 metric cards after fetch resolves', async () => {
     await act(async () => {
-      render(<MetricsPage api={api} />);
+      render(<MetricsPage api={api} refreshInterval={10_000} />);
     });
 
     await waitFor(() => {
@@ -76,7 +76,7 @@ describe('MetricsPage', () => {
   it('shows error alert on fetch failure', async () => {
     api = makeApi({ getMetrics: vi.fn().mockRejectedValue(new Error('Network error')) });
     await act(async () => {
-      render(<MetricsPage api={api} />);
+      render(<MetricsPage api={api} refreshInterval={10_000} />);
     });
 
     await waitFor(() => {
@@ -86,7 +86,7 @@ describe('MetricsPage', () => {
 
   it('Aggiorna button triggers a new fetch', async () => {
     await act(async () => {
-      render(<MetricsPage api={api} />);
+      render(<MetricsPage api={api} refreshInterval={10_000} />);
     });
     await waitFor(() => screen.getAllByText('1000'));
 
@@ -100,7 +100,7 @@ describe('MetricsPage', () => {
 
   it('auto-refresh toggle off cancels the interval', async () => {
     await act(async () => {
-      render(<MetricsPage api={api} />);
+      render(<MetricsPage api={api} refreshInterval={10_000} />);
     });
     await waitFor(() => screen.getAllByText('1000'));
 
@@ -119,7 +119,7 @@ describe('MetricsPage', () => {
 
   it('auto-refresh fires fetch after interval', async () => {
     await act(async () => {
-      render(<MetricsPage api={api} />);
+      render(<MetricsPage api={api} refreshInterval={10_000} />);
     });
     await waitFor(() => screen.getAllByText('1000'));
 
@@ -140,7 +140,7 @@ describe('MetricsPage', () => {
       .mockResolvedValue(SAMPLE_METRICS);
     api = makeApi({ getMetrics });
     await act(async () => {
-      render(<MetricsPage api={api} />);
+      render(<MetricsPage api={api} refreshInterval={10_000} />);
     });
 
     await waitFor(() => {
@@ -158,12 +158,32 @@ describe('MetricsPage', () => {
   it('shows dashes for missing metrics', async () => {
     api = makeApi({ getMetrics: vi.fn().mockResolvedValue('') });
     await act(async () => {
-      render(<MetricsPage api={api} />);
+      render(<MetricsPage api={api} refreshInterval={10_000} />);
     });
 
     await waitFor(() => {
       const dashes = screen.getAllByText('—');
       expect(dashes.length).toBeGreaterThanOrEqual(4);
+    });
+  });
+
+  it('recreates interval when refreshInterval prop changes', async () => {
+    const { rerender } = await act(async () => {
+      return render(<MetricsPage api={api} refreshInterval={10_000} />);
+    });
+    await waitFor(() => screen.getAllByText('1000'));
+    expect(api.getMetrics).toHaveBeenCalledTimes(1);
+
+    // Change interval to 5s and advance by 5s
+    await act(async () => {
+      rerender(<MetricsPage api={api} refreshInterval={5_000} />);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+    });
+
+    await waitFor(() => {
+      expect(api.getMetrics).toHaveBeenCalledTimes(2);
     });
   });
 });

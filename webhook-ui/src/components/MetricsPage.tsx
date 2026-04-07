@@ -19,9 +19,7 @@ import { SyncAltIcon } from '@patternfly/react-icons';
 import type { WebhookApiClient } from '../api/webhookApi';
 import { parseMetrics, type ParsedMetrics } from '../lib/parseMetrics';
 
-const REFRESH_INTERVAL = 10_000;
-
-export function MetricsPage({ api }: { api: WebhookApiClient }) {
+export function MetricsPage({ api, refreshInterval }: { api: WebhookApiClient; refreshInterval: number }) {
   const [metrics, setMetrics] = useState<ParsedMetrics | null>(null);
   const [rawText, setRawText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +51,10 @@ export function MetricsPage({ api }: { api: WebhookApiClient }) {
 
   useEffect(() => {
     if (autoRefresh) {
-      intervalRef.current = setInterval(fetchMetrics, REFRESH_INTERVAL);
+      intervalRef.current = setInterval(fetchMetrics, refreshInterval);
     }
     return () => clearInterval(intervalRef.current);
-  }, [autoRefresh, fetchMetrics]);
+  }, [autoRefresh, fetchMetrics, refreshInterval]);
 
   const fmt = (val: number | null): string => (val !== null ? String(val) : '—');
 
