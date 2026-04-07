@@ -3,6 +3,7 @@ package dev.montell.keycloak.jpa;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Base64;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +17,11 @@ class SecretEncryptionConverterTest {
     @BeforeAll
     static void initKey() {
         EncryptionKeyProvider.init(TEST_KEY_B64);
+    }
+
+    @AfterAll
+    static void cleanup() {
+        EncryptionKeyProvider.reset();
     }
 
     @Test
@@ -55,18 +61,17 @@ class SecretEncryptionConverterTest {
     void decrypt_with_wrong_key_throws() {
         String encrypted = converter.convertToDatabaseColumn("secret");
 
-        // Swap to a different key
         byte[] wrongKeyBytes = new byte[32];
         wrongKeyBytes[0] = 99;
         EncryptionKeyProvider.init(
                 Base64.getEncoder().encodeToString(wrongKeyBytes));
-
-        assertThrows(
-                IllegalStateException.class,
-                () -> converter.convertToEntityAttribute(encrypted));
-
-        // Restore original key
-        EncryptionKeyProvider.init(TEST_KEY_B64);
+        try {
+            assertThrows(
+                    IllegalStateException.class,
+                    () -> converter.convertToEntityAttribute(encrypted));
+        } finally {
+            EncryptionKeyProvider.init(TEST_KEY_B64);
+        }
     }
 
     @Test
