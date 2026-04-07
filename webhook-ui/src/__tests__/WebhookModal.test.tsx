@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { WebhookModal } from '../components/WebhookModal';
 import type { Webhook } from '../api/types';
+import type { WebhookDefaults } from '../lib/useSettings';
 
 describe('WebhookModal', () => {
   const onSave = vi.fn().mockResolvedValue(undefined);
@@ -131,5 +132,64 @@ describe('WebhookModal', () => {
     await waitFor(() => {
       expect(screen.getByText(/server error/i)).toBeInTheDocument();
     });
+  });
+
+  it('create mode with defaults prop uses default values', () => {
+    const defaults: WebhookDefaults = {
+      enabled: false,
+      retryMaxElapsedSeconds: 600,
+      retryMaxIntervalSeconds: 120,
+    };
+    render(
+      <WebhookModal mode="create" isOpen defaults={defaults} onSave={onSave} onClose={onClose} />,
+    );
+
+    expect(screen.getByRole('checkbox', { name: /enabled/i })).not.toBeChecked();
+    expect(screen.getByLabelText('Max retry duration (seconds)')).toHaveValue(600);
+    expect(screen.getByLabelText('Max retry interval (seconds)')).toHaveValue(120);
+  });
+
+  it('create mode without defaults prop uses hardcoded defaults', () => {
+    render(
+      <WebhookModal mode="create" isOpen onSave={onSave} onClose={onClose} />,
+    );
+
+    expect(screen.getByRole('checkbox', { name: /enabled/i })).toBeChecked();
+    expect(screen.getByLabelText('Max retry duration (seconds)')).toHaveValue(null);
+    expect(screen.getByLabelText('Max retry interval (seconds)')).toHaveValue(null);
+  });
+
+  it('edit mode ignores defaults prop', () => {
+    const webhook: Webhook = {
+      id: '1',
+      url: 'https://example.com/hook',
+      algorithm: 'HmacSHA256',
+      enabled: true,
+      eventTypes: ['access.LOGIN'],
+      circuitState: 'CLOSED',
+      failureCount: 0,
+      createdAt: '2026-01-01T00:00:00Z',
+      retryMaxElapsedSeconds: 300,
+      retryMaxIntervalSeconds: 60,
+    };
+    const defaults: WebhookDefaults = {
+      enabled: false,
+      retryMaxElapsedSeconds: 600,
+      retryMaxIntervalSeconds: 120,
+    };
+    render(
+      <WebhookModal
+        mode="edit"
+        isOpen
+        webhook={webhook}
+        defaults={defaults}
+        onSave={onSave}
+        onClose={onClose}
+      />,
+    );
+
+    expect(screen.getByRole('checkbox', { name: /enabled/i })).toBeChecked();
+    expect(screen.getByLabelText('Max retry duration (seconds)')).toHaveValue(300);
+    expect(screen.getByLabelText('Max retry interval (seconds)')).toHaveValue(60);
   });
 });

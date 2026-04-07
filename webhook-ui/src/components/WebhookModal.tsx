@@ -23,6 +23,7 @@ import {
   TextInputGroupMain,
 } from '@patternfly/react-core';
 import type { Webhook, WebhookInput } from '../api/types';
+import type { WebhookDefaults } from '../lib/useSettings';
 import { ALL_EVENT_OPTIONS } from './eventTypes';
 
 interface WebhookModalProps {
@@ -30,6 +31,7 @@ interface WebhookModalProps {
   isOpen: boolean;
   webhook?: Webhook;
   secretConfigured?: boolean | null;
+  defaults?: WebhookDefaults;
   onSave: (data: WebhookInput) => Promise<void>;
   onClose: () => void;
 }
@@ -43,7 +45,7 @@ function isValidUrl(url: string): boolean {
   }
 }
 
-export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, onClose }: WebhookModalProps) {
+export function WebhookModal({ mode, isOpen, webhook, secretConfigured, defaults, onSave, onClose }: WebhookModalProps) {
   const [url, setUrl] = useState('');
   const [enabled, setEnabled] = useState(true);
   const [secret, setSecret] = useState('');
@@ -68,17 +70,21 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
       setRetryMaxInterval(webhook.retryMaxIntervalSeconds != null ? String(webhook.retryMaxIntervalSeconds) : '');
     } else {
       setUrl('');
-      setEnabled(true);
+      setEnabled(defaults?.enabled ?? true);
       setSecret('');
       setAlgorithm('HmacSHA256');
       setEventTypes([]);
-      setRetryMaxElapsed('');
-      setRetryMaxInterval('');
+      setRetryMaxElapsed(
+        defaults?.retryMaxElapsedSeconds != null ? String(defaults.retryMaxElapsedSeconds) : '',
+      );
+      setRetryMaxInterval(
+        defaults?.retryMaxIntervalSeconds != null ? String(defaults.retryMaxIntervalSeconds) : '',
+      );
     }
     setErrors({});
     setApiError(null);
     setEventInput('');
-  }, [mode, webhook, isOpen]);
+  }, [mode, webhook, defaults, isOpen]);
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
@@ -234,6 +240,7 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
         <FormGroup label="Max retry duration (seconds)" fieldId="retryMaxElapsed">
           <TextInput
             id="retryMaxElapsed"
+            aria-label="Max retry duration (seconds)"
             type="number"
             value={retryMaxElapsed}
             onChange={(_e: React.FormEvent<HTMLInputElement>, val: string) => setRetryMaxElapsed(val)}
@@ -252,6 +259,7 @@ export function WebhookModal({ mode, isOpen, webhook, secretConfigured, onSave, 
         <FormGroup label="Max retry interval (seconds)" fieldId="retryMaxInterval">
           <TextInput
             id="retryMaxInterval"
+            aria-label="Max retry interval (seconds)"
             type="number"
             value={retryMaxInterval}
             onChange={(_e: React.FormEvent<HTMLInputElement>, val: string) => setRetryMaxInterval(val)}
