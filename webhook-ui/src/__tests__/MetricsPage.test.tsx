@@ -65,8 +65,8 @@ describe('MetricsPage', () => {
     });
 
     await waitFor(() => {
-      // dispatches = 950+50 = 1000, eventsReceived = 1000, both cards show 1000
-      expect(screen.getAllByText('1000').length).toBeGreaterThanOrEqual(1);
+      // dispatches = 950+50 = 1000, eventsReceived = 1000 — exactly 2 cards show 1000
+      expect(screen.getAllByText('1000')).toHaveLength(2);
     });
     expect(screen.getByText('43')).toBeInTheDocument(); // retries
     expect(screen.getByText('0')).toBeInTheDocument(); // queue pending
@@ -131,6 +131,27 @@ describe('MetricsPage', () => {
 
     await waitFor(() => {
       expect(api.getMetrics).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('clears error alert when subsequent fetch succeeds', async () => {
+    const getMetrics = vi.fn()
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValue(SAMPLE_METRICS);
+    api = makeApi({ getMetrics });
+    await act(async () => {
+      render(<MetricsPage api={api} />);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/network error/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /aggiorna/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/network error/i)).not.toBeInTheDocument();
+      expect(screen.getAllByText('1000')).toHaveLength(2);
     });
   });
 

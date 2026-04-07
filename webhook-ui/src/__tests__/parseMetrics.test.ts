@@ -31,7 +31,7 @@ describe('parseMetrics', () => {
     expect(m.queuePending).toBe(0);
   });
 
-  it('returns null for missing metric lines', () => {
+  it('returns null for metrics absent from input', () => {
     const partial = `webhook_dispatches_total{realm="master",success="true"} 10.0
 webhook_dispatches_total{realm="master",success="false"} 0.0
 `;

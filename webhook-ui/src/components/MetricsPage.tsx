@@ -26,10 +26,13 @@ export function MetricsPage({ api }: { api: WebhookApiClient }) {
   const [rawText, setRawText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const isInitialRef = useRef(true);
 
   const fetchMetrics = useCallback(async () => {
+    if (!isInitialRef.current) setIsRefreshing(true);
     try {
       const raw = await api.getMetrics();
       setRawText(raw);
@@ -38,7 +41,9 @@ export function MetricsPage({ api }: { api: WebhookApiClient }) {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
+      isInitialRef.current = false;
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, [api]);
 
@@ -78,7 +83,13 @@ export function MetricsPage({ api }: { api: WebhookApiClient }) {
             />
           </ToolbarItem>
           <ToolbarItem>
-            <Button variant="secondary" icon={<SyncAltIcon />} onClick={fetchMetrics}>
+            <Button
+              variant="secondary"
+              icon={<SyncAltIcon />}
+              onClick={fetchMetrics}
+              isLoading={isRefreshing}
+              isDisabled={isRefreshing}
+            >
               Aggiorna
             </Button>
           </ToolbarItem>
@@ -96,12 +107,14 @@ export function MetricsPage({ api }: { api: WebhookApiClient }) {
               <div
                 style={{
                   color:
-                    metrics?.successRate !== null && metrics?.successRate !== undefined
+                    metrics?.successRate == null
+                      ? undefined
+                      : metrics.successRate >= 95
                       ? 'var(--pf-v5-global--success-color--100)'
-                      : undefined,
+                      : 'var(--pf-v5-global--warning-color--100)',
                 }}
               >
-                {metrics?.successRate !== null && metrics?.successRate !== undefined
+                {metrics?.successRate != null
                   ? `${metrics.successRate.toFixed(1)}% success`
                   : '—'}
               </div>
