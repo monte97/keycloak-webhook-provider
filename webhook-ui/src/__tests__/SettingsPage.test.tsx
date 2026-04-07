@@ -25,7 +25,7 @@ describe('SettingsPage', () => {
   it('checks the radio matching current settings', () => {
     render(
       <SettingsPage
-        settings={{ metricsRefreshInterval: 30_000, webhookDefaults: defaultSettings.webhookDefaults }}
+        settings={{ ...defaultSettings, metricsRefreshInterval: 30_000 }}
         onUpdate={vi.fn()}
       />,
     );
