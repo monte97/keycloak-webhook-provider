@@ -69,13 +69,13 @@ export function createWebhookApi(basePath: string, realm: string, keycloak: Keyc
     },
     getSends(
       id: string,
-      params: { max?: number; success?: boolean } = {},
+      params: { first?: number; max?: number; success?: boolean } = {},
     ): Promise<WebhookSend[]> {
-      const { max = 50, success } = params;
+      const { first = 0, max = 50, success } = params;
       const qs =
         success !== undefined
-          ? `?first=0&max=${max}&success=${success}`
-          : `?first=0&max=${max}`;
+          ? `?first=${first}&max=${max}&success=${success}`
+          : `?first=${first}&max=${max}`;
       return request(`/${id}/sends${qs}`);
     },
     resendFailed(id: string, hours = 24): Promise<ResendResult> {
