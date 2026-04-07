@@ -58,3 +58,71 @@ test('Settings tab is accessible from metrics tab and back', async ({
   await page.getByRole('tab', { name: 'Metriche' }).click();
   await expect(page.getByText('Dispatches', { exact: true })).toBeVisible({ timeout: 10_000 });
 });
+
+test('Webhook defaults card is visible with switch and inputs', async ({
+  page,
+  keycloakUrl,
+}) => {
+  await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  await expect(page.getByText('Webhook — valori predefiniti')).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByLabel('Enabled by default')).toBeVisible();
+  await expect(page.getByLabel('Max retry duration (seconds)')).toBeVisible();
+  await expect(page.getByLabel('Max retry interval (seconds)')).toBeVisible();
+});
+
+test('Toggling enabled default off pre-populates create modal', async ({
+  page,
+  keycloakUrl,
+}) => {
+  await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
+  await page.waitForLoadState('networkidle');
+
+  // Set enabled default to off
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  await expect(page.getByLabel('Enabled by default')).toBeVisible({ timeout: 5_000 });
+  await page.getByLabel('Enabled by default').click();
+
+  // Open create modal
+  await page.getByRole('tab', { name: 'Webhooks' }).click();
+  await page.waitForTimeout(500);
+  await page.getByRole('button', { name: /create webhook/i }).click();
+  await page.waitForSelector('[role="dialog"]');
+
+  // Enabled should be off in the modal
+  const enabledSwitch = page.locator('#enabled');
+  await expect(enabledSwitch).not.toBeChecked();
+
+  await page.keyboard.press('Escape');
+});
+
+test('Setting retry duration persists and pre-populates create modal', async ({
+  page,
+  keycloakUrl,
+}) => {
+  await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
+  await page.waitForLoadState('networkidle');
+
+  // Set retry duration
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  const retryInput = page.getByLabel('Max retry duration (seconds)');
+  await expect(retryInput).toBeVisible({ timeout: 5_000 });
+  await retryInput.fill('600');
+  await retryInput.blur();
+
+  // Reload and verify persistence
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  await expect(page.getByLabel('Max retry duration (seconds)')).toHaveValue('600', { timeout: 5_000 });
+
+  // Open create modal and verify pre-population
+  await page.getByRole('tab', { name: 'Webhooks' }).click();
+  await page.waitForTimeout(500);
+  await page.getByRole('button', { name: /create webhook/i }).click();
+  await page.waitForSelector('[role="dialog"]');
+  await expect(page.locator('#retryMaxElapsed')).toHaveValue('600');
+
+  await page.keyboard.press('Escape');
+});
