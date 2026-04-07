@@ -33,7 +33,7 @@ export function SettingsPage({ settings, onUpdate }: SettingsPageProps) {
           <Form>
             <FormGroup
               label="Intervallo auto-refresh"
-              fieldId="metrics-refresh-interval"
+              role="group"
             >
               {INTERVAL_OPTIONS.map((opt) => (
                 <Radio
