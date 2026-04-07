@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardBody,
@@ -40,6 +40,10 @@ function RetryInput({
 }) {
   const [local, setLocal] = useState(value != null ? String(value) : '');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLocal(value != null ? String(value) : '');
+  }, [value]);
 
   const handleBlur = () => {
     if (local.trim() === '') {

@@ -100,6 +100,7 @@ describe('SettingsPage', () => {
     fireEvent.change(input, { target: { value: '-5' } });
     fireEvent.blur(input);
     expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.getByText('Must be a positive integer')).toBeInTheDocument();
   });
 
   it('retry input shows persisted value from settings', () => {
