@@ -26,12 +26,13 @@ ifeq ($(BUILD),local)
   MVN := mvn
 else
   MVN_IMAGE := maven:3.9-eclipse-temurin-17
-  # node_modules and the Node binary are shadowed with named volumes so Docker
-  # never writes root-owned files into the host working directory.
+  # node_modules, the Node binary, and the Vite build output are shadowed with
+  # named volumes so Docker never writes root-owned files into the host tree.
   MVN := $(DOCKER_RUN) \
     -v mvn-cache:/root/.m2 \
     -v webhook-ui-node-modules:/build/webhook-ui/node_modules \
     -v webhook-ui-node:/build/webhook-ui/node \
+    -v webhook-ui-dist:/build/src/main/resources/webhook-ui \
     $(MVN_IMAGE) mvn
 endif
 
