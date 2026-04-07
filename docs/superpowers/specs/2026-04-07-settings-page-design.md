@@ -113,4 +113,4 @@ localStorage (written immediately)
 - Navigating to "Impostazioni" tab shows the radio group.
 - Changing the interval radio updates the selection.
 - Reloading the page preserves the selected interval (localStorage persistence).
-- After changing the interval, switching to Metriche and advancing fake timers confirms the new interval is active (covered by unit test; E2E verifies persistence only).
+- After changing the interval and reloading, the Metriche tab uses the persisted value (interval behaviour verified by unit tests; E2E covers persistence only).
