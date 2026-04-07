@@ -11,7 +11,7 @@ JAR := target/keycloak-webhook-provider-$(VERSION).jar
 DOCKER_RUN := docker run --rm -v "$(CURDIR)":/build -w /build
 UID := $(shell id -u)
 GID := $(shell id -g)
-FIX_OWNER = @$(DOCKER_RUN) alpine chown -R $(UID):$(GID) target/ webhook-ui/node_modules 2>/dev/null || true
+FIX_OWNER = @$(DOCKER_RUN) alpine chown -R $(UID):$(GID) target/ 2>/dev/null || true
 
 OPENAPI_SPEC := docs/openapi.yaml
 OPENAPI_BUNDLE := docs/openapi-bundled.yaml
@@ -26,7 +26,13 @@ ifeq ($(BUILD),local)
   MVN := mvn
 else
   MVN_IMAGE := maven:3.9-eclipse-temurin-17
-  MVN := $(DOCKER_RUN) -v mvn-cache:/root/.m2 $(MVN_IMAGE) mvn
+  # node_modules and the Node binary are shadowed with named volumes so Docker
+  # never writes root-owned files into the host working directory.
+  MVN := $(DOCKER_RUN) \
+    -v mvn-cache:/root/.m2 \
+    -v webhook-ui-node-modules:/build/webhook-ui/node_modules \
+    -v webhook-ui-node:/build/webhook-ui/node \
+    $(MVN_IMAGE) mvn
 endif
 
 # ============================================================
