@@ -29,22 +29,25 @@ const DEFAULTS: AppSettings = {
 function validateWebhookDefaults(raw: unknown): WebhookDefaults {
   if (typeof raw !== 'object' || raw === null) return DEFAULTS.webhookDefaults;
   const obj = raw as Record<string, unknown>;
-  if (
-    typeof obj['enabled'] !== 'boolean' ||
-    (obj['retryMaxElapsedSeconds'] !== null &&
-     obj['retryMaxElapsedSeconds'] !== undefined &&
-     typeof obj['retryMaxElapsedSeconds'] !== 'number') ||
-    (obj['retryMaxIntervalSeconds'] !== null &&
-     obj['retryMaxIntervalSeconds'] !== undefined &&
-     typeof obj['retryMaxIntervalSeconds'] !== 'number')
-  ) {
-    return DEFAULTS.webhookDefaults;
-  }
-  return {
-    enabled: obj['enabled'] as boolean,
-    retryMaxElapsedSeconds: (obj['retryMaxElapsedSeconds'] ?? null) as number | null,
-    retryMaxIntervalSeconds: (obj['retryMaxIntervalSeconds'] ?? null) as number | null,
-  };
+
+  const enabled =
+    typeof obj['enabled'] === 'boolean' ? obj['enabled'] : DEFAULTS.webhookDefaults.enabled;
+
+  const retryMaxElapsedSeconds =
+    obj['retryMaxElapsedSeconds'] === null || obj['retryMaxElapsedSeconds'] === undefined
+      ? null
+      : typeof obj['retryMaxElapsedSeconds'] === 'number'
+        ? obj['retryMaxElapsedSeconds']
+        : DEFAULTS.webhookDefaults.retryMaxElapsedSeconds;
+
+  const retryMaxIntervalSeconds =
+    obj['retryMaxIntervalSeconds'] === null || obj['retryMaxIntervalSeconds'] === undefined
+      ? null
+      : typeof obj['retryMaxIntervalSeconds'] === 'number'
+        ? obj['retryMaxIntervalSeconds']
+        : DEFAULTS.webhookDefaults.retryMaxIntervalSeconds;
+
+  return { enabled, retryMaxElapsedSeconds, retryMaxIntervalSeconds };
 }
 
 function readSettings(): AppSettings {

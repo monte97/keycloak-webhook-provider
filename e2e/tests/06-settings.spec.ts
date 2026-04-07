@@ -130,4 +130,11 @@ test('Setting retry duration persists and pre-populates create modal', async ({
   await expect(page.locator('#retryMaxElapsed')).toHaveValue('600');
 
   await page.keyboard.press('Escape');
+
+  // Reset retry duration to avoid leaking state to subsequent test runs
+  await page.getByRole('tab', { name: 'Impostazioni' }).click();
+  const retryInputCleanup = page.getByLabel('Max retry duration (seconds)');
+  await expect(retryInputCleanup).toBeVisible({ timeout: 5_000 });
+  await retryInputCleanup.fill('');
+  await retryInputCleanup.blur();
 });

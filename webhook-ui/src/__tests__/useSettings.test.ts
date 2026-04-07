@@ -134,4 +134,21 @@ describe('useSettings', () => {
       retryMaxIntervalSeconds: null,
     });
   });
+
+  it('falls back per-field when one webhookDefaults field is invalid', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        webhookDefaults: { enabled: false, retryMaxElapsedSeconds: 'bad', retryMaxIntervalSeconds: 60 },
+      }),
+    );
+    const { result } = renderHook(() => useSettings());
+    // enabled and retryMaxIntervalSeconds are valid → preserved
+    // retryMaxElapsedSeconds is invalid → falls back to null
+    expect(result.current.settings.webhookDefaults).toEqual({
+      enabled: false,
+      retryMaxElapsedSeconds: null,
+      retryMaxIntervalSeconds: 60,
+    });
+  });
 });

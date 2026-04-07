@@ -29,11 +29,13 @@ const INTERVAL_OPTIONS = [
 
 function RetryInput({
   label,
+  fieldId,
   value,
   placeholder,
   onChange,
 }: {
   label: string;
+  fieldId: string;
   value: number | null;
   placeholder: string;
   onChange: (val: number | null) => void;
@@ -61,9 +63,9 @@ function RetryInput({
   };
 
   return (
-    <FormGroup label={label} fieldId={label}>
+    <FormGroup label={label} fieldId={fieldId}>
       <TextInput
-        id={label}
+        id={fieldId}
         aria-label={label}
         type="number"
         value={local}
@@ -130,6 +132,7 @@ export function SettingsPage({ settings, onUpdate }: SettingsPageProps) {
             </FormGroup>
             <RetryInput
               label="Max retry duration (seconds)"
+              fieldId="retry-max-elapsed"
               value={settings.webhookDefaults.retryMaxElapsedSeconds}
               placeholder="900 (default server)"
               onChange={(val) =>
@@ -138,6 +141,7 @@ export function SettingsPage({ settings, onUpdate }: SettingsPageProps) {
             />
             <RetryInput
               label="Max retry interval (seconds)"
+              fieldId="retry-max-interval"
               value={settings.webhookDefaults.retryMaxIntervalSeconds}
               placeholder="180 (default server)"
               onChange={(val) =>
