@@ -58,7 +58,7 @@ describe('WebhookTable', () => {
 
   it('renders table with webhook data', async () => {
     await act(async () => {
-      render(<WebhookTable api={api as any} />);
+      render(<WebhookTable api={api as any} pageSize={50} />);
     });
 
     expect(await screen.findByText('https://api.example.com/webhook')).toBeInTheDocument();
@@ -70,7 +70,7 @@ describe('WebhookTable', () => {
   it('shows empty state when no webhooks', async () => {
     api = createMockApi([]);
     await act(async () => {
-      render(<WebhookTable api={api as any} />);
+      render(<WebhookTable api={api as any} pageSize={50} />);
     });
 
     expect(await screen.findByText(/no webhooks configured/i)).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe('WebhookTable', () => {
 
   it('opens create modal when button clicked', async () => {
     await act(async () => {
-      render(<WebhookTable api={api as any} />);
+      render(<WebhookTable api={api as any} pageSize={50} />);
     });
 
     await screen.findByText('https://api.example.com/webhook');
@@ -90,7 +90,7 @@ describe('WebhookTable', () => {
 
   it('calls delete API after confirmation', async () => {
     await act(async () => {
-      render(<WebhookTable api={api as any} />);
+      render(<WebhookTable api={api as any} pageSize={50} />);
     });
 
     await screen.findByText('https://api.example.com/webhook');
@@ -110,7 +110,7 @@ describe('WebhookTable', () => {
 
   it('shows test ping result as alert', async () => {
     await act(async () => {
-      render(<WebhookTable api={api as any} />);
+      render(<WebhookTable api={api as any} pageSize={50} />);
     });
 
     await screen.findByText('https://api.example.com/webhook');

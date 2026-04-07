@@ -32,7 +32,7 @@ export function App({ api }: AppProps) {
         </PageSection>
         <PageSection>
           {activeTab === 'webhooks' && (
-            <WebhookTable api={api} defaults={settings.webhookDefaults} />
+            <WebhookTable api={api} defaults={settings.webhookDefaults} pageSize={settings.deliveryHistoryPageSize} />
           )}
           {activeTab === 'metrics' && (
             <MetricsPage api={api} refreshInterval={settings.metricsRefreshInterval} />

@@ -42,7 +42,7 @@ interface AlertItem {
 
 const POLL_INTERVAL = 30_000;
 
-export function WebhookTable({ api, defaults }: { api: WebhookApiClient; defaults?: WebhookDefaults }) {
+export function WebhookTable({ api, defaults, pageSize }: { api: WebhookApiClient; defaults?: WebhookDefaults; pageSize: number }) {
   const alertKeyRef = useRef(0);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,6 +220,7 @@ export function WebhookTable({ api, defaults }: { api: WebhookApiClient; default
               api={api}
               onClose={() => setDrawerWebhook(null)}
               onCircuitReset={handleCircuitReset}
+              pageSize={pageSize}
             />
           }
         >
