@@ -20,8 +20,8 @@ public final class EncryptionKeyProvider {
         init(System.getenv("WEBHOOK_ENCRYPTION_KEY"));
     }
 
-    /** Initializes with an explicit base64-encoded key. Package-private for testing. */
-    static void init(String base64Key) {
+    /** Initializes with an explicit base64-encoded key. */
+    public static void init(String base64Key) {
         if (base64Key == null || base64Key.isBlank()) {
             throw new IllegalStateException(
                     "WEBHOOK_ENCRYPTION_KEY environment variable is required");
