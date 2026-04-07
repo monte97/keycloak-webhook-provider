@@ -63,6 +63,10 @@ The **Delivery history** tab lists recent dispatch attempts. Each row shows:
 
 Use the **Resend failed** button to replay all failed deliveries for this webhook.
 
+### Pagination
+
+Use the **← Prev** and **Next →** buttons at the bottom of the delivery table to navigate between pages. The number of rows per page is configurable in **Settings → Cronologia consegne** (default: 50). The **Next** button is disabled on the last page; **Prev** is disabled on the first page.
+
 ---
 
 ## 4. Circuit breaker
@@ -155,3 +159,14 @@ Default values applied when **creating** a new webhook. Existing webhooks are no
 | **Max retry interval (seconds)** | Empty (server default: 180) | Maximum back-off interval between retry attempts. Leave empty to use the server default (180 s / 3 min). |
 
 All changes take effect immediately — no save required. Settings persist after a page reload.
+
+### Delivery history
+
+Controls the number of rows shown per page in the delivery history drawer.
+
+| Option | Value |
+|--------|-------|
+| 10 | 10 rows |
+| 25 | 25 rows |
+| **50** *(default)* | 50 rows |
+| 100 | 100 rows |

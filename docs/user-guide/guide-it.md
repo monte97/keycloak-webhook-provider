@@ -63,6 +63,10 @@ La scheda **Delivery history** elenca i tentativi di consegna recenti. Ogni riga
 
 Il pulsante **Resend failed** permette di ripetere tutte le consegne fallite per quel webhook.
 
+### Paginazione
+
+I pulsanti **← Prev** e **Next →** in fondo alla tabella permettono di navigare tra le pagine. Il numero di righe per pagina è configurabile in **Impostazioni → Cronologia consegne** (predefinito: 50). Il pulsante **Next** è disabilitato sull'ultima pagina; **Prev** è disabilitato sulla prima pagina.
+
 ---
 
 ## 4. Circuit breaker
@@ -155,3 +159,14 @@ Valori predefiniti applicati alla **creazione** di un nuovo webhook. I webhook e
 | **Max retry interval (seconds)** | Vuoto (default server: 180) | Intervallo massimo di back-off tra i tentativi di retry. Lasciare vuoto per usare il default del server (180 s / 3 min). |
 
 Le modifiche hanno effetto immediato — non è richiesto alcun salvataggio. Le impostazioni persistono al ricaricamento della pagina.
+
+### Cronologia consegne
+
+Controlla il numero di righe visualizzate per pagina nel drawer della cronologia consegne.
+
+| Opzione | Valore |
+|---------|--------|
+| 10 | 10 righe |
+| 25 | 25 righe |
+| **50** *(default)* | 50 righe |
+| 100 | 100 righe |
