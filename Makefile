@@ -11,7 +11,7 @@ JAR := target/keycloak-webhook-provider-$(VERSION).jar
 DOCKER_RUN := docker run --rm -v "$(CURDIR)":/build -w /build
 UID := $(shell id -u)
 GID := $(shell id -g)
-FIX_OWNER = @$(DOCKER_RUN) alpine chown -R $(UID):$(GID) target/ 2>/dev/null || true
+FIX_OWNER = @$(DOCKER_RUN) alpine chown -R $(UID):$(GID) target/ webhook-ui/node_modules 2>/dev/null || true
 
 OPENAPI_SPEC := docs/openapi.yaml
 OPENAPI_BUNDLE := docs/openapi-bundled.yaml
