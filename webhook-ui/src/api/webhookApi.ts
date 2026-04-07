@@ -84,6 +84,19 @@ export function createWebhookApi(basePath: string, realm: string, keycloak: Keyc
     resendSingle(webhookId: string, sendId: string, force = false): Promise<SendResult> {
       return request(`/${webhookId}/sends/${sendId}/resend?force=${force}`, { method: 'POST' });
     },
+    async getMetrics(): Promise<string> {
+      await keycloak.updateToken(30);
+      const res = await fetch(`${baseUrl}/metrics`, {
+        headers: {
+          Authorization: `Bearer ${keycloak.token}`,
+        },
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new ApiError(res.status, body);
+      }
+      return res.text();
+    },
   };
 }
 

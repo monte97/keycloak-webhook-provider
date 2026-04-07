@@ -139,4 +139,29 @@ describe('webhookApi', () => {
     );
     expect(res).toEqual(result);
   });
+
+  it('getMetrics() fetches raw text from /metrics', async () => {
+    const raw = '# HELP webhook_dispatches_total\nwebhook_dispatches_total{realm="master",success="true"} 42\n';
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(raw, { status: 200 }),
+    );
+
+    const result = await api.getMetrics();
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/auth/realms/my-realm/webhooks/metrics',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+      }),
+    );
+    expect(result).toBe(raw);
+  });
+
+  it('getMetrics() throws ApiError on non-2xx response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response('unauthorized', { status: 401 })),
+    );
+    await expect(api.getMetrics()).rejects.toThrow(ApiError);
+    await expect(api.getMetrics()).rejects.toMatchObject({ status: 401 });
+  });
 });
