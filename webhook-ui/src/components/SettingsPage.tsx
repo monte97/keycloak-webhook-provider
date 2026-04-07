@@ -1,10 +1,16 @@
+import { useState } from 'react';
 import {
   Card,
   CardBody,
   CardTitle,
   Form,
   FormGroup,
+  FormHelperText,
+  HelperText,
+  HelperTextItem,
   Radio,
+  Switch,
+  TextInput,
   Title,
 } from '@patternfly/react-core';
 import type { AppSettings, AppSettingsPatch } from '../lib/useSettings';
@@ -20,6 +26,61 @@ const INTERVAL_OPTIONS = [
   { label: '30 secondi', value: 30_000 },
   { label: '60 secondi', value: 60_000 },
 ] as const;
+
+function RetryInput({
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  value: number | null;
+  placeholder: string;
+  onChange: (val: number | null) => void;
+}) {
+  const [local, setLocal] = useState(value != null ? String(value) : '');
+  const [error, setError] = useState('');
+
+  const handleBlur = () => {
+    if (local.trim() === '') {
+      setError('');
+      onChange(null);
+      return;
+    }
+    const n = Number(local);
+    if (!Number.isInteger(n) || n < 1) {
+      setError('Must be a positive integer');
+      return;
+    }
+    setError('');
+    onChange(n);
+  };
+
+  return (
+    <FormGroup label={label} fieldId={label}>
+      <TextInput
+        id={label}
+        aria-label={label}
+        type="number"
+        value={local}
+        onChange={(_e, val) => {
+          setLocal(val);
+          if (error) setError('');
+        }}
+        onBlur={handleBlur}
+        validated={error ? 'error' : 'default'}
+        placeholder={placeholder}
+      />
+      {error && (
+        <FormHelperText>
+          <HelperText>
+            <HelperTextItem variant="error">{error}</HelperTextItem>
+          </HelperText>
+        </FormHelperText>
+      )}
+    </FormGroup>
+  );
+}
 
 export function SettingsPage({ settings, onUpdate }: SettingsPageProps) {
   return (
@@ -46,6 +107,39 @@ export function SettingsPage({ settings, onUpdate }: SettingsPageProps) {
                 />
               ))}
             </FormGroup>
+          </Form>
+        </CardBody>
+      </Card>
+      <Card style={{ marginTop: 16 }}>
+        <CardTitle>Webhook — valori predefiniti</CardTitle>
+        <CardBody>
+          <Form>
+            <FormGroup label="Enabled by default" fieldId="default-enabled">
+              <Switch
+                id="default-enabled"
+                aria-label="Enabled by default"
+                isChecked={settings.webhookDefaults.enabled}
+                onChange={(_e, val) =>
+                  onUpdate({ webhookDefaults: { enabled: val } })
+                }
+              />
+            </FormGroup>
+            <RetryInput
+              label="Max retry duration (seconds)"
+              value={settings.webhookDefaults.retryMaxElapsedSeconds}
+              placeholder="900 (default server)"
+              onChange={(val) =>
+                onUpdate({ webhookDefaults: { retryMaxElapsedSeconds: val } })
+              }
+            />
+            <RetryInput
+              label="Max retry interval (seconds)"
+              value={settings.webhookDefaults.retryMaxIntervalSeconds}
+              placeholder="180 (default server)"
+              onChange={(val) =>
+                onUpdate({ webhookDefaults: { retryMaxIntervalSeconds: val } })
+              }
+            />
           </Form>
         </CardBody>
       </Card>
