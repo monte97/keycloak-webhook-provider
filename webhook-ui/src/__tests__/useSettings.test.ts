@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useSettings } from '../lib/useSettings';
-
-const STORAGE_KEY = 'webhook-admin-ui-settings';
+import { useSettings, STORAGE_KEY } from '../lib/useSettings';
 
 beforeEach(() => {
   localStorage.clear();
@@ -33,6 +31,12 @@ describe('useSettings', () => {
 
   it('falls back to defaults on malformed JSON', () => {
     localStorage.setItem(STORAGE_KEY, '{not json!!!');
+    const { result } = renderHook(() => useSettings());
+    expect(result.current.settings).toEqual({ metricsRefreshInterval: 10_000 });
+  });
+
+  it('falls back to defaults on valid JSON that is not a settings object', () => {
+    localStorage.setItem(STORAGE_KEY, '42');
     const { result } = renderHook(() => useSettings());
     expect(result.current.settings).toEqual({ metricsRefreshInterval: 10_000 });
   });

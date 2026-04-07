@@ -4,7 +4,7 @@ export interface AppSettings {
   metricsRefreshInterval: number;
 }
 
-const STORAGE_KEY = 'webhook-admin-ui-settings';
+export const STORAGE_KEY = 'webhook-admin-ui-settings';
 
 const DEFAULTS: AppSettings = {
   metricsRefreshInterval: 10_000,
@@ -15,7 +15,12 @@ function readSettings(): AppSettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULTS;
     const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed === 'object' && parsed !== null && 'metricsRefreshInterval' in parsed) {
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'metricsRefreshInterval' in parsed &&
+      typeof (parsed as Record<string, unknown>)['metricsRefreshInterval'] === 'number'
+    ) {
       return { ...DEFAULTS, ...(parsed as Partial<AppSettings>) };
     }
     return DEFAULTS;
