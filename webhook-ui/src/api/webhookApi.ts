@@ -9,6 +9,7 @@ import type {
   SendResult,
   RotateSecretRequest,
   RotateSecretResponse,
+  SendPayload,
 } from './types';
 import { ApiError } from './types';
 
@@ -94,6 +95,9 @@ export function createWebhookApi(basePath: string, realm: string, keycloak: Keyc
     },
     resendSingle(webhookId: string, sendId: string, force = false): Promise<SendResult> {
       return request(`/${webhookId}/sends/${sendId}/resend?force=${force}`, { method: 'POST' });
+    },
+    getSendPayload(webhookId: string, sendId: string): Promise<SendPayload> {
+      return request(`/${webhookId}/sends/${sendId}/payload`);
     },
     async getMetrics(): Promise<string> {
       await keycloak.updateToken(30);
