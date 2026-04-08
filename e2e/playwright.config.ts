@@ -10,6 +10,7 @@ export default defineConfig({
   },
   workers: 1, // serial execution — avoids shared Keycloak state conflicts
   retries: 0,
+  forbidOnly: !!process.env.CI,
   reporter: [['list'], ['html', { open: 'never' }]],
   projects: [
     {
