@@ -760,4 +760,52 @@ class WebhooksResourceTest {
             assertThrows(NotFoundException.class, () -> resource.completeRotation("missing"));
         }
     }
+
+    // -----------------------------------------------------------------------
+    // GET /{id}/sends/{sendId}/payload
+    // -----------------------------------------------------------------------
+    @Nested
+    class GetSendPayload {
+
+        @Test
+        void returns_eventObject_for_known_send() {
+            WebhookModel w = mockWebhook("wh-1");
+            WebhookSendModel s = mockSend("send-1", "wh-1", "ev-1");
+            WebhookEventModel e = mockEvent("ev-1", "wh-1");
+            when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
+            when(provider.getSendById(realm, "send-1")).thenReturn(s);
+            when(provider.getEventById(realm, "ev-1")).thenReturn(e);
+
+            Response resp = resource.getSendPayload("wh-1", "send-1");
+
+            assertEquals(200, resp.getStatus());
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> body = (java.util.Map<String, Object>) resp.getEntity();
+            assertEquals("{\"type\":\"access.LOGIN\"}", body.get("eventObject"));
+        }
+
+        @Test
+        void returns_404_when_webhook_not_found() {
+            when(provider.getWebhookById(realm, "missing")).thenReturn(null);
+            assertThrows(NotFoundException.class, () -> resource.getSendPayload("missing", "send-1"));
+        }
+
+        @Test
+        void returns_404_when_send_not_found() {
+            WebhookModel w = mockWebhook("wh-1");
+            when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
+            when(provider.getSendById(realm, "missing-send")).thenReturn(null);
+            assertThrows(NotFoundException.class, () -> resource.getSendPayload("wh-1", "missing-send"));
+        }
+
+        @Test
+        void returns_404_when_event_not_found() {
+            WebhookModel w = mockWebhook("wh-1");
+            WebhookSendModel s = mockSend("send-1", "wh-1", "ev-deleted");
+            when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
+            when(provider.getSendById(realm, "send-1")).thenReturn(s);
+            when(provider.getEventById(realm, "ev-deleted")).thenReturn(null);
+            assertThrows(NotFoundException.class, () -> resource.getSendPayload("wh-1", "send-1"));
+        }
+    }
 }

@@ -470,6 +470,22 @@ public class WebhooksResource {
                 .build();
     }
 
+    // --- GET /{id}/sends/{sendId}/payload ---
+    @GET
+    @Path("{id}/sends/{sendId}/payload")
+    public Response getSendPayload(
+            @PathParam("id") String id,
+            @PathParam("sendId") String sendId) {
+        requireManageEvents();
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException();
+        WebhookSendModel send = provider().getSendById(realm, sendId);
+        if (send == null) throw new NotFoundException();
+        WebhookEventModel event = provider().getEventById(realm, send.getWebhookEventId());
+        if (event == null) throw new NotFoundException();
+        return Response.ok(java.util.Map.of("eventObject", event.getEventObject())).build();
+    }
+
     // --- POST /{id}/resend-failed ---
     @POST
     @Path("{id}/resend-failed")
