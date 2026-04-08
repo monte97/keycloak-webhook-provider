@@ -273,7 +273,8 @@ public class WebhookEventDispatcher {
                         payloadJson,
                         webhook.getId(),
                         webhook.getSecret(),
-                        webhook.getAlgorithm());
+                        webhook.getAlgorithm(),
+                        webhook.getSecondarySecret());
         double durationSeconds = (System.nanoTime() - startNanos) / 1_000_000_000.0;
 
         metrics.recordDispatch(realmId, result.success(), durationSeconds);

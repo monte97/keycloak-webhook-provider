@@ -232,7 +232,7 @@ class WebhooksResourceTest {
         WebhookModel w = mockWebhook("wh-1");
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
-        when(sender.send(anyString(), payloadCaptor.capture(), eq("wh-1"), isNull(), isNull()))
+        when(sender.send(anyString(), payloadCaptor.capture(), eq("wh-1"), isNull(), isNull(), isNull()))
                 .thenReturn(new HttpSendResult(200, true, 42L, null));
 
         Response resp = resource.testWebhook("wh-1");
@@ -296,7 +296,7 @@ class WebhooksResourceTest {
         CircuitBreakerRegistry realRegistry = new CircuitBreakerRegistry(5, 60);
         WebhookComponentHolder.init(sender, realRegistry);
 
-        when(sender.send(anyString(), anyString(), anyString(), any(), any()))
+        when(sender.send(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(new HttpSendResult(200, true, 10L, null));
 
         Response resp = resource.resendSingle("wh-1", "send-1", false);
@@ -363,7 +363,7 @@ class WebhooksResourceTest {
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         when(provider.getSendById(realm, "send-1")).thenReturn(s);
         when(provider.getEventById(realm, "ev-1")).thenReturn(e);
-        when(sender.send(anyString(), anyString(), anyString(), any(), any()))
+        when(sender.send(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(new HttpSendResult(200, true, 10L, null));
 
         Response resp = resource.resendSingle("wh-1", "send-1", true);
@@ -397,7 +397,7 @@ class WebhooksResourceTest {
         when(provider.getEventById(realm, "ev-1")).thenReturn(e1);
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
-        when(sender.send(anyString(), anyString(), anyString(), any(), any()))
+        when(sender.send(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(new HttpSendResult(200, true, 5L, null));
 
         Response resp = resource.resendFailed("wh-1", 24);
@@ -570,7 +570,7 @@ class WebhooksResourceTest {
         when(provider.getEventById(realm, "ev-1")).thenReturn(e1);
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
-        when(sender.send(anyString(), anyString(), anyString(), any(), any()))
+        when(sender.send(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(new HttpSendResult(500, false, 5L, null));
 
         Response resp = resource.resendFailed("wh-1", 24);

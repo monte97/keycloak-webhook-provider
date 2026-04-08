@@ -44,11 +44,17 @@ public class HttpWebhookSender {
 
     /**
      * Sends a POST to {@code url} with {@code payloadJson} as body. Sets {@code
-     * X-Keycloak-Webhook-Id} always; sets {@code X-Keycloak-Signature} only when {@code secret} is
-     * non-null and non-blank.
+     * X-Keycloak-Webhook-Id} always; sets {@code X-Keycloak-Signature} when {@code secret} is
+     * non-null and non-blank. When {@code secondarySecret} is also non-null and non-blank, emits a
+     * comma-separated list of two signatures (primary first) in Stripe-style format.
      */
     public HttpSendResult send(
-            String url, String payloadJson, String webhookId, String secret, String algorithm) {
+            String url,
+            String payloadJson,
+            String webhookId,
+            String secret,
+            String algorithm,
+            String secondarySecret) {
         long start = System.currentTimeMillis();
         HttpRequest.Builder builder =
                 HttpRequest.newBuilder()
@@ -58,8 +64,10 @@ public class HttpWebhookSender {
                         .header("X-Keycloak-Webhook-Id", webhookId)
                         .POST(HttpRequest.BodyPublishers.ofString(payloadJson));
 
-        if (secret != null && !secret.isBlank()) {
-            builder.header("X-Keycloak-Signature", HmacSigner.sign(payloadJson, secret, algorithm));
+        String signatureHeader =
+                buildSignatureHeader(payloadJson, secret, secondarySecret, algorithm);
+        if (signatureHeader != null) {
+            builder.header("X-Keycloak-Signature", signatureHeader);
         }
 
         try {
@@ -73,5 +81,25 @@ public class HttpWebhookSender {
             log.warnf("HTTP send failed for webhook %s url=%s: %s", webhookId, url, e.getMessage());
             return new HttpSendResult(-1, false, durationMs, e.getMessage());
         }
+    }
+
+    /**
+     * Builds the {@code X-Keycloak-Signature} header value. Returns {@code null} when no primary
+     * secret is configured (no header emitted). Format:
+     *
+     * <ul>
+     *   <li>primary only: {@code sha256=<hex>}
+     *   <li>primary + secondary: {@code sha256=<hex1>, sha256=<hex2>} (primary first)
+     * </ul>
+     */
+    static String buildSignatureHeader(
+            String payload, String primary, String secondary, String algorithm) {
+        if (primary == null || primary.isBlank()) return null;
+        String primarySig = "sha256=" + HmacSigner.sign(payload, primary, algorithm);
+        if (secondary == null || secondary.isBlank()) {
+            return primarySig;
+        }
+        String secondarySig = "sha256=" + HmacSigner.sign(payload, secondary, algorithm);
+        return primarySig + ", " + secondarySig;
     }
 }

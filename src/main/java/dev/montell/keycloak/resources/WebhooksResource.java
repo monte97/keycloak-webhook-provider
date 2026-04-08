@@ -257,7 +257,7 @@ public class WebhooksResource {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             return Response.serverError().entity("Failed to serialize test payload").build();
         }
-        var result = sender.send(w.getUrl(), payload, w.getId(), w.getSecret(), w.getAlgorithm());
+        var result = sender.send(w.getUrl(), payload, w.getId(), w.getSecret(), w.getAlgorithm(), w.getSecondarySecret());
         return Response.ok(
                         java.util.Map.of(
                                 "httpStatus", result.httpStatus(),
@@ -306,7 +306,8 @@ public class WebhooksResource {
                         event.getEventObject(),
                         w.getId(),
                         w.getSecret(),
-                        w.getAlgorithm());
+                        w.getAlgorithm(),
+                        w.getSecondarySecret());
 
         // Update CB state
         if (result.success()) cb.onSuccess();
@@ -374,7 +375,8 @@ public class WebhooksResource {
                             event.getEventObject(),
                             w.getId(),
                             w.getSecret(),
-                            w.getAlgorithm());
+                            w.getAlgorithm(),
+                            w.getSecondarySecret());
             if (result.success()) cb.onSuccess();
             else cb.onFailure();
             cb.applyTo(w);
