@@ -787,7 +787,8 @@ class WebhooksResourceTest {
         @Test
         void returns_404_when_webhook_not_found() {
             when(provider.getWebhookById(realm, "missing")).thenReturn(null);
-            assertThrows(NotFoundException.class, () -> resource.getSendPayload("missing", "send-1"));
+            assertThrows(
+                    NotFoundException.class, () -> resource.getSendPayload("missing", "send-1"));
         }
 
         @Test
@@ -795,7 +796,8 @@ class WebhooksResourceTest {
             WebhookModel w = mockWebhook("wh-1");
             when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
             when(provider.getSendById(realm, "missing-send")).thenReturn(null);
-            assertThrows(NotFoundException.class, () -> resource.getSendPayload("wh-1", "missing-send"));
+            assertThrows(
+                    NotFoundException.class, () -> resource.getSendPayload("wh-1", "missing-send"));
         }
 
         @Test

@@ -473,9 +473,7 @@ public class WebhooksResource {
     // --- GET /{id}/sends/{sendId}/payload ---
     @GET
     @Path("{id}/sends/{sendId}/payload")
-    public Response getSendPayload(
-            @PathParam("id") String id,
-            @PathParam("sendId") String sendId) {
+    public Response getSendPayload(@PathParam("id") String id, @PathParam("sendId") String sendId) {
         requireManageEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException();
