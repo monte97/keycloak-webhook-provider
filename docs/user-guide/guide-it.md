@@ -129,7 +129,51 @@ La risposta usa il formato testo Prometheus 0.0.4 ed espone le seguenti famiglie
 
 ---
 
-## 7. Impostazioni
+## 7. Rotazione del secret
+
+Ruotare un secret di webhook è un'operazione in due fasi, senza interruzione del servizio: mentre la rotazione è in corso, le richieste in uscita contengono firme sia del nuovo che del vecchio secret, permettendo ai consumer di aggiornare la loro chiave di verifica senza perdere eventi.
+
+### Avviare una rotazione
+
+Aprire il webhook nell'interfaccia di amministrazione e cliccare su **Rotate secret** nella scheda Secret del pannello. Scegliere un periodo di grazia (1, 7 o 30 giorni) e confermare. Una modale mostra il nuovo secret una sola volta — copiarlo e configurarlo lato consumer. Il vecchio secret continua a verificare le firme fino al termine del periodo di grazia o fino a quando non si clicca su **Complete rotation now**.
+
+### Rotazione di emergenza
+
+Se il secret attuale è stato compromesso, cliccare su **Emergency rotate**. Verrà richiesto di digitare `rotate` per confermare. Il nuovo secret sostituisce quello vecchio immediatamente — non c'è un periodo di grazia e il vecchio secret viene invalidato. Usare questa opzione solo in caso di compromissione; interromperà qualsiasi consumer che utilizza ancora il vecchio secret finché non viene aggiornato.
+
+### Verifica degli header multi-firma lato consumer
+
+Durante la rotazione, l'header `X-Keycloak-Signature` contiene un elenco di firme separate da virgole:
+
+```
+X-Keycloak-Signature: sha256=<hex1>, sha256=<hex2>
+```
+
+Verificare iterando le firme e accettando il payload se **una qualsiasi** firma corrisponde:
+
+```python
+def verify(payload_bytes, header, secrets):
+    parts = [p.strip() for p in header.split(",")]
+    for part in parts:
+        if not part.startswith("sha256="):
+            continue
+        received = part[len("sha256="):]
+        for secret in secrets:
+            expected = hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
+            if hmac.compare_digest(expected, received):
+                return True
+    return False
+```
+
+### Metriche e audit trail
+
+- `webhook_secret_rotations_total{mode}` — conteggio delle rotazioni per modalità (`graceful`, `emergency`, `expired`)
+- `webhook_rotations_in_progress{realm}` — numero attuale di webhook in rotazione
+- Eventi di log strutturati: `webhook.secret.rotated`, `webhook.rotation.completed`, `webhook.rotation.expired`
+
+---
+
+## 8. Impostazioni
 
 ![Pagina impostazioni](screenshots/07-settings-page.png)
 
