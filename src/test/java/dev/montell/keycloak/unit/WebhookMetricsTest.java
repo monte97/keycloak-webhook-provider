@@ -134,4 +134,58 @@ class WebhookMetricsTest {
                 0.0,
                 registry.getSampleValue("webhook_queue_pending", new String[] {}, new String[] {}));
     }
+
+    @Test
+    void recordSecretRotation_increments_counter_per_mode() {
+        CollectorRegistry registry = new CollectorRegistry();
+        WebhookMetrics metrics = new WebhookMetrics(registry);
+        metrics.recordSecretRotation("demo", "graceful");
+        metrics.recordSecretRotation("demo", "graceful");
+        metrics.recordSecretRotation("demo", "emergency");
+        metrics.recordSecretRotation("demo", "expired");
+
+        assertEquals(
+                2.0,
+                registry.getSampleValue(
+                        "webhook_secret_rotations_total",
+                        new String[] {"realm", "mode"},
+                        new String[] {"demo", "graceful"}),
+                0.0001);
+        assertEquals(
+                1.0,
+                registry.getSampleValue(
+                        "webhook_secret_rotations_total",
+                        new String[] {"realm", "mode"},
+                        new String[] {"demo", "emergency"}),
+                0.0001);
+        assertEquals(
+                1.0,
+                registry.getSampleValue(
+                        "webhook_secret_rotations_total",
+                        new String[] {"realm", "mode"},
+                        new String[] {"demo", "expired"}),
+                0.0001);
+    }
+
+    @Test
+    void setRotationsInProgress_updates_gauge() {
+        CollectorRegistry registry = new CollectorRegistry();
+        WebhookMetrics metrics = new WebhookMetrics(registry);
+        metrics.setRotationsInProgress("demo", 3);
+        assertEquals(
+                3.0,
+                registry.getSampleValue(
+                        "webhook_rotations_in_progress",
+                        new String[] {"realm"},
+                        new String[] {"demo"}),
+                0.0001);
+        metrics.setRotationsInProgress("demo", 0);
+        assertEquals(
+                0.0,
+                registry.getSampleValue(
+                        "webhook_rotations_in_progress",
+                        new String[] {"realm"},
+                        new String[] {"demo"}),
+                0.0001);
+    }
 }
