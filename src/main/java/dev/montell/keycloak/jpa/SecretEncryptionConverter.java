@@ -10,9 +10,8 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 
 /**
- * JPA converter that encrypts the webhook HMAC secret at rest using AES-256-GCM. A fresh random
- * IV is generated for every encryption, so identical plaintext values produce different
- * ciphertext.
+ * JPA converter that encrypts the webhook HMAC secret at rest using AES-256-GCM. A fresh random IV
+ * is generated for every encryption, so identical plaintext values produce different ciphertext.
  *
  * <p>The database column stores {@code Base64(IV || ciphertext || GCM-tag)}. Null values pass
  * through unchanged.

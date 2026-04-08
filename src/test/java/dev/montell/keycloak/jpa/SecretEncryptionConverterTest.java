@@ -9,8 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class SecretEncryptionConverterTest {
 
-    static final String TEST_KEY_B64 =
-            Base64.getEncoder().encodeToString(new byte[32]);
+    static final String TEST_KEY_B64 = Base64.getEncoder().encodeToString(new byte[32]);
 
     final SecretEncryptionConverter converter = new SecretEncryptionConverter();
 
@@ -63,8 +62,7 @@ class SecretEncryptionConverterTest {
 
         byte[] wrongKeyBytes = new byte[32];
         wrongKeyBytes[0] = 99;
-        EncryptionKeyProvider.init(
-                Base64.getEncoder().encodeToString(wrongKeyBytes));
+        EncryptionKeyProvider.init(Base64.getEncoder().encodeToString(wrongKeyBytes));
         try {
             assertThrows(
                     IllegalStateException.class,

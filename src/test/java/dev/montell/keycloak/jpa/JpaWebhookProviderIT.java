@@ -33,8 +33,7 @@ class JpaWebhookProviderIT {
 
     @BeforeAll
     static void setup() {
-        EncryptionKeyProvider.init(
-                java.util.Base64.getEncoder().encodeToString(new byte[32]));
+        EncryptionKeyProvider.init(java.util.Base64.getEncoder().encodeToString(new byte[32]));
 
         Map<String, String> props = new HashMap<>();
         props.put("jakarta.persistence.jdbc.url", postgres.getJdbcUrl());

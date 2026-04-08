@@ -29,8 +29,7 @@ public final class EncryptionKeyProvider {
         byte[] raw = Base64.getDecoder().decode(base64Key);
         if (raw.length != 32) {
             throw new IllegalStateException(
-                    "WEBHOOK_ENCRYPTION_KEY must be 32 bytes (256-bit AES key), got "
-                            + raw.length);
+                    "WEBHOOK_ENCRYPTION_KEY must be 32 bytes (256-bit AES key), got " + raw.length);
         }
         key = new SecretKeySpec(raw, "AES");
     }
