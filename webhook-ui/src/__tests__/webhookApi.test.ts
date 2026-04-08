@@ -164,4 +164,49 @@ describe('webhookApi', () => {
     await expect(api.getMetrics()).rejects.toThrow(ApiError);
     await expect(api.getMetrics()).rejects.toMatchObject({ status: 401 });
   });
+
+  describe('rotateSecret', () => {
+    it('POSTs /{id}/rotate-secret with the body and returns the new secret', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            newSecret: 'abc123',
+            rotationExpiresAt: '2026-04-15T12:00:00Z',
+            mode: 'graceful',
+          }),
+          { status: 200 },
+        ),
+      );
+
+      const result = await api.rotateSecret('wid', { mode: 'graceful', graceDays: 7 });
+
+      expect(result.newSecret).toBe('abc123');
+      expect(result.mode).toBe('graceful');
+      expect(fetch).toHaveBeenCalledWith(
+        '/auth/realms/my-realm/webhooks/wid/rotate-secret',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ mode: 'graceful', graceDays: 7 }),
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('completeRotation', () => {
+    it('POSTs /{id}/complete-rotation and resolves on 204', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(null, { status: 204 }),
+      );
+
+      await expect(api.completeRotation('wid')).resolves.toBeUndefined();
+
+      expect(fetch).toHaveBeenCalledWith(
+        '/auth/realms/my-realm/webhooks/wid/complete-rotation',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+  });
 });

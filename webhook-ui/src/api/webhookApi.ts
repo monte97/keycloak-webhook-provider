@@ -7,6 +7,8 @@ import type {
   WebhookSend,
   ResendResult,
   SendResult,
+  RotateSecretRequest,
+  RotateSecretResponse,
 } from './types';
 import { ApiError } from './types';
 
@@ -66,6 +68,15 @@ export function createWebhookApi(basePath: string, realm: string, keycloak: Keyc
     },
     resetCircuit(id: string): Promise<void> {
       return request(`/${id}/circuit/reset`, { method: 'POST' });
+    },
+    rotateSecret(id: string, req: RotateSecretRequest): Promise<RotateSecretResponse> {
+      return request(`/${id}/rotate-secret`, {
+        method: 'POST',
+        body: JSON.stringify(req),
+      });
+    },
+    completeRotation(id: string): Promise<void> {
+      return request(`/${id}/complete-rotation`, { method: 'POST' });
     },
     getSends(
       id: string,
