@@ -465,6 +465,37 @@ paths:
               schema:
                 type: string
 
+  /{id}/sends/{sendId}/payload:
+    get:
+      operationId: getSendPayload
+      summary: Get the event payload for a send attempt
+      description: |
+        Returns the original Keycloak event JSON that was dispatched for this
+        send attempt. Returns 404 if the send does not exist or if the event
+        has been removed by the retention policy.
+      tags: [Sends]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+        - name: sendId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Event payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendPayload"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /{id}/resend-failed:
     post:
       operationId: resendFailed
@@ -877,6 +908,13 @@ components:
         failed:
           type: integer
           description: Number of failed resend attempts
+
+    SendPayload:
+      type: object
+      properties:
+        eventObject:
+          type: string
+          description: Full JSON payload of the original Keycloak event
 
     RotateSecretRequest:
       type: object
