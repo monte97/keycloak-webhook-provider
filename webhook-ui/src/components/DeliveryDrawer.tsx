@@ -18,6 +18,7 @@ import type { Webhook, WebhookSend, CircuitState } from '../api/types';
 import type { WebhookApiClient } from '../api/webhookApi';
 import { SecretRotationModal } from './SecretRotationModal';
 import { SecretDisclosureModal } from './SecretDisclosureModal';
+import { PayloadPreviewModal } from './PayloadPreviewModal';
 
 interface DeliveryDrawerProps {
   webhook: Webhook | null;
@@ -66,6 +67,10 @@ export function DeliveryDrawer({
   const [rotationModalMode, setRotationModalMode] = useState<'graceful' | 'emergency' | null>(null);
   const [disclosedSecret, setDisclosedSecret] = useState<string | null>(null);
   const [rotationError, setRotationError] = useState<string | null>(null);
+
+  const [loadingPayloadId, setLoadingPayloadId] = useState<string | null>(null);
+  const [payloadEventObject, setPayloadEventObject] = useState<string | null>(null);
+  const [payloadError, setPayloadError] = useState<string | null>(null);
 
   const isRotating = !!webhook?.hasSecondarySecret;
 
@@ -216,6 +221,20 @@ export function DeliveryDrawer({
       onWebhookChange?.();
     } catch (e) {
       setRotationError(String(e));
+    }
+  };
+
+  const handleViewPayload = async (sendId: string) => {
+    setLoadingPayloadId(sendId);
+    setPayloadEventObject(null);
+    setPayloadError(null);
+    try {
+      const result = await api.getSendPayload(webhook!.id, sendId);
+      setPayloadEventObject(result.eventObject);
+    } catch (e) {
+      setPayloadError(e instanceof Error ? e.message : 'Failed to load payload');
+    } finally {
+      setLoadingPayloadId(null);
     }
   };
 
@@ -409,6 +428,15 @@ export function DeliveryDrawer({
                         >
                           Resend
                         </Button>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          isLoading={loadingPayloadId === s.id}
+                          isDisabled={loadingPayloadId !== null}
+                          onClick={() => handleViewPayload(s.id)}
+                        >
+                          Payload
+                        </Button>
                       </Td>
                     </Tr>
                   ))
@@ -488,6 +516,18 @@ export function DeliveryDrawer({
           isOpen
           newSecret={disclosedSecret}
           onClose={() => setDisclosedSecret(null)}
+        />
+      )}
+
+      {(payloadEventObject !== null || payloadError !== null) && (
+        <PayloadPreviewModal
+          isOpen
+          eventObject={payloadEventObject}
+          errorMessage={payloadError}
+          onClose={() => {
+            setPayloadEventObject(null);
+            setPayloadError(null);
+          }}
         />
       )}
     </DrawerPanelContent>

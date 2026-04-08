@@ -78,6 +78,10 @@ export interface RotateSecretResponse {
   mode: 'graceful' | 'emergency';
 }
 
+export interface SendPayload {
+  eventObject: string;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
