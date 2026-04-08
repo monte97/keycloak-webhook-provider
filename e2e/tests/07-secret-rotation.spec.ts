@@ -28,7 +28,9 @@ test.describe('Secret rotation', () => {
     const row = page
       .getByRole('row')
       .filter({ hasText: 'https://example.test/hook-rotate-graceful' });
-    await row.click();
+    // Click the URL cell (first gridcell) — avoid row.click() which may land on the
+    // Enabled cell (stopPropagation) and fail to open the drawer.
+    await row.getByRole('gridcell').first().click();
 
     // 3. Secret card shows Active
     await expect(page.getByText(/active/i).first()).toBeVisible({ timeout: 10_000 });
@@ -122,7 +124,7 @@ test.describe('Secret rotation', () => {
     const row = page
       .getByRole('row')
       .filter({ hasText: 'https://example.test/hook-rotate-emergency' });
-    await row.click();
+    await row.getByRole('gridcell').first().click();
 
     // 3. Rotate secret button is disabled because we're already rotating
     await expect(page.getByRole('button', { name: /^rotate secret$/i })).toBeDisabled();
