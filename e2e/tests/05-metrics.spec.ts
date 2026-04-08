@@ -1,31 +1,7 @@
 import { test, expect } from '../fixtures/ports';
-
-/** Create + delete a user in the demo realm to generate admin events. */
-async function triggerEvents(keycloakUrl: string, adminToken: string, n = 1): Promise<void> {
-  for (let i = 0; i < n; i++) {
-    const username = `e2e-metrics-${Date.now()}-${i}`;
-    const createRes = await fetch(`${keycloakUrl}/admin/realms/demo/users`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username,
-        enabled: true,
-        credentials: [{ type: 'password', value: 'temp123', temporary: false }],
-      }),
-    });
-    if (!createRes.ok) throw new Error(`Create user failed: ${createRes.status}`);
-    const location = createRes.headers.get('location')!;
-    const userId = location.split('/').pop()!;
-    const deleteRes = await fetch(`${keycloakUrl}/admin/realms/demo/users/${userId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
-    if (!deleteRes.ok) throw new Error(`Delete user failed: ${deleteRes.status}`);
-  }
-}
+import { triggerUserCycle } from '../fixtures/admin-events';
+import { createWebhookViaUI } from '../fixtures/webhook-helpers';
+import { TAB_METRICHE, HEADING_METRICHE, BTN_AGGIORNA } from '../fixtures/labels.it';
 
 test('Metrics tab is accessible from the main navigation', async ({
   page,
@@ -34,11 +10,11 @@ test('Metrics tab is accessible from the main navigation', async ({
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
   await page.waitForLoadState('networkidle');
 
-  const metricsTab = page.getByRole('tab', { name: 'Metriche' });
+  const metricsTab = page.getByRole('tab', { name: TAB_METRICHE });
   await expect(metricsTab).toBeVisible({ timeout: 15_000 });
   await metricsTab.click();
 
-  await expect(page.getByRole('heading', { name: 'Metriche' })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('heading', { name: HEADING_METRICHE })).toBeVisible({ timeout: 5_000 });
 });
 
 test('Metrics page shows 4 cards on load', async ({
@@ -47,7 +23,7 @@ test('Metrics page shows 4 cards on load', async ({
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
   await page.waitForLoadState('networkidle');
-  await page.getByRole('tab', { name: 'Metriche' }).click();
+  await page.getByRole('tab', { name: TAB_METRICHE }).click();
 
   // Use exact:true so the locator matches only the card title element,
   // not the <pre> block that contains these words in Prometheus HELP lines.
@@ -72,30 +48,19 @@ test('Metrics show non-zero dispatches after events are triggered', async ({
   const { uuid } = (await sessionRes.json()) as { uuid: string };
 
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  const createBtn = page.getByRole('button', { name: 'Create webhook' });
-  await expect(createBtn.first()).toBeVisible({ timeout: 15_000 });
-  await createBtn.first().click();
-  await page.getByLabel('URL').fill(`http://consumer:8080/${uuid}`);
-  const eventSearch = page.getByPlaceholder('Search event types...');
-  await eventSearch.click();
-  await eventSearch.fill('*');
-  const dropdown = page.locator('[role="listbox"]');
-  await expect(dropdown).toBeVisible({ timeout: 5_000 });
-  await dropdown.locator('[role="option"]').first().click();
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('Webhook created')).toBeVisible();
+  await createWebhookViaUI(page, `http://consumer:8080/${uuid}`);
 
   // 2. Trigger events and wait for dispatch
-  await triggerEvents(keycloakUrl, adminToken, 1);
+  await triggerUserCycle(keycloakUrl, adminToken);
   await page.waitForTimeout(5_000);
 
   // 3. Switch to Metriche tab
-  await page.getByRole('tab', { name: 'Metriche' }).click();
+  await page.getByRole('tab', { name: TAB_METRICHE }).click();
   await expect(page.getByText('Dispatches', { exact: true })).toBeVisible({ timeout: 10_000 });
 
   // 4. Dispatches count should be > 0 — the text is a number inside the card
   //    Use Aggiorna to force a fresh fetch (auto-refresh may not have fired yet)
-  await page.getByRole('button', { name: /aggiorna/i }).click();
+  await page.getByRole('button', { name: BTN_AGGIORNA }).click();
   await page.waitForTimeout(2_000);
 
   // The dispatch count should NOT be '—' (dashes)
@@ -109,7 +74,7 @@ test('Aggiorna button triggers a fresh metrics fetch', async ({
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
   await page.waitForLoadState('networkidle');
-  await page.getByRole('tab', { name: 'Metriche' }).click();
+  await page.getByRole('tab', { name: TAB_METRICHE }).click();
   await expect(page.getByText('Dispatches', { exact: true })).toBeVisible({ timeout: 10_000 });
 
   // Intercept requests to the metrics endpoint
@@ -119,7 +84,7 @@ test('Aggiorna button triggers a fresh metrics fetch', async ({
   });
 
   const countBefore = fetchCount;
-  await page.getByRole('button', { name: /aggiorna/i }).click();
+  await page.getByRole('button', { name: BTN_AGGIORNA }).click();
   await page.waitForTimeout(1_000);
 
   expect(fetchCount).toBeGreaterThan(countBefore);
@@ -131,7 +96,7 @@ test('Auto-refresh toggle is present and can be switched off', async ({
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
   await page.waitForLoadState('networkidle');
-  await page.getByRole('tab', { name: 'Metriche' }).click();
+  await page.getByRole('tab', { name: TAB_METRICHE }).click();
   await expect(page.getByText('Dispatches', { exact: true })).toBeVisible({ timeout: 10_000 });
 
   // PF5 Switch renders the <input> as visually hidden; click the visible <label> instead
@@ -152,7 +117,7 @@ test('Raw Prometheus section is expandable and contains metric names', async ({
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
   await page.waitForLoadState('networkidle');
-  await page.getByRole('tab', { name: 'Metriche' }).click();
+  await page.getByRole('tab', { name: TAB_METRICHE }).click();
   await expect(page.getByText('Dispatches', { exact: true })).toBeVisible({ timeout: 10_000 });
 
   // Expand the Raw Prometheus section
