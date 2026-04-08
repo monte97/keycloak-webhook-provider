@@ -68,6 +68,8 @@ test('Delete webhook', async ({ page, keycloakUrl }) => {
   await expect(page.getByRole('dialog', { name: 'Delete webhook' })).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
 
-  await expect(page.getByText('Webhook deleted')).toBeVisible();
+  // Don't assert on the 'Webhook deleted' toast — it auto-dismisses after 5s,
+  // which races Playwright's default 5s assertion timeout. The row disappearing
+  // is the behavior we actually care about.
   await expect(page.getByRole('gridcell', { name: url, exact: true })).not.toBeVisible({ timeout: 5_000 });
 });

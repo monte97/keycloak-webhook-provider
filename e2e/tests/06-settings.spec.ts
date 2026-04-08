@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/ports';
+import { createWebhookViaUI } from '../fixtures/webhook-helpers';
 
 test('Settings tab shows radio group with default selection', async ({
   page,
@@ -192,6 +193,11 @@ test('Delivery drawer shows Prev/Next pagination buttons', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
+
+  // Create a webhook so the table has at least one row to click into.
+  // Tests are isolated by the auto-cleanup fixture; we cannot rely on
+  // residue from preceding specs.
+  await createWebhookViaUI(page, `https://e2e.example.com/pagination-${Date.now()}`);
 
   // Set page size to 10 so buttons are always visible
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
