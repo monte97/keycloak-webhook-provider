@@ -76,6 +76,16 @@ public class WebhookEntity {
     @Column(name = "RETRY_MAX_INTERVAL_SECONDS")
     private Integer retryMaxIntervalSeconds;
 
+    @Convert(converter = dev.montell.keycloak.jpa.SecretEncryptionConverter.class)
+    @Column(name = "SECONDARY_SECRET", length = 512)
+    private String secondarySecret;
+
+    @Column(name = "ROTATION_EXPIRES_AT")
+    private Instant rotationExpiresAt;
+
+    @Column(name = "ROTATION_STARTED_AT")
+    private Instant rotationStartedAt;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @Column(name = "EVENT_TYPE")
     @CollectionTable(name = "WEBHOOK_EVENT_TYPE", joinColumns = @JoinColumn(name = "WEBHOOK_ID"))
@@ -200,6 +210,30 @@ public class WebhookEntity {
 
     public void setRetryMaxIntervalSeconds(Integer s) {
         this.retryMaxIntervalSeconds = s;
+    }
+
+    public String getSecondarySecret() {
+        return secondarySecret;
+    }
+
+    public void setSecondarySecret(String secondarySecret) {
+        this.secondarySecret = secondarySecret;
+    }
+
+    public Instant getRotationExpiresAt() {
+        return rotationExpiresAt;
+    }
+
+    public void setRotationExpiresAt(Instant rotationExpiresAt) {
+        this.rotationExpiresAt = rotationExpiresAt;
+    }
+
+    public Instant getRotationStartedAt() {
+        return rotationStartedAt;
+    }
+
+    public void setRotationStartedAt(Instant rotationStartedAt) {
+        this.rotationStartedAt = rotationStartedAt;
     }
 
     public Set<String> getEventTypes() {

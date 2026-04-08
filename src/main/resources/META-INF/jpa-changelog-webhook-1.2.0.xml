@@ -3,7 +3,11 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
-    <include file="META-INF/jpa-changelog-webhook-1.0.0.xml"/>
-    <include file="META-INF/jpa-changelog-webhook-1.1.0.xml"/>
-    <include file="META-INF/jpa-changelog-webhook-1.2.0.xml"/>
+    <changeSet id="webhook-1.2.0-1" author="montell">
+        <addColumn tableName="WEBHOOK">
+            <column name="SECONDARY_SECRET" type="VARCHAR(512)"/>
+            <column name="ROTATION_EXPIRES_AT" type="TIMESTAMP"/>
+            <column name="ROTATION_STARTED_AT" type="TIMESTAMP"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
