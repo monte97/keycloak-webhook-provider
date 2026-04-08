@@ -79,13 +79,13 @@ test('Toggling enabled default off pre-populates create modal', async ({
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
   await page.waitForLoadState('networkidle');
 
-  // Set enabled default to off. PatternFly Switch renders a visually-hidden
-  // <input>; clicking via getByLabel hits the invisible input and times out.
-  // Use role=switch which targets the clickable overlay.
-  const enabledDefault = page.getByRole('switch', { name: 'Enabled by default' });
+  // PatternFly Switch renders a visually-hidden <input> covered by a toggle
+  // span. Plain click() lands on the input which has opacity:0 and times out.
+  // Force-click the input directly.
+  const enabledDefault = page.locator('#default-enabled');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
-  await expect(enabledDefault).toBeVisible({ timeout: 5_000 });
-  await enabledDefault.click();
+  await expect(page.getByLabel('Enabled by default')).toBeVisible({ timeout: 5_000 });
+  await enabledDefault.click({ force: true });
 
   // Open create modal
   await page.getByRole('tab', { name: 'Webhooks' }).click();
@@ -101,8 +101,8 @@ test('Toggling enabled default off pre-populates create modal', async ({
 
   // Reset setting to avoid leaking state to subsequent tests
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
-  await expect(enabledDefault).toBeVisible({ timeout: 5_000 });
-  await enabledDefault.click();
+  await expect(page.getByLabel('Enabled by default')).toBeVisible({ timeout: 5_000 });
+  await enabledDefault.click({ force: true });
 });
 
 test('Setting retry duration persists and pre-populates create modal', async ({
@@ -209,11 +209,13 @@ test('Delivery drawer shows Prev/Next pagination buttons', async ({
   await expect(radio10).toBeVisible({ timeout: 5_000 });
   await radio10.click();
 
-  // Open the delivery drawer (first webhook row)
+  // Open the delivery drawer (first webhook row). Click via gridcell to
+  // avoid landing on the centered "Enabled" switch — same trick used in
+  // 03-delivery.spec.ts.
   await page.getByRole('tab', { name: 'Webhooks' }).click();
   await page.waitForLoadState('networkidle');
   const firstRow = page.getByRole('row').nth(1); // skip header
-  await firstRow.click();
+  await firstRow.getByRole('gridcell').first().click();
 
   await expect(page.getByRole('button', { name: /prev/i })).toBeVisible({ timeout: 5_000 });
   await expect(page.getByRole('button', { name: /next/i })).toBeVisible();
