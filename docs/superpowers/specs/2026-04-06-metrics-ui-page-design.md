@@ -139,3 +139,13 @@ No backend changes. The `/metrics` endpoint already exists and returns Prometheu
 - Configurable refresh interval (future settings page)
 - Charts or time-series visualization
 - Circuit breaker state per webhook on this page
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — matches spec, with one upgrade.**
+
+`MetricsPage.tsx` delivers the 2×2 card grid (Dispatches, Events received, Retries, Queue pending), auto-refresh toggle, manual "Aggiorna" button, and collapsible raw Prometheus section. Parser in `parseMetrics.ts` handles the 6 metric families with null fallback. Integrated into the tabbed shell in `App.tsx`.
+
+Upgrade vs. "out of scope" list: the refresh interval is now configurable via the settings page (`settings.metricsRefreshInterval`), completing the item the spec deferred. See `2026-04-07-settings-page-design.md`.

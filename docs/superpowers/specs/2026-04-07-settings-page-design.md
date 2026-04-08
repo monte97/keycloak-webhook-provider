@@ -114,3 +114,11 @@ localStorage (written immediately)
 - Changing the interval radio updates the selection.
 - Reloading the page preserves the selected interval (localStorage persistence).
 - After changing the interval and reloading, the Metriche tab uses the persisted value (interval behaviour verified by unit tests; E2E covers persistence only).
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — matches spec, scope expanded.**
+
+`SettingsPage.tsx` hosts three cards in a single tab: Metriche (auto-refresh interval), Webhook — valori predefiniti (enabled default + retry defaults), Cronologia consegne (page size). `useSettings.ts` is the single source of truth with localStorage persistence + deep-merge updates + validation on read. Unit tests cover defaults, persistence, and malformed-JSON fallback. Of the two "out of scope" items in the original spec, the delivery-history page size was pulled into the same feature wave (see `2026-04-07-delivery-history-pagination-design.md` and `2026-04-07-webhook-defaults-settings-design.md`).

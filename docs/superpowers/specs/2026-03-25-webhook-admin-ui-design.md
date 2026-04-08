@@ -403,3 +403,13 @@ Pin `@patternfly/react-core` and `@patternfly/react-table` to `^5.4` in `package
 ### Error boundary
 
 A top-level React `ErrorBoundary` component wraps the app. If a component throws during rendering, it shows a PatternFly `EmptyState` with the error message and a "Reload" button instead of a white screen.
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — with deviation on auth client.**
+
+Deviation: the spec prescribes `clientId: 'security-admin-console'` (reusing the built-in Keycloak client). The implementation uses a dedicated `webhook-ui` client, **auto-provisioned on first UI access** by `WebhooksResource.java:451-455` (`realm.addClient(UI_CLIENT_ID)`). Rationale: decouples the admin UI from the Keycloak console client and avoids requiring realm config changes. The demo realm does not register `webhook-ui` explicitly — it's created lazily by the provider.
+
+The rest of the spec (JAX-RS routing, placeholder injection, Vite build, React/PatternFly structure, modals, ErrorBoundary) matches the implementation.

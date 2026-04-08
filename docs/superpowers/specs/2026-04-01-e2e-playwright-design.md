@@ -214,3 +214,15 @@ jobs:
 - Load / performance testing
 - Visual regression testing
 - Parallel test execution across multiple workers (single worker to avoid state conflicts)
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — exceeds original scope.**
+
+Original 4 spec files (`01-smoke`, `02-crud`, `03-delivery`, `04-circuit`) all present. Added beyond spec:
+- `05-metrics.spec.ts` — metrics page tests (added with the metrics UI feature).
+- `06-settings.spec.ts` — settings page tests (added with the settings feature).
+
+Post-spec refactor (v1.14.3, branch `refactor/e2e-cleanup`): extracted shared helpers to `e2e/fixtures/` (`admin-events.ts`, `webhook-helpers.ts`, `labels.it.ts`, `consumer.ts`), replaced all `waitForTimeout` with `expect.poll`, removed redundant `waitForLoadState('networkidle')`, added per-test webhook cleanup auto-fixture. Suite wall-time 3.1m → 1.3m (-58%). See `e2e/REVIEW.md` for the full roadmap. Residual nits (N5/N6/N8/N9) tracked but not yet actioned.

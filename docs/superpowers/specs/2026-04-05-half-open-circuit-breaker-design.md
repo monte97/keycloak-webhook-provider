@@ -129,3 +129,11 @@ if (!cb.allowRequest()) {
 - Persisting HALF_OPEN state to database
 - Queuing events during HALF_OPEN (decided against — events are skipped and retried via their own backoff)
 - Configurable probe count (always exactly 1)
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — matches spec.**
+
+State machine lives in `CircuitBreaker.java` with `probeInFlight` (`AtomicBoolean`) for single-probe enforcement, `allowRequest()` handling CLOSED/HALF_OPEN/OPEN→HALF_OPEN transitions, and `onSuccess`/`onFailure` resetting the probe flag. Metrics gauge in `WebhookMetrics.java:112-115` reports CLOSED=0, HALF_OPEN=1, OPEN=2. HALF_OPEN remains transient (never persisted), as designed.

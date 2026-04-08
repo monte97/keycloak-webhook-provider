@@ -200,3 +200,11 @@ New file `jpa-changelog-webhook-1.1.0.xml`:
 Add `WEBHOOK_ENCRYPTION_KEY` to the Keycloak service in `docker-compose.yml` (or the demo stack equivalent) so the plugin loads in development.
 
 Generate a dev-only key: `openssl rand -base64 32`
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — matches spec.**
+
+AES-256-GCM round-trip in `SecretEncryptionConverter.java` (IV || ciphertext || GCM-tag, Base64-encoded), key validation + `volatile`-backed init in `EncryptionKeyProvider.java`, `@Convert` decorator on `WebhookEntity.secret`, Liquibase migration `jpa-changelog-webhook-1.1.0.xml` widens the column VARCHAR(255) → VARCHAR(512). Unit tests cover round-trip, null input, random IV, wrong key, garbage ciphertext, missing/wrong-length env var.

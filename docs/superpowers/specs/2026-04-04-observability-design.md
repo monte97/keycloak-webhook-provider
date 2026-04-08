@@ -146,3 +146,13 @@ The JUL logger is configured programmatically in `WebhookEventListenerProviderFa
 **Structured logging:**
 - Unit test `JsonFormatter`: verify output is valid JSON with all required fields
 - Unit test `AuditLogger`: verify correct event names and fields for each log method
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — matches spec.**
+
+All 8 metrics in `WebhookMetrics.java`, Prometheus text-format endpoint `GET /realms/{realm}/webhooks/metrics` guarded by `requireViewEvents()` in `WebhooksResource.java:432-447`. Structured logging via `AuditLogger.java` + custom `JsonFormatter.java`.
+
+Nit: the HELP text for `webhook_circuit_state` in `WebhookMetrics.java:77` still reads "1=HALF_OPEN reserved for future use" — stale since half-open was implemented (see `2026-04-05-half-open-circuit-breaker-design.md`). Non-functional, but worth cleaning up on the next touch.

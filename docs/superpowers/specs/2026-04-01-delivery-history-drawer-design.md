@@ -129,3 +129,15 @@ Unit tests for `DeliveryDrawer.tsx`:
 - Configurable hours window for resend-failed (fixed at 24h)
 - Pagination of sends (capped at 50)
 - Per-send resend action (`POST /{id}/sends/{sid}/resend`)
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — exceeds original scope.**
+
+Two items originally listed as "out of scope" were added in later iterations and are now in production:
+- **Pagination of sends**: implemented in `DeliveryDrawer.tsx:84-91,353-372` with Prev/Next controls. Page size configurable via Settings → Cronologia consegne. See spec `2026-04-07-delivery-history-pagination-design.md`.
+- **Per-send resend action**: implemented in `DeliveryDrawer.tsx:154` with a confirmation modal and force-resend support when the circuit is OPEN. See spec `2026-04-05-resend-by-delivery-id-design.md`.
+
+The core drawer design (circuit section, send history table, filter toggle, resend-failed, reset circuit) matches the spec.

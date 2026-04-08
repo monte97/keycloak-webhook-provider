@@ -122,3 +122,11 @@ Minimal realm import:
 - Automated assertions / pass-fail exit codes (this is a demo, not a CI test)
 - TLS / production hardening
 - Persistent webhook history across restarts
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — matches spec.**
+
+All 5 services (postgres, keycloak, consumer, setup, generator) present in `demo/docker-compose.yml`. Realm config in `demo/keycloak/realm-demo.json` wires the `webhook-provider` events listener. Setup/generator scripts under `demo/setup/run.sh` and `demo/generator/run.sh`. `Makefile` exposes `test-e2e` and helper targets.

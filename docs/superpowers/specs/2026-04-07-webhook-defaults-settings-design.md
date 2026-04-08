@@ -171,3 +171,11 @@ Update §7 "Impostazioni" in `docs/user-guide/guide-en.md` and `guide-it.md`:
 - Document the new "Webhook — valori predefiniti" card.
 - Describe each setting and its effect on new webhook creation.
 - Update screenshot `07-settings-page.png`.
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — matches spec.**
+
+`WebhookDefaults` interface and defaults in `useSettings.ts:3-12,24-28`, deep-merge preserves sibling fields (`useSettings.ts:84-107`). `SettingsPage.tsx:126-160` renders the card with Switch + `RetryInput` controls; the input validates positive integers, null on empty, and shows field-level error state. `WebhookModal.tsx:34,48,73-81` consumes the defaults in create mode only; edit mode ignores them. `App.tsx:35` threads settings through to the table and drawer. Immediate-apply (no Save button), as specified. Tests cover deep-merge and input validation.

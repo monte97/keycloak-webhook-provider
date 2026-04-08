@@ -223,3 +223,11 @@ localStorage
 Update §3 "Delivery history" (or §7 "Settings") in both `guide-en.md` and `guide-it.md` to document:
 - Pagination controls in the drawer
 - Page size configurable in Settings → Cronologia consegne
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — matches spec.**
+
+Page size (10/25/50/100, default 50) lives in `useSettings.ts:11,23` as `deliveryHistoryPageSize`. Pagination state (`currentPage`, `hasMore`) and Prev/Next controls in `DeliveryDrawer.tsx:58-59,84-91,353-372`. Reset logic on webhook/filter/pageSize change in place.

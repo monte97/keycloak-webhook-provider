@@ -132,3 +132,11 @@ New tests:
 - `resend_of` audit chain (deferred with above)
 - HALF_OPEN circuit breaker state (separate roadmap item)
 - Bulk force-resend
+
+---
+
+## Implementation Status
+
+**Implemented in v1.14.3 — matches spec.**
+
+`WebhooksResource.java:272-296` exposes `resendSingle()` with `?force=true|false` query param. When circuit is OPEN and `force=false`, returns 409. When `force=true`, bypasses the circuit check but still updates CB state based on the dispatch outcome. Frontend wires the force flag via `webhookApi.ts:84-86` and the per-send resend modal in `DeliveryDrawer.tsx`.
