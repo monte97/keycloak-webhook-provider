@@ -220,6 +220,7 @@ export function WebhookTable({ api, defaults, pageSize }: { api: WebhookApiClien
               api={api}
               onClose={() => setDrawerWebhook(null)}
               onCircuitReset={handleCircuitReset}
+              onWebhookChange={fetchWebhooks}
               pageSize={pageSize}
             />
           }

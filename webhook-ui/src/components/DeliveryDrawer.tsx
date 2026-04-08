@@ -24,6 +24,7 @@ interface DeliveryDrawerProps {
   api: WebhookApiClient;
   onClose: () => void;
   onCircuitReset: (id: string) => void;
+  onWebhookChange?: () => void;
   pageSize: number;
 }
 
@@ -43,6 +44,7 @@ export function DeliveryDrawer({
   api,
   onClose,
   onCircuitReset,
+  onWebhookChange,
   pageSize,
 }: DeliveryDrawerProps) {
   const [sends, setSends] = useState<WebhookSend[]>([]);
@@ -201,6 +203,7 @@ export function DeliveryDrawer({
       });
       setRotationModalMode(null);
       setDisclosedSecret(resp.newSecret);
+      onWebhookChange?.();
     } catch (e) {
       setRotationError(String(e));
     }
@@ -210,6 +213,7 @@ export function DeliveryDrawer({
     if (!webhook) return;
     try {
       await api.completeRotation(webhook.id);
+      onWebhookChange?.();
     } catch (e) {
       setRotationError(String(e));
     }

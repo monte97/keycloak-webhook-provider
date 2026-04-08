@@ -68,8 +68,8 @@ test.describe('Secret rotation', () => {
       )
       .toMatchObject({ hasSecondarySecret: true });
 
-    // 8. Drawer shows Rotating badge
-    await expect(page.getByText(/rotating/i).first()).toBeVisible();
+    // 8. Drawer shows Rotating badge (drawerWebhook refreshed by onWebhookChange callback)
+    await expect(page.getByText(/rotating/i).first()).toBeVisible({ timeout: 10_000 });
 
     // 9. Click Complete rotation now
     await page.getByRole('button', { name: /complete rotation/i }).click();
