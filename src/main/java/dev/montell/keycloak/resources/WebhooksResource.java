@@ -75,10 +75,21 @@ public class WebhooksResource {
             @QueryParam("first") @DefaultValue("0") Integer first,
             @QueryParam("max") @DefaultValue("100") Integer max) {
         requireViewEvents();
-        return provider()
-                .getWebhooksStream(realm, first, max)
-                .map(WebhookRepresentation::from)
-                .toList();
+        Instant now = Instant.now();
+        List<WebhookModel> all = provider().getWebhooksStream(realm, first, max).toList();
+
+        int rotatingCount = 0;
+        for (WebhookModel w : all) {
+            w.expireRotationIfDue(now);
+            if (w.getSecondarySecret() != null && !w.getSecondarySecret().isBlank()) {
+                rotatingCount++;
+            }
+        }
+
+        var metrics = dev.montell.keycloak.dispatch.WebhookComponentHolder.metrics();
+        if (metrics != null) metrics.setRotationsInProgress(realm.getId(), rotatingCount);
+
+        return all.stream().map(WebhookRepresentation::from).toList();
     }
 
     // --- GET /count ---
