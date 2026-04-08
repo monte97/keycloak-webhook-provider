@@ -27,7 +27,13 @@ class HttpWebhookSenderTest {
 
         HttpSendResult result =
                 new HttpWebhookSender(client)
-                        .send("https://example.com/hook", "{}", "wh-id", "secret", "HmacSHA256", null);
+                        .send(
+                                "https://example.com/hook",
+                                "{}",
+                                "wh-id",
+                                "secret",
+                                "HmacSHA256",
+                                null);
 
         assertTrue(result.success());
         assertEquals(200, result.httpStatus());
@@ -43,7 +49,13 @@ class HttpWebhookSenderTest {
 
         HttpSendResult result =
                 new HttpWebhookSender(client)
-                        .send("https://example.com/hook", "{}", "wh-id", "secret", "HmacSHA256", null);
+                        .send(
+                                "https://example.com/hook",
+                                "{}",
+                                "wh-id",
+                                "secret",
+                                "HmacSHA256",
+                                null);
 
         assertFalse(result.success());
         assertEquals(500, result.httpStatus());
@@ -215,8 +227,14 @@ class HttpWebhookSenderTest {
         assertTrue(parts[0].startsWith("sha256="));
         assertTrue(parts[1].startsWith("sha256="));
 
-        String expectedPrimary = "sha256=" + dev.montell.keycloak.sender.HmacSigner.sign("{}", "primary", "HmacSHA256");
-        String expectedSecondary = "sha256=" + dev.montell.keycloak.sender.HmacSigner.sign("{}", "secondary", "HmacSHA256");
+        String expectedPrimary =
+                "sha256="
+                        + dev.montell.keycloak.sender.HmacSigner.sign(
+                                "{}", "primary", "HmacSHA256");
+        String expectedSecondary =
+                "sha256="
+                        + dev.montell.keycloak.sender.HmacSigner.sign(
+                                "{}", "secondary", "HmacSHA256");
         assertEquals(expectedPrimary, parts[0]);
         assertEquals(expectedSecondary, parts[1]);
     }

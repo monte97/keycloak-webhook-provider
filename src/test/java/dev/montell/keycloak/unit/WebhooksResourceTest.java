@@ -5,9 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import org.junit.jupiter.api.Nested;
-import org.mockito.ArgumentCaptor;
-
 import dev.montell.keycloak.dispatch.CircuitBreaker;
 import dev.montell.keycloak.dispatch.CircuitBreakerRegistry;
 import dev.montell.keycloak.dispatch.WebhookComponentHolder;
@@ -29,11 +26,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.services.managers.AuthenticationManager;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -235,7 +234,13 @@ class WebhooksResourceTest {
         WebhookModel w = mockWebhook("wh-1");
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
-        when(sender.send(anyString(), payloadCaptor.capture(), eq("wh-1"), isNull(), isNull(), isNull()))
+        when(sender.send(
+                        anyString(),
+                        payloadCaptor.capture(),
+                        eq("wh-1"),
+                        isNull(),
+                        isNull(),
+                        isNull()))
                 .thenReturn(new HttpSendResult(200, true, 42L, null));
 
         Response resp = resource.testWebhook("wh-1");
@@ -697,7 +702,8 @@ class WebhooksResourceTest {
 
             assertEquals(
                     400,
-                    resource.rotateSecret("wid", java.util.Map.of("mode", "graceful", "graceDays", 0))
+                    resource.rotateSecret(
+                                    "wid", java.util.Map.of("mode", "graceful", "graceDays", 0))
                             .getStatus());
             assertEquals(
                     400,

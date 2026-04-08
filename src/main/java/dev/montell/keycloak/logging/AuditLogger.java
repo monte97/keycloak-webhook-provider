@@ -108,7 +108,8 @@ public final class AuditLogger {
     public static void secretRotated(
             String realm, String webhookId, String mode, Integer graceDays, String userId) {
         Map<String, Object> fields =
-                baseFields("webhook.secret.rotated", "Webhook secret rotated", realm, webhookId, null);
+                baseFields(
+                        "webhook.secret.rotated", "Webhook secret rotated", realm, webhookId, null);
         fields.put("mode", mode);
         if (graceDays != null) fields.put("grace_days", graceDays);
         if (userId != null) fields.put("user_id", userId);

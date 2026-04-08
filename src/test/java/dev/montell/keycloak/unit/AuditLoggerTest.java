@@ -140,8 +140,7 @@ class AuditLoggerTest {
 
     @Test
     void secretRotated_emits_without_exception() {
-        assertDoesNotThrow(
-                () -> AuditLogger.secretRotated("demo", "wid", "graceful", 7, "user1"));
+        assertDoesNotThrow(() -> AuditLogger.secretRotated("demo", "wid", "graceful", 7, "user1"));
     }
 
     @Test

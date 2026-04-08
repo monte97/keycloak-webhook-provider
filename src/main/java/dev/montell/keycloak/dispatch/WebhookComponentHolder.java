@@ -25,7 +25,8 @@ public final class WebhookComponentHolder {
         registry = reg;
     }
 
-    public static void init(HttpWebhookSender sender, CircuitBreakerRegistry reg, WebhookMetrics m) {
+    public static void init(
+            HttpWebhookSender sender, CircuitBreakerRegistry reg, WebhookMetrics m) {
         httpSender = sender;
         registry = reg;
         metrics = m;

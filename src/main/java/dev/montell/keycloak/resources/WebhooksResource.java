@@ -48,6 +48,8 @@ import org.keycloak.services.resources.admin.permissions.AdminPermissions;
 @Consumes(MediaType.APPLICATION_JSON)
 public class WebhooksResource {
 
+    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
+
     private static final ObjectMapper MAPPER =
             new ObjectMapper()
                     .registerModule(new JavaTimeModule())
@@ -231,8 +233,7 @@ public class WebhooksResource {
     // --- POST /{id}/rotate-secret ---
     @POST
     @Path("{id}/rotate-secret")
-    public Response rotateSecret(
-            @PathParam("id") String id, java.util.Map<String, ?> body) {
+    public Response rotateSecret(@PathParam("id") String id, java.util.Map<String, ?> body) {
         requireManageEvents();
         if (body == null || !body.containsKey("mode")) {
             return Response.status(400).entity("mode is required").build();
@@ -292,9 +293,10 @@ public class WebhooksResource {
         var metrics = dev.montell.keycloak.dispatch.WebhookComponentHolder.metrics();
         if (metrics != null) metrics.recordSecretRotation(realm.getId(), mode);
         var authResultValue = authResult();
-        String userId = (authResultValue != null && authResultValue.getUser() != null)
-                ? authResultValue.getUser().getId()
-                : "unknown";
+        String userId =
+                (authResultValue != null && authResultValue.getUser() != null)
+                        ? authResultValue.getUser().getId()
+                        : "unknown";
         dev.montell.keycloak.logging.AuditLogger.secretRotated(
                 realm.getId(), id, mode, "graceful".equals(mode) ? graceDays : null, userId);
 
@@ -309,7 +311,7 @@ public class WebhooksResource {
 
     private static String generateSecret() {
         byte[] raw = new byte[32];
-        new java.security.SecureRandom().nextBytes(raw);
+        SECURE_RANDOM.nextBytes(raw);
         return java.util.Base64.getEncoder().encodeToString(raw);
     }
 
@@ -334,9 +336,10 @@ public class WebhooksResource {
         var metrics = dev.montell.keycloak.dispatch.WebhookComponentHolder.metrics();
         if (metrics != null) metrics.recordSecretRotation(realm.getId(), "completed");
         var authResultValue = authResult();
-        String userId = (authResultValue != null && authResultValue.getUser() != null)
-                ? authResultValue.getUser().getId()
-                : "unknown";
+        String userId =
+                (authResultValue != null && authResultValue.getUser() != null)
+                        ? authResultValue.getUser().getId()
+                        : "unknown";
         dev.montell.keycloak.logging.AuditLogger.rotationCompleted(realm.getId(), id, userId);
 
         return Response.noContent().build();
@@ -382,7 +385,14 @@ public class WebhooksResource {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             return Response.serverError().entity("Failed to serialize test payload").build();
         }
-        var result = sender.send(w.getUrl(), payload, w.getId(), w.getSecret(), w.getAlgorithm(), w.getSecondarySecret());
+        var result =
+                sender.send(
+                        w.getUrl(),
+                        payload,
+                        w.getId(),
+                        w.getSecret(),
+                        w.getAlgorithm(),
+                        w.getSecondarySecret());
         return Response.ok(
                         java.util.Map.of(
                                 "httpStatus", result.httpStatus(),

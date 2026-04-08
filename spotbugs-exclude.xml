@@ -50,4 +50,10 @@
     <Class name="dev.montell.keycloak.dispatch.WebhookEventDispatcher"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
+
+  <!-- WebhookComponentHolder is an intentional singleton holder — static field + accessor are by design -->
+  <Match>
+    <Class name="dev.montell.keycloak.dispatch.WebhookComponentHolder"/>
+    <Bug pattern="EI_EXPOSE_STATIC_REP2,MS_EXPOSE_REP"/>
+  </Match>
 </FindBugsFilter>

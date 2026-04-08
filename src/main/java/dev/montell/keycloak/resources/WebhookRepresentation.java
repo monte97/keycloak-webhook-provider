@@ -43,8 +43,7 @@ public class WebhookRepresentation {
         r.createdAt = m.getCreatedAt();
         r.retryMaxElapsedSeconds = m.getRetryMaxElapsedSeconds();
         r.retryMaxIntervalSeconds = m.getRetryMaxIntervalSeconds();
-        r.hasSecondarySecret =
-                m.getSecondarySecret() != null && !m.getSecondarySecret().isBlank();
+        r.hasSecondarySecret = m.getSecondarySecret() != null && !m.getSecondarySecret().isBlank();
         r.rotationExpiresAt = m.getRotationExpiresAt();
         r.rotationStartedAt = m.getRotationStartedAt();
         return r;

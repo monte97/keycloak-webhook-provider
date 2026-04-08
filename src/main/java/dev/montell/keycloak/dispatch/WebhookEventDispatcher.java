@@ -211,8 +211,7 @@ public class WebhookEventDispatcher {
                                 .forEach(
                                         w -> {
                                             if (w.expireRotationIfDue(now)) {
-                                                metrics.recordSecretRotation(
-                                                        realmId, "expired");
+                                                metrics.recordSecretRotation(realmId, "expired");
                                                 dev.montell.keycloak.logging.AuditLogger
                                                         .rotationExpired(realmId, w.getId());
                                             }

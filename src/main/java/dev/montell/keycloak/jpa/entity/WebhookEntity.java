@@ -243,8 +243,8 @@ public class WebhookEntity {
      * scheduled cleanup job. Idempotent — a second call on the same entity returns {@code false}.
      *
      * @param now current instant (injectable for tests)
-     * @return {@code true} if the rotation was expired and the entity was mutated; {@code false}
-     *     if no rotation was in progress or the rotation window has not yet elapsed
+     * @return {@code true} if the rotation was expired and the entity was mutated; {@code false} if
+     *     no rotation was in progress or the rotation window has not yet elapsed
      */
     public boolean expireRotationIfDue(Instant now) {
         if (secondarySecret == null) return false;
