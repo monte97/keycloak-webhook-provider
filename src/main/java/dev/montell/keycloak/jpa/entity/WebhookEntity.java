@@ -236,6 +236,26 @@ public class WebhookEntity {
         this.rotationStartedAt = rotationStartedAt;
     }
 
+    /**
+     * Clears the secondary secret and rotation timestamps if the rotation window has elapsed.
+     *
+     * <p>Called lazily at dispatch time and by the list endpoint sweep, avoiding the need for a
+     * scheduled cleanup job. Idempotent — a second call on the same entity returns {@code false}.
+     *
+     * @param now current instant (injectable for tests)
+     * @return {@code true} if the rotation was expired and the entity was mutated; {@code false}
+     *     if no rotation was in progress or the rotation window has not yet elapsed
+     */
+    public boolean expireRotationIfDue(Instant now) {
+        if (secondarySecret == null) return false;
+        if (rotationExpiresAt == null) return false;
+        if (rotationExpiresAt.isAfter(now)) return false;
+        secondarySecret = null;
+        rotationExpiresAt = null;
+        rotationStartedAt = null;
+        return true;
+    }
+
     public Set<String> getEventTypes() {
         return eventTypes;
     }
