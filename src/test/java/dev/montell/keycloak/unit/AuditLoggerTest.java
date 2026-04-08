@@ -139,6 +139,22 @@ class AuditLoggerTest {
     }
 
     @Test
+    void secretRotated_emits_without_exception() {
+        assertDoesNotThrow(
+                () -> AuditLogger.secretRotated("demo", "wid", "graceful", 7, "user1"));
+    }
+
+    @Test
+    void rotationCompleted_emits_without_exception() {
+        assertDoesNotThrow(() -> AuditLogger.rotationCompleted("demo", "wid", "user1"));
+    }
+
+    @Test
+    void rotationExpired_emits_without_exception() {
+        assertDoesNotThrow(() -> AuditLogger.rotationExpired("demo", "wid"));
+    }
+
+    @Test
     void init_isIdempotent_doesNotAddDuplicateHandlers() {
         int before = julLogger.getHandlers().length;
         AuditLogger.init(); // should be no-op since handlers already exist

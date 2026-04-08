@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import org.junit.jupiter.api.Nested;
+import org.mockito.ArgumentCaptor;
+
 import dev.montell.keycloak.dispatch.CircuitBreaker;
 import dev.montell.keycloak.dispatch.CircuitBreakerRegistry;
 import dev.montell.keycloak.dispatch.WebhookComponentHolder;
@@ -232,7 +235,7 @@ class WebhooksResourceTest {
         WebhookModel w = mockWebhook("wh-1");
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
-        when(sender.send(anyString(), payloadCaptor.capture(), eq("wh-1"), isNull(), isNull()))
+        when(sender.send(anyString(), payloadCaptor.capture(), eq("wh-1"), isNull(), isNull(), isNull()))
                 .thenReturn(new HttpSendResult(200, true, 42L, null));
 
         Response resp = resource.testWebhook("wh-1");
@@ -296,7 +299,7 @@ class WebhooksResourceTest {
         CircuitBreakerRegistry realRegistry = new CircuitBreakerRegistry(5, 60);
         WebhookComponentHolder.init(sender, realRegistry);
 
-        when(sender.send(anyString(), anyString(), anyString(), any(), any()))
+        when(sender.send(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(new HttpSendResult(200, true, 10L, null));
 
         Response resp = resource.resendSingle("wh-1", "send-1", false);
@@ -363,7 +366,7 @@ class WebhooksResourceTest {
         when(provider.getWebhookById(realm, "wh-1")).thenReturn(w);
         when(provider.getSendById(realm, "send-1")).thenReturn(s);
         when(provider.getEventById(realm, "ev-1")).thenReturn(e);
-        when(sender.send(anyString(), anyString(), anyString(), any(), any()))
+        when(sender.send(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(new HttpSendResult(200, true, 10L, null));
 
         Response resp = resource.resendSingle("wh-1", "send-1", true);
@@ -397,7 +400,7 @@ class WebhooksResourceTest {
         when(provider.getEventById(realm, "ev-1")).thenReturn(e1);
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
-        when(sender.send(anyString(), anyString(), anyString(), any(), any()))
+        when(sender.send(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(new HttpSendResult(200, true, 5L, null));
 
         Response resp = resource.resendFailed("wh-1", 24);
@@ -570,7 +573,7 @@ class WebhooksResourceTest {
         when(provider.getEventById(realm, "ev-1")).thenReturn(e1);
         when(provider.getEventById(realm, "ev-2")).thenReturn(e2);
 
-        when(sender.send(anyString(), anyString(), anyString(), any(), any()))
+        when(sender.send(anyString(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(new HttpSendResult(500, false, 5L, null));
 
         Response resp = resource.resendFailed("wh-1", 24);
@@ -583,5 +586,172 @@ class WebhooksResourceTest {
         assertEquals(1, body.get("skipped")); // third skipped because CB opened
         // third event should never be loaded (CB blocked it)
         verify(provider, never()).getEventById(realm, "ev-3");
+    }
+
+    // -----------------------------------------------------------------------
+    // POST /{id}/rotate-secret
+    // -----------------------------------------------------------------------
+
+    @Nested
+    class RotateSecret {
+
+        @Test
+        void graceful_on_active_webhook_returns_200_with_new_secret_and_updates_state() {
+            WebhookModel w = mock(WebhookModel.class);
+            when(w.getSecret()).thenReturn("old");
+            when(w.getSecondarySecret()).thenReturn(null);
+            when(provider.getWebhookById(realm, "wid")).thenReturn(w);
+
+            var req = java.util.Map.of("mode", "graceful", "graceDays", 7);
+            Response resp = resource.rotateSecret("wid", req);
+
+            assertEquals(200, resp.getStatus());
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> body = (java.util.Map<String, Object>) resp.getEntity();
+            assertTrue(body.containsKey("newSecret"));
+            String newSecret = (String) body.get("newSecret");
+            assertNotNull(newSecret);
+            assertTrue(newSecret.length() > 20, "expected base64-encoded 32-byte secret");
+            assertEquals("graceful", body.get("mode"));
+            assertNotNull(body.get("rotationExpiresAt"));
+
+            verify(w).setSecondarySecret("old");
+            verify(w).setSecret(newSecret);
+            verify(w).setRotationStartedAt(any(Instant.class));
+            verify(w).setRotationExpiresAt(any(Instant.class));
+        }
+
+        @Test
+        void graceful_defaults_graceDays_to_7_when_omitted() {
+            WebhookModel w = mock(WebhookModel.class);
+            when(w.getSecret()).thenReturn("old");
+            when(w.getSecondarySecret()).thenReturn(null);
+            when(provider.getWebhookById(realm, "wid")).thenReturn(w);
+
+            var req = java.util.Map.of("mode", "graceful");
+            Response resp = resource.rotateSecret("wid", req);
+
+            assertEquals(200, resp.getStatus());
+            ArgumentCaptor<Instant> expiryCap = ArgumentCaptor.forClass(Instant.class);
+            verify(w).setRotationExpiresAt(expiryCap.capture());
+            Instant expected = Instant.now().plus(java.time.Duration.ofDays(7));
+            assertTrue(
+                    Math.abs(expiryCap.getValue().getEpochSecond() - expected.getEpochSecond())
+                            < 60);
+        }
+
+        @Test
+        void graceful_on_already_rotating_webhook_returns_409() {
+            WebhookModel w = mock(WebhookModel.class);
+            when(w.getSecondarySecret()).thenReturn("existing-secondary");
+            when(w.getRotationExpiresAt()).thenReturn(Instant.now().plusSeconds(3600));
+            when(provider.getWebhookById(realm, "wid")).thenReturn(w);
+
+            var req = java.util.Map.of("mode", "graceful");
+            Response resp = resource.rotateSecret("wid", req);
+
+            assertEquals(409, resp.getStatus());
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> body = (java.util.Map<String, Object>) resp.getEntity();
+            assertEquals("rotation_in_progress", body.get("error"));
+            verify(w, never()).setSecret(anyString());
+        }
+
+        @Test
+        void emergency_on_rotating_webhook_discards_secondary_and_succeeds() {
+            WebhookModel w = mock(WebhookModel.class);
+            when(w.getSecret()).thenReturn("old-primary");
+            when(w.getSecondarySecret()).thenReturn("stale-secondary");
+            when(provider.getWebhookById(realm, "wid")).thenReturn(w);
+
+            var req = java.util.Map.of("mode", "emergency");
+            Response resp = resource.rotateSecret("wid", req);
+
+            assertEquals(200, resp.getStatus());
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> body = (java.util.Map<String, Object>) resp.getEntity();
+            assertEquals("emergency", body.get("mode"));
+            assertNull(body.get("rotationExpiresAt"));
+            verify(w).setSecondarySecret(null);
+            verify(w).setRotationExpiresAt(null);
+            verify(w).setRotationStartedAt(null);
+        }
+
+        @Test
+        void rejects_missing_mode() {
+            Response resp = resource.rotateSecret("wid", java.util.Map.of());
+            assertEquals(400, resp.getStatus());
+        }
+
+        @Test
+        void rejects_unknown_mode() {
+            Response resp = resource.rotateSecret("wid", java.util.Map.of("mode", "bogus"));
+            assertEquals(400, resp.getStatus());
+        }
+
+        @Test
+        void rejects_graceDays_out_of_range() {
+            WebhookModel w = mock(WebhookModel.class);
+            when(w.getSecondarySecret()).thenReturn(null);
+            when(provider.getWebhookById(realm, "wid")).thenReturn(w);
+
+            assertEquals(
+                    400,
+                    resource.rotateSecret("wid", java.util.Map.of("mode", "graceful", "graceDays", 0))
+                            .getStatus());
+            assertEquals(
+                    400,
+                    resource.rotateSecret(
+                                    "wid", java.util.Map.of("mode", "graceful", "graceDays", 31))
+                            .getStatus());
+        }
+
+        @Test
+        void returns_404_for_unknown_webhook() {
+            when(provider.getWebhookById(realm, "missing")).thenReturn(null);
+            assertThrows(
+                    NotFoundException.class,
+                    () -> resource.rotateSecret("missing", java.util.Map.of("mode", "graceful")));
+        }
+    }
+
+    @Nested
+    class CompleteRotation {
+
+        @Test
+        void clears_secondary_on_rotating_webhook() {
+            WebhookModel w = mock(WebhookModel.class);
+            when(w.getSecondarySecret()).thenReturn("secondary-in-progress");
+            when(provider.getWebhookById(realm, "wid")).thenReturn(w);
+
+            Response resp = resource.completeRotation("wid");
+
+            assertEquals(204, resp.getStatus());
+            verify(w).setSecondarySecret(null);
+            verify(w).setRotationExpiresAt(null);
+            verify(w).setRotationStartedAt(null);
+            // primary untouched
+            verify(w, never()).setSecret(anyString());
+        }
+
+        @Test
+        void returns_409_when_no_rotation_in_progress() {
+            WebhookModel w = mock(WebhookModel.class);
+            when(w.getSecondarySecret()).thenReturn(null);
+            when(provider.getWebhookById(realm, "wid")).thenReturn(w);
+
+            Response resp = resource.completeRotation("wid");
+
+            assertEquals(409, resp.getStatus());
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> body = (java.util.Map<String, Object>) resp.getEntity();
+            assertEquals("no_rotation_in_progress", body.get("error"));
+        }
+
+        @Test
+        void returns_404_for_unknown_webhook() {
+            when(provider.getWebhookById(realm, "missing")).thenReturn(null);
+            assertThrows(NotFoundException.class, () -> resource.completeRotation("missing"));
+        }
     }
 }

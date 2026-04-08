@@ -7,6 +7,8 @@ import static org.mockito.Mockito.*;
 import dev.montell.keycloak.jpa.entity.*;
 import dev.montell.keycloak.model.*;
 import jakarta.persistence.*;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.keycloak.models.RealmModel;
@@ -185,5 +187,37 @@ class JpaWebhookProviderIT {
         em.clear(); // Force reload from DB
         WebhookModel loaded = provider.getWebhookById(mockRealm, w.getId());
         assertEquals("my-hmac-secret", loaded.getSecret());
+    }
+
+    @Test
+    @Order(21)
+    void secondary_secret_is_encrypted_at_rest_and_decrypted_on_read() {
+        // Create a webhook and set the secondary secret directly
+        WebhookModel w = provider.createWebhook(mockRealm, "https://example.test/hook-enc-test", null);
+        w.setSecret("primary-plaintext");
+        w.setSecondarySecret("secondary-plaintext");
+        w.setRotationStartedAt(Instant.now());
+        w.setRotationExpiresAt(Instant.now().plus(Duration.ofDays(7)));
+        em.getTransaction().commit();
+
+        // Read raw column value via native query to verify ciphertext (not plaintext) is stored
+        em.getTransaction().begin();
+        Object[] row = (Object[]) em.createNativeQuery(
+                        "SELECT SECRET, SECONDARY_SECRET FROM WEBHOOK WHERE ID = ?1")
+                .setParameter(1, w.getId())
+                .getSingleResult();
+        String rawSecondary = (String) row[1];
+
+        assertNotNull(rawSecondary);
+        assertNotEquals("secondary-plaintext", rawSecondary,
+                "secondary should be stored as ciphertext");
+        assertTrue(rawSecondary.length() > "secondary-plaintext".length());
+
+        // Read via provider — plaintext round-trips correctly
+        em.clear(); // force reload from DB
+        WebhookModel loaded = provider.getWebhookById(mockRealm, w.getId());
+        assertEquals("secondary-plaintext", loaded.getSecondarySecret());
+        assertNotNull(loaded.getRotationExpiresAt());
+        assertNotNull(loaded.getRotationStartedAt());
     }
 }

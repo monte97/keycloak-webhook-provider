@@ -21,6 +21,8 @@ public class WebhookMetrics {
     private final Counter eventsDropped;
     private final Gauge circuitState;
     private final Gauge queuePending;
+    private final Counter secretRotations;
+    private final Gauge rotationsInProgress;
 
     public WebhookMetrics() {
         this(CollectorRegistry.defaultRegistry);
@@ -82,6 +84,20 @@ public class WebhookMetrics {
                         .name("webhook_queue_pending")
                         .help("Tasks currently pending in the executor")
                         .register(registry);
+
+        secretRotations =
+                Counter.build()
+                        .name("webhook_secret_rotations_total")
+                        .help("Webhook secret rotations performed (graceful, emergency, expired)")
+                        .labelNames("realm", "mode")
+                        .register(registry);
+
+        rotationsInProgress =
+                Gauge.build()
+                        .name("webhook_rotations_in_progress")
+                        .help("Webhooks currently in rotation (secondary secret active)")
+                        .labelNames("realm")
+                        .register(registry);
     }
 
     public void recordEventReceived(String realm, String eventType) {
@@ -117,5 +133,13 @@ public class WebhookMetrics {
 
     public void setQueuePending(int count) {
         queuePending.set(count);
+    }
+
+    public void recordSecretRotation(String realm, String mode) {
+        secretRotations.labels(realm, mode).inc();
+    }
+
+    public void setRotationsInProgress(String realm, int count) {
+        rotationsInProgress.labels(realm).set(count);
     }
 }

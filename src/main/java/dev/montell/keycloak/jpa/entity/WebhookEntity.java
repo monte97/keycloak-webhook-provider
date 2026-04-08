@@ -76,6 +76,16 @@ public class WebhookEntity {
     @Column(name = "RETRY_MAX_INTERVAL_SECONDS")
     private Integer retryMaxIntervalSeconds;
 
+    @Convert(converter = dev.montell.keycloak.jpa.SecretEncryptionConverter.class)
+    @Column(name = "SECONDARY_SECRET", length = 512)
+    private String secondarySecret;
+
+    @Column(name = "ROTATION_EXPIRES_AT")
+    private Instant rotationExpiresAt;
+
+    @Column(name = "ROTATION_STARTED_AT")
+    private Instant rotationStartedAt;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @Column(name = "EVENT_TYPE")
     @CollectionTable(name = "WEBHOOK_EVENT_TYPE", joinColumns = @JoinColumn(name = "WEBHOOK_ID"))
@@ -200,6 +210,50 @@ public class WebhookEntity {
 
     public void setRetryMaxIntervalSeconds(Integer s) {
         this.retryMaxIntervalSeconds = s;
+    }
+
+    public String getSecondarySecret() {
+        return secondarySecret;
+    }
+
+    public void setSecondarySecret(String secondarySecret) {
+        this.secondarySecret = secondarySecret;
+    }
+
+    public Instant getRotationExpiresAt() {
+        return rotationExpiresAt;
+    }
+
+    public void setRotationExpiresAt(Instant rotationExpiresAt) {
+        this.rotationExpiresAt = rotationExpiresAt;
+    }
+
+    public Instant getRotationStartedAt() {
+        return rotationStartedAt;
+    }
+
+    public void setRotationStartedAt(Instant rotationStartedAt) {
+        this.rotationStartedAt = rotationStartedAt;
+    }
+
+    /**
+     * Clears the secondary secret and rotation timestamps if the rotation window has elapsed.
+     *
+     * <p>Called lazily at dispatch time and by the list endpoint sweep, avoiding the need for a
+     * scheduled cleanup job. Idempotent — a second call on the same entity returns {@code false}.
+     *
+     * @param now current instant (injectable for tests)
+     * @return {@code true} if the rotation was expired and the entity was mutated; {@code false}
+     *     if no rotation was in progress or the rotation window has not yet elapsed
+     */
+    public boolean expireRotationIfDue(Instant now) {
+        if (secondarySecret == null) return false;
+        if (rotationExpiresAt == null) return false;
+        if (rotationExpiresAt.isAfter(now)) return false;
+        secondarySecret = null;
+        rotationExpiresAt = null;
+        rotationStartedAt = null;
+        return true;
     }
 
     public Set<String> getEventTypes() {

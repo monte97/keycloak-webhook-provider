@@ -75,10 +75,21 @@ public class WebhooksResource {
             @QueryParam("first") @DefaultValue("0") Integer first,
             @QueryParam("max") @DefaultValue("100") Integer max) {
         requireViewEvents();
-        return provider()
-                .getWebhooksStream(realm, first, max)
-                .map(WebhookRepresentation::from)
-                .toList();
+        Instant now = Instant.now();
+        List<WebhookModel> all = provider().getWebhooksStream(realm, first, max).toList();
+
+        int rotatingCount = 0;
+        for (WebhookModel w : all) {
+            w.expireRotationIfDue(now);
+            if (w.getSecondarySecret() != null && !w.getSecondarySecret().isBlank()) {
+                rotatingCount++;
+            }
+        }
+
+        var metrics = dev.montell.keycloak.dispatch.WebhookComponentHolder.metrics();
+        if (metrics != null) metrics.setRotationsInProgress(realm.getId(), rotatingCount);
+
+        return all.stream().map(WebhookRepresentation::from).toList();
     }
 
     // --- GET /count ---
@@ -217,6 +228,120 @@ public class WebhooksResource {
         return Response.ok(body).build();
     }
 
+    // --- POST /{id}/rotate-secret ---
+    @POST
+    @Path("{id}/rotate-secret")
+    public Response rotateSecret(
+            @PathParam("id") String id, java.util.Map<String, ?> body) {
+        requireManageEvents();
+        if (body == null || !body.containsKey("mode")) {
+            return Response.status(400).entity("mode is required").build();
+        }
+        String mode = String.valueOf(body.get("mode"));
+        if (!"graceful".equals(mode) && !"emergency".equals(mode)) {
+            return Response.status(400).entity("mode must be 'graceful' or 'emergency'").build();
+        }
+
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+
+        int graceDays = 7;
+        if ("graceful".equals(mode)) {
+            if (body.get("graceDays") != null) {
+                try {
+                    graceDays = ((Number) body.get("graceDays")).intValue();
+                } catch (ClassCastException e) {
+                    return Response.status(400).entity("graceDays must be a number").build();
+                }
+                if (graceDays < 1 || graceDays > 30) {
+                    return Response.status(400)
+                            .entity("graceDays must be between 1 and 30")
+                            .build();
+                }
+            }
+            // Block double-rotation
+            if (w.getSecondarySecret() != null && !w.getSecondarySecret().isBlank()) {
+                var errBody = new java.util.LinkedHashMap<String, Object>();
+                errBody.put("error", "rotation_in_progress");
+                errBody.put(
+                        "expiresAt",
+                        w.getRotationExpiresAt() != null
+                                ? w.getRotationExpiresAt().toString()
+                                : null);
+                return Response.status(409).entity(errBody).build();
+            }
+        }
+
+        String newSecret = generateSecret();
+        Instant now = Instant.now();
+
+        String oldPrimary = w.getSecret();
+        Instant rotationExpiresAt = null;
+        if ("graceful".equals(mode)) {
+            rotationExpiresAt = now.plus(java.time.Duration.ofDays(graceDays));
+            w.setSecondarySecret(oldPrimary);
+            w.setRotationStartedAt(now);
+            w.setRotationExpiresAt(rotationExpiresAt);
+        } else { // emergency
+            w.setSecondarySecret(null);
+            w.setRotationStartedAt(null);
+            w.setRotationExpiresAt(null);
+        }
+        w.setSecret(newSecret);
+
+        var metrics = dev.montell.keycloak.dispatch.WebhookComponentHolder.metrics();
+        if (metrics != null) metrics.recordSecretRotation(realm.getId(), mode);
+        var authResultValue = authResult();
+        String userId = (authResultValue != null && authResultValue.getUser() != null)
+                ? authResultValue.getUser().getId()
+                : "unknown";
+        dev.montell.keycloak.logging.AuditLogger.secretRotated(
+                realm.getId(), id, mode, "graceful".equals(mode) ? graceDays : null, userId);
+
+        var respBody = new java.util.LinkedHashMap<String, Object>();
+        respBody.put("newSecret", newSecret);
+        respBody.put(
+                "rotationExpiresAt",
+                rotationExpiresAt != null ? rotationExpiresAt.toString() : null);
+        respBody.put("mode", mode);
+        return Response.ok(respBody).build();
+    }
+
+    private static String generateSecret() {
+        byte[] raw = new byte[32];
+        new java.security.SecureRandom().nextBytes(raw);
+        return java.util.Base64.getEncoder().encodeToString(raw);
+    }
+
+    // --- POST /{id}/complete-rotation ---
+    @POST
+    @Path("{id}/complete-rotation")
+    public Response completeRotation(@PathParam("id") String id) {
+        requireManageEvents();
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+
+        if (w.getSecondarySecret() == null || w.getSecondarySecret().isBlank()) {
+            return Response.status(409)
+                    .entity(java.util.Map.of("error", "no_rotation_in_progress"))
+                    .build();
+        }
+
+        w.setSecondarySecret(null);
+        w.setRotationExpiresAt(null);
+        w.setRotationStartedAt(null);
+
+        var metrics = dev.montell.keycloak.dispatch.WebhookComponentHolder.metrics();
+        if (metrics != null) metrics.recordSecretRotation(realm.getId(), "completed");
+        var authResultValue = authResult();
+        String userId = (authResultValue != null && authResultValue.getUser() != null)
+                ? authResultValue.getUser().getId()
+                : "unknown";
+        dev.montell.keycloak.logging.AuditLogger.rotationCompleted(realm.getId(), id, userId);
+
+        return Response.noContent().build();
+    }
+
     // --- POST /{id}/circuit/reset ---
     @POST
     @Path("{id}/circuit/reset")
@@ -257,7 +382,7 @@ public class WebhooksResource {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             return Response.serverError().entity("Failed to serialize test payload").build();
         }
-        var result = sender.send(w.getUrl(), payload, w.getId(), w.getSecret(), w.getAlgorithm());
+        var result = sender.send(w.getUrl(), payload, w.getId(), w.getSecret(), w.getAlgorithm(), w.getSecondarySecret());
         return Response.ok(
                         java.util.Map.of(
                                 "httpStatus", result.httpStatus(),
@@ -306,7 +431,8 @@ public class WebhooksResource {
                         event.getEventObject(),
                         w.getId(),
                         w.getSecret(),
-                        w.getAlgorithm());
+                        w.getAlgorithm(),
+                        w.getSecondarySecret());
 
         // Update CB state
         if (result.success()) cb.onSuccess();
@@ -374,7 +500,8 @@ public class WebhooksResource {
                             event.getEventObject(),
                             w.getId(),
                             w.getSecret(),
-                            w.getAlgorithm());
+                            w.getAlgorithm(),
+                            w.getSecondarySecret());
             if (result.success()) cb.onSuccess();
             else cb.onFailure();
             cb.applyTo(w);

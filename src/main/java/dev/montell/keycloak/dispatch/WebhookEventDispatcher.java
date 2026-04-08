@@ -201,13 +201,23 @@ public class WebhookEventDispatcher {
                                 provider.storeEvent(realm, eventType, kcEventId, payloadJson);
                         if (eventModel != null) webhookEventId[0] = eventModel.getId();
 
+                        Instant now = Instant.now();
                         provider.getWebhooksStream(realm)
                                 .filter(WebhookModel::isEnabled)
                                 .filter(
                                         w ->
                                                 EventPatternMatcher.matches(
                                                         w.getEventTypes(), payload.type()))
-                                .forEach(webhooks::add);
+                                .forEach(
+                                        w -> {
+                                            if (w.expireRotationIfDue(now)) {
+                                                metrics.recordSecretRotation(
+                                                        realmId, "expired");
+                                                dev.montell.keycloak.logging.AuditLogger
+                                                        .rotationExpired(realmId, w.getId());
+                                            }
+                                            webhooks.add(w);
+                                        });
                     });
         } catch (Exception e) {
             log.errorf(
@@ -273,7 +283,8 @@ public class WebhookEventDispatcher {
                         payloadJson,
                         webhook.getId(),
                         webhook.getSecret(),
-                        webhook.getAlgorithm());
+                        webhook.getAlgorithm(),
+                        webhook.getSecondarySecret());
         double durationSeconds = (System.nanoTime() - startNanos) / 1_000_000_000.0;
 
         metrics.recordDispatch(realmId, result.success(), durationSeconds);

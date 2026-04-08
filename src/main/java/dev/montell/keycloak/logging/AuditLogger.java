@@ -105,6 +105,39 @@ public final class AuditLogger {
         log(Level.INFO, fields);
     }
 
+    public static void secretRotated(
+            String realm, String webhookId, String mode, Integer graceDays, String userId) {
+        Map<String, Object> fields =
+                baseFields("webhook.secret.rotated", "Webhook secret rotated", realm, webhookId, null);
+        fields.put("mode", mode);
+        if (graceDays != null) fields.put("grace_days", graceDays);
+        if (userId != null) fields.put("user_id", userId);
+        log(Level.INFO, fields);
+    }
+
+    public static void rotationCompleted(String realm, String webhookId, String userId) {
+        Map<String, Object> fields =
+                baseFields(
+                        "webhook.rotation.completed",
+                        "Webhook rotation completed",
+                        realm,
+                        webhookId,
+                        null);
+        if (userId != null) fields.put("user_id", userId);
+        log(Level.INFO, fields);
+    }
+
+    public static void rotationExpired(String realm, String webhookId) {
+        Map<String, Object> fields =
+                baseFields(
+                        "webhook.rotation.expired",
+                        "Webhook rotation expired — secondary secret dropped",
+                        realm,
+                        webhookId,
+                        null);
+        log(Level.INFO, fields);
+    }
+
     public static void eventDropped(String realm, String eventType, int queueSize) {
         Map<String, Object> fields =
                 baseFields(

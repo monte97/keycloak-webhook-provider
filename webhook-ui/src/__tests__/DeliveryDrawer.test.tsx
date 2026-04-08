@@ -72,6 +72,8 @@ function makeApi(overrides: Partial<WebhookApiClient> = {}): WebhookApiClient {
     resendFailed: vi.fn().mockResolvedValue({ resent: 1, failed: 0, skipped: 0 }),
     resendSingle: vi.fn().mockResolvedValue({ httpStatus: 200, success: true, durationMs: 10 }),
     getMetrics: vi.fn().mockResolvedValue(''),
+    rotateSecret: vi.fn().mockResolvedValue({ newSecret: 'abc123', rotationExpiresAt: null, mode: 'graceful' }),
+    completeRotation: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as unknown as WebhookApiClient;
 }
@@ -464,6 +466,57 @@ describe('DeliveryDrawer', () => {
       await waitFor(() => {
         expect(screen.getByText('Pagina 1')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Secret card', () => {
+    it('shows Active label and enabled Rotate button when no rotation is in progress', async () => {
+      const noRotationWebhook: Webhook = { ...webhook, hasSecondarySecret: false };
+      const localApi = makeApi();
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer
+            webhook={noRotationWebhook}
+            api={localApi}
+            onClose={vi.fn()}
+            onCircuitReset={vi.fn()}
+            pageSize={50}
+          />
+        </Drawer>,
+      );
+
+      await waitFor(() => screen.getByText('200'));
+
+      expect(screen.getByText(/^active$/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /rotate secret/i })).not.toBeDisabled();
+      expect(screen.queryByRole('button', { name: /complete rotation/i })).not.toBeInTheDocument();
+    });
+
+    it('shows Rotating label and disables Rotate button when rotation is in progress', async () => {
+      const rotatingWebhook: Webhook = {
+        ...webhook,
+        hasSecondarySecret: true,
+        rotationExpiresAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+        rotationStartedAt: new Date(Date.now() - 60_000).toISOString(),
+      };
+      const localApi = makeApi();
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer
+            webhook={rotatingWebhook}
+            api={localApi}
+            onClose={vi.fn()}
+            onCircuitReset={vi.fn()}
+            pageSize={50}
+          />
+        </Drawer>,
+      );
+
+      await waitFor(() => screen.getByText('200'));
+
+      expect(screen.getByText(/^rotating$/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /rotate secret/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /complete rotation/i })).not.toBeDisabled();
     });
   });
 });

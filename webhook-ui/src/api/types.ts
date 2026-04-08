@@ -9,6 +9,9 @@ export interface Webhook {
   createdAt: string;
   retryMaxElapsedSeconds?: number;
   retryMaxIntervalSeconds?: number;
+  hasSecondarySecret?: boolean;
+  rotationExpiresAt?: string | null;
+  rotationStartedAt?: string | null;
 }
 
 export interface WebhookInput {
@@ -62,6 +65,17 @@ export interface SendResult {
   httpStatus: number;
   success: boolean;
   durationMs: number;
+}
+
+export interface RotateSecretRequest {
+  mode: 'graceful' | 'emergency';
+  graceDays?: number;
+}
+
+export interface RotateSecretResponse {
+  newSecret: string;
+  rotationExpiresAt: string | null;
+  mode: 'graceful' | 'emergency';
 }
 
 export class ApiError extends Error {

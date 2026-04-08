@@ -1,5 +1,6 @@
 package dev.montell.keycloak.dispatch;
 
+import dev.montell.keycloak.metrics.WebhookMetrics;
 import dev.montell.keycloak.sender.HttpWebhookSender;
 
 /**
@@ -15,6 +16,7 @@ public final class WebhookComponentHolder {
 
     private static volatile HttpWebhookSender httpSender;
     private static volatile CircuitBreakerRegistry registry;
+    private static volatile WebhookMetrics metrics;
 
     private WebhookComponentHolder() {}
 
@@ -23,11 +25,21 @@ public final class WebhookComponentHolder {
         registry = reg;
     }
 
+    public static void init(HttpWebhookSender sender, CircuitBreakerRegistry reg, WebhookMetrics m) {
+        httpSender = sender;
+        registry = reg;
+        metrics = m;
+    }
+
     public static HttpWebhookSender httpSender() {
         return httpSender;
     }
 
     public static CircuitBreakerRegistry registry() {
         return registry;
+    }
+
+    public static WebhookMetrics metrics() {
+        return metrics;
     }
 }

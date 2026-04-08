@@ -129,7 +129,51 @@ The response uses Prometheus text format 0.0.4 and exposes the following metric 
 
 ---
 
-## 7. Settings
+## 7. Secret Rotation
+
+Rotating a webhook secret is a two-phase, zero-downtime operation: while the rotation is in progress, outgoing requests carry signatures from both the new and the old secret, so consumers can update their verification key without losing events.
+
+### Starting a rotation
+
+Open the webhook in the admin UI and click **Rotate secret** in the drawer's Secret card. Choose a grace period (1, 7, or 30 days) and confirm. A modal displays the new secret exactly once — copy it and configure it on the consumer side. The old secret continues to verify signatures until the grace period ends or you click **Complete rotation now**.
+
+### Emergency rotation
+
+If the current secret has been compromised, click **Emergency rotate**. You will be asked to type `rotate` to confirm. The new secret replaces the old one immediately — there is no grace period and the old secret is invalidated. Use this only for compromise; it will break any consumer still using the old secret until they are updated.
+
+### Verifying multi-signature headers on the consumer side
+
+During rotation, the `X-Keycloak-Signature` header contains a comma-separated list of signatures:
+
+```
+X-Keycloak-Signature: sha256=<hex1>, sha256=<hex2>
+```
+
+Verify by iterating over the signatures and accepting the payload if **any** signature matches:
+
+```python
+def verify(payload_bytes, header, secrets):
+    parts = [p.strip() for p in header.split(",")]
+    for part in parts:
+        if not part.startswith("sha256="):
+            continue
+        received = part[len("sha256="):]
+        for secret in secrets:
+            expected = hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
+            if hmac.compare_digest(expected, received):
+                return True
+    return False
+```
+
+### Metrics and audit trail
+
+- `webhook_secret_rotations_total{mode}` — count of rotations by mode (`graceful`, `emergency`, `expired`)
+- `webhook_rotations_in_progress{realm}` — current number of rotating webhooks
+- Structured log events: `webhook.secret.rotated`, `webhook.rotation.completed`, `webhook.rotation.expired`
+
+---
+
+## 8. Settings
 
 ![Settings page](screenshots/07-settings-page.png)
 
