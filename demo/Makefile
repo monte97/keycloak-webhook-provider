@@ -1,12 +1,41 @@
-.PHONY: up down restart logs logs-setup logs-generator status urls clean help test-e2e
+.PHONY: up down restart logs logs-setup logs-generator status urls clean help test-e2e check-encryption-key
 
 # ============================================================
 # keycloak-webhook-provider — demo stack
 # Run from this directory: make <target>
 # ============================================================
 
+## check-encryption-key  Verify WEBHOOK_ENCRYPTION_KEY is set and valid (32-byte base64)
+check-encryption-key:
+	@if [ ! -f .env ]; then \
+		echo "ERROR: demo/.env not found. Copy .env.example to .env first:"; \
+		echo "  cp .env.example .env"; \
+		exit 1; \
+	fi
+	@KEY=$$(grep -E '^WEBHOOK_ENCRYPTION_KEY=' .env | cut -d= -f2-); \
+	if [ -z "$$KEY" ]; then \
+		echo "ERROR: WEBHOOK_ENCRYPTION_KEY is not set in demo/.env"; \
+		echo ""; \
+		echo "The webhook provider encrypts HMAC secrets at rest and requires"; \
+		echo "a 256-bit AES key. Generate one and add it to demo/.env:"; \
+		echo ""; \
+		echo "  echo \"WEBHOOK_ENCRYPTION_KEY=\$$(openssl rand -base64 32)\" >> .env"; \
+		echo ""; \
+		exit 1; \
+	fi; \
+	LEN=$$(printf '%s' "$$KEY" | base64 -d 2>/dev/null | wc -c); \
+	if [ "$$LEN" != "32" ]; then \
+		echo "ERROR: WEBHOOK_ENCRYPTION_KEY must decode to exactly 32 bytes (got $$LEN)"; \
+		echo ""; \
+		echo "Generate a fresh key:"; \
+		echo "  openssl rand -base64 32"; \
+		echo ""; \
+		exit 1; \
+	fi; \
+	echo "WEBHOOK_ENCRYPTION_KEY: OK (32 bytes)"
+
 ## up              Start the full demo stack (detached)
-up:
+up: check-encryption-key
 	docker compose up --build -d
 
 ## down            Stop and remove containers (keep volumes)
@@ -14,7 +43,7 @@ down:
 	docker compose down
 
 ## restart         Full teardown (volumes included) and fresh start
-restart:
+restart: check-encryption-key
 	docker compose down -v
 	docker compose up -d
 
@@ -49,5 +78,5 @@ help:
 	@grep -E '^## ' Makefile | sed 's/^## /  make /'
 
 ## test-e2e        Run Playwright E2E suite (boots demo stack automatically)
-test-e2e:
+test-e2e: check-encryption-key
 	cd .. && npm --prefix e2e test

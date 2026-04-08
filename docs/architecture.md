@@ -104,7 +104,7 @@ WEBHOOK
 ├── ID                    VARCHAR(36)  PK
 ├── REALM_ID              VARCHAR      NOT NULL
 ├── URL                   VARCHAR(2048) NOT NULL
-├── SECRET                VARCHAR      nullable
+├── SECRET                VARCHAR(512) nullable (AES-256-GCM encrypted at rest; see Security)
 ├── ALGORITHM             VARCHAR      default 'HmacSHA256'
 ├── ENABLED               BOOLEAN      default false
 ├── CIRCUIT_STATE         VARCHAR(16)  default 'CLOSED'
@@ -253,6 +253,22 @@ _webhook.circuit.open_seconds = 120
 Supported algorithms: `HmacSHA256` (default), `HmacSHA1`.
 
 The header name is `X-Keycloak-Signature`. This deviates from GitHub's `X-Hub-Signature-256` and Svix's `svix-signature` — it's Keycloak-specific. Consumers should verify using constant-time comparison (`hmac.compare_digest` in Python, `MessageDigest.isEqual` in Java).
+
+---
+
+## Secret encryption at rest
+
+HMAC secrets are stored in `WEBHOOK.SECRET` encrypted with **AES-256-GCM** (12-byte random IV per record, 128-bit authentication tag). Encryption and decryption are transparent to the rest of the codebase, handled by a JPA `AttributeConverter` (`SecretEncryptionConverter`) wired to the `secret` field of `WebhookEntity`.
+
+**Key management.** The 256-bit key is read once at provider init from the `WEBHOOK_ENCRYPTION_KEY` environment variable (base64-encoded, must decode to exactly 32 bytes). It is held in a static `SecretKey` reference inside `EncryptionKeyProvider`. If the variable is missing or malformed the provider refuses to start — this is a deliberate fail-closed choice to prevent silent loss of confidentiality.
+
+**On-disk format.** Each record is `Base64(IV ‖ ciphertext ‖ GCM-tag)`. The GCM tag provides authenticated encryption: tampering with the ciphertext or decrypting with the wrong key throws `AEADBadTagException`, surfaced as a runtime error rather than silently returning garbage.
+
+**Operational notes.**
+- The key **must remain stable** for the lifetime of the stored secrets. There is currently no rotation flow — changing the key makes existing records unreadable.
+- Losing the key is equivalent to losing the secrets themselves. Back it up with your database credentials.
+- The key is never persisted to disk by the provider, never logged, and never exposed through the REST API. The `GET /{id}/secret` endpoint only reports whether a secret is configured, not its value.
+- Schema migration `jpa-changelog-webhook-1.1.0.xml` widens `SECRET` to `VARCHAR(512)` to fit the ciphertext envelope.
 
 ---
 

@@ -34,11 +34,29 @@ make package          # Docker-based, no local deps needed
 make package BUILD=local  # requires Java 17 + Maven + Node 20
 ```
 
-### 2. Deploy
+### 2. Configure the encryption key
+
+The provider encrypts webhook HMAC secrets at rest using **AES-256-GCM**. You must supply a 256-bit key via the `WEBHOOK_ENCRYPTION_KEY` environment variable before Keycloak starts — the provider refuses to initialize without it.
+
+Generate a key:
+
+```bash
+openssl rand -base64 32
+```
+
+This produces a 44-character base64 string that decodes to exactly 32 bytes. Store it wherever you manage secrets (a secret manager, `.env` file outside version control, Kubernetes Secret, etc.) and expose it to the Keycloak process as `WEBHOOK_ENCRYPTION_KEY`.
+
+> **⚠️ Key rotation & loss**
+> - **Do not change the key** after webhooks have been created — existing secrets in the database can only be decrypted with the original key. Rotating the key currently requires manual re-entry of every webhook secret.
+> - **If the key is lost**, stored secrets become unrecoverable. Back up the key with the same care as your database credentials.
+> - The key is never read from the database or logged. It lives only in the Keycloak process environment.
+
+### 3. Deploy
 
 **Bare-metal / VM:**
 
 ```bash
+export WEBHOOK_ENCRYPTION_KEY="$(openssl rand -base64 32)"   # store this safely
 cp keycloak-webhook-provider-*.jar /opt/keycloak/providers/
 /opt/keycloak/bin/kc.sh build
 /opt/keycloak/bin/kc.sh start
@@ -58,6 +76,7 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: keycloak
+      WEBHOOK_ENCRYPTION_KEY: ${WEBHOOK_ENCRYPTION_KEY}   # from host env or .env file
     depends_on:
       - postgres
 
@@ -71,7 +90,7 @@ services:
 
 The Liquibase migration runs automatically on first start and creates the `WEBHOOK`, `WEBHOOK_EVENT`, and `WEBHOOK_SEND` tables in Keycloak's schema.
 
-### 3. Enable the event listener
+### 4. Enable the event listener
 
 In **Keycloak Admin Console**:
 
@@ -87,7 +106,7 @@ kcadm.sh update events/config -r {realm} \
   -s 'eventsListeners=["jboss-logging","webhook-provider"]'
 ```
 
-### 4. Create your first webhook
+### 5. Create your first webhook
 
 Open the Admin UI at `http://localhost:8080/realms/{realm}/webhooks/ui`, or use the REST API:
 
@@ -109,7 +128,7 @@ curl -X POST "http://localhost:8080/realms/{realm}/webhooks/" \
 
 ## Configuration
 
-Register webhooks via the [Admin UI](#admin-ui) or the REST API (see [Installation → step 4](#4-create-your-first-webhook)).
+Register webhooks via the [Admin UI](#admin-ui) or the REST API (see [Installation → step 5](#5-create-your-first-webhook)).
 
 ### Event types
 
@@ -166,7 +185,7 @@ Full spec: [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.1) — import int
 | `POST` | `/{id}/sends/{sid}/resend` | Resend a specific delivery |
 | `POST` | `/{id}/resend-failed` | Bulk resend failed deliveries |
 
-See [Installation → step 4](#4-create-your-first-webhook) for a full example.
+See [Installation → step 5](#5-create-your-first-webhook) for a full example.
 
 ## Observability
 

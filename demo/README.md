@@ -16,8 +16,15 @@ CONSUMER_PORT=3000   # change if 3000 is taken
 
 ```bash
 cd demo
+cp .env.example .env
+
+# Generate the encryption key and append it to .env
+echo "WEBHOOK_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
+
 make up
 ```
+
+> **Why the extra step?** The provider encrypts webhook HMAC secrets at rest with AES-256-GCM and refuses to start without a valid `WEBHOOK_ENCRYPTION_KEY` (32 bytes, base64-encoded). The `make up` target runs a `check-encryption-key` guard that fails early with an actionable error if the key is missing, empty, or wrong length — so you can't accidentally boot the stack without encryption configured. See the [main README](../README.md#2-configure-the-encryption-key) for details on the threat model and key-rotation caveats.
 
 Wait ~90 seconds for Keycloak to boot. Then:
 
@@ -111,6 +118,7 @@ Edit `.env` before starting:
 | `GENERATOR_INTERVAL_SECONDS` | `15` | Seconds between generator cycles |
 | `GENERATOR_USERS_PER_CYCLE` | `1` | Users created (and deleted) per cycle |
 | `GENERATOR_USER_PREFIX` | `demo-user` | Username prefix |
+| `WEBHOOK_ENCRYPTION_KEY` | *(required, no default)* | 32-byte AES-256 key (base64) — generate with `openssl rand -base64 32`. Not committed; `make up` aborts if missing or invalid. |
 
 ## Common commands
 
