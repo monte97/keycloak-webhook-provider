@@ -111,7 +111,7 @@ Starts a rotation. The secret value in the response is the only time the plainte
 ```
 
 - `mode` is required.
-- `graceDays` is required when `mode=graceful`, ignored when `mode=emergency`. Allowed range: 1..30. Default (if field omitted in graceful mode): 7.
+- `graceDays` is optional; defaults to `7` when `mode=graceful`, ignored when `mode=emergency`. When present, allowed range is 1..30.
 
 **Response `200 OK`:**
 ```json
@@ -338,6 +338,8 @@ public void setRotationsInProgress(String realm, int count) { ... }
 - `webhook_secret_rotations_total{mode="emergency"}` — same for emergency
 - `webhook_secret_rotations_total{mode="expired"}` — incremented when `expireRotationIfDue` transitions a webhook out of `ROTATING` (from either the dispatcher path or the list-endpoint sweep)
 - `webhook_rotations_in_progress` — refreshed on `GET /webhooks/` from a `SELECT COUNT(*) WHERE secondary_secret IS NOT NULL GROUP BY realm` query. Refresh-on-list is chosen over imperative updates to avoid drift across restarts and concurrent operations.
+
+**Manual completion is intentionally not counted** in `webhook_secret_rotations_total`. The counter measures rotation lifecycle transitions initiated by secret change (`graceful`, `emergency`) or by timer (`expired`). Manual completion is a cleanup of an already-started rotation and is captured in the audit log but not in the metric. This keeps the `mode` label set closed and the rate of the counter interpretable as "new secrets issued".
 
 ### Audit trail — structured logs
 
