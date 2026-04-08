@@ -22,13 +22,14 @@ public class SecretEncryptionConverter implements AttributeConverter<String, Str
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final int IV_LENGTH = 12;
     private static final int TAG_BITS = 128;
+    private static final SecureRandom RNG = new SecureRandom();
 
     @Override
     public String convertToDatabaseColumn(String plaintext) {
         if (plaintext == null) return null;
         try {
             byte[] iv = new byte[IV_LENGTH];
-            new SecureRandom().nextBytes(iv);
+            RNG.nextBytes(iv);
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(
                     Cipher.ENCRYPT_MODE,
