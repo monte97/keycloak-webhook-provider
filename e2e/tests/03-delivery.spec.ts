@@ -1,41 +1,7 @@
 import { test, expect } from '../fixtures/ports';
-
-/** Create a user in the demo realm and immediately delete them — triggers 2 admin events. */
-async function triggerEvents(
-  keycloakUrl: string,
-  adminToken: string,
-  n = 1,
-): Promise<void> {
-  for (let i = 0; i < n; i++) {
-    const username = `e2e-user-${Date.now()}-${i}`;
-
-    const createRes = await fetch(
-      `${keycloakUrl}/admin/realms/demo/users`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          enabled: true,
-          credentials: [{ type: 'password', value: 'temp123', temporary: false }],
-        }),
-      },
-    );
-    if (!createRes.ok) throw new Error(`Create user failed: ${createRes.status}`);
-
-    const location = createRes.headers.get('location')!;
-    const userId = location.split('/').pop()!;
-
-    const deleteRes = await fetch(`${keycloakUrl}/admin/realms/demo/users/${userId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
-    if (!deleteRes.ok) throw new Error(`Delete user failed: ${deleteRes.status}`);
-  }
-}
+import { triggerUserCycle } from '../fixtures/admin-events';
+import { createWebhookViaUI } from '../fixtures/webhook-helpers';
+import { waitForDelivery } from '../fixtures/consumer';
 
 test('Delivery drawer shows sends table after event delivery', async ({
   page,
@@ -56,26 +22,14 @@ test('Delivery drawer shows sends table after event delivery', async ({
   const webhookUrl = `http://consumer:8080/${uuid}`;
 
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-
-  const createBtn = page.getByRole('button', { name: 'Create webhook' });
-  await expect(createBtn.first()).toBeVisible({ timeout: 15_000 });
-  await createBtn.first().click();
-  await page.getByLabel('URL').fill(webhookUrl);
-  const eventSearch = page.getByPlaceholder('Search event types...');
-  await eventSearch.click();
-  await eventSearch.fill('*');
-  const dropdown = page.locator('[role="listbox"]');
-  await expect(dropdown).toBeVisible({ timeout: 5_000 });
-  await dropdown.locator('[role="option"]').first().click();
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('Webhook created')).toBeVisible();
+  await createWebhookViaUI(page, webhookUrl);
 
   // 3. Trigger 2 events (create + delete user)
-  await triggerEvents(keycloakUrl, adminToken, 1);
+  await triggerUserCycle(keycloakUrl, adminToken);
 
-  // 4. Wait for delivery (async; Keycloak dispatches on executor threads)
-  //    10s is generous — typically takes < 2s on connection-refused URLs, < 1s on success.
-  await page.waitForTimeout(10_000);
+  // 4. Wait until at least one delivery has been recorded by the consumer.
+  //    Polling the consumer API is deterministic and ~10x faster than a fixed sleep.
+  await waitForDelivery(consumerPublicUrl, uuid);
 
   // 5. Click the URL cell to open the drawer (filter row by unique uuid substring).
   // Avoid row.click() — it hits the center which may land on the "Enabled" cell
@@ -114,22 +68,10 @@ test('Delivery drawer filter toggles to Failed', async ({
   const webhookUrl = `http://consumer:8080/${uuid}`;
 
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
+  await createWebhookViaUI(page, webhookUrl);
 
-  const createBtn = page.getByRole('button', { name: 'Create webhook' });
-  await expect(createBtn.first()).toBeVisible({ timeout: 15_000 });
-  await createBtn.first().click();
-  await page.getByLabel('URL').fill(webhookUrl);
-  const eventSearch2 = page.getByPlaceholder('Search event types...');
-  await eventSearch2.click();
-  await eventSearch2.fill('*');
-  const dropdown2 = page.locator('[role="listbox"]');
-  await expect(dropdown2).toBeVisible({ timeout: 5_000 });
-  await dropdown2.locator('[role="option"]').first().click();
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('Webhook created')).toBeVisible();
-
-  await triggerEvents(keycloakUrl, adminToken, 1);
-  await page.waitForTimeout(10_000);
+  await triggerUserCycle(keycloakUrl, adminToken);
+  await waitForDelivery(consumerPublicUrl, uuid);
 
   // Open drawer — click URL cell (first gridcell) to avoid stopPropagation on Enabled cell
   const row = page.getByRole('row').filter({ hasText: uuid });

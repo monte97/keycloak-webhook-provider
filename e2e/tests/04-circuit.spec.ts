@@ -1,35 +1,8 @@
 import { test, expect } from '../fixtures/ports';
+import { createUser, deleteUser } from '../fixtures/admin-events';
+import { openCreateModal, fillWebhookForm } from '../fixtures/webhook-helpers';
 
 const UNREACHABLE_URL = 'http://127.0.0.1:19999/webhook';
-
-async function createUser(keycloakUrl: string, adminToken: string): Promise<string> {
-  const res = await fetch(`${keycloakUrl}/admin/realms/demo/users`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${adminToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      username: `e2e-circuit-${Date.now()}`,
-      enabled: true,
-      credentials: [{ type: 'password', value: 'temp123', temporary: false }],
-    }),
-  });
-  if (!res.ok) throw new Error(`Create user failed: ${res.status}`);
-  const location = res.headers.get('location');
-  if (!location) throw new Error('Create user: missing Location header');
-  const userId = location.split('/').pop();
-  if (!userId) throw new Error('Create user: malformed Location header');
-  return userId;
-}
-
-async function deleteUser(keycloakUrl: string, adminToken: string, userId: string): Promise<void> {
-  const res = await fetch(`${keycloakUrl}/admin/realms/demo/users/${userId}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${adminToken}` },
-  });
-  if (!res.ok) throw new Error(`Delete user failed: ${res.status}`);
-}
 
 test('Circuit opens after repeated failures and resets to CLOSED', async ({
   page,
@@ -38,21 +11,11 @@ test('Circuit opens after repeated failures and resets to CLOSED', async ({
 }) => {
   // 1. Create webhook pointing to unreachable URL with short retry window
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-
-  const createBtn = page.getByRole('button', { name: 'Create webhook' });
-  await expect(createBtn.first()).toBeVisible({ timeout: 15_000 });
-  await createBtn.first().click();
-
-  await page.getByLabel('URL').fill(UNREACHABLE_URL);
+  await openCreateModal(page);
   // Use admin.* (not *) so that only admin events (user create/delete) trigger dispatches.
   // Using * would also catch access events (CODE_TO_TOKEN, TOKEN_REFRESH) from keycloak-js
   // silent auth on each page reload, which would re-open the circuit after the reset.
-  const eventSearch = page.getByPlaceholder('Search event types...');
-  await eventSearch.click();
-  await eventSearch.fill('admin.*');
-  const dropdown = page.locator('[role="listbox"]');
-  await expect(dropdown).toBeVisible({ timeout: 5_000 });
-  await dropdown.locator('[role="option"]').first().click();
+  await fillWebhookForm(page, UNREACHABLE_URL, 'admin.*');
 
   // Short retry window so failures accumulate fast: 1s total
   await page.getByLabel('Max retry duration (seconds)').fill('1');
@@ -62,9 +25,9 @@ test('Circuit opens after repeated failures and resets to CLOSED', async ({
 
   // 2. Trigger 2 events (create + delete user, twice)
   //    Each event → ~3 send attempts (initial + retries within 1s) → total ~6 failures > threshold 5
-  const id1 = await createUser(keycloakUrl, adminToken);
+  const id1 = await createUser(keycloakUrl, adminToken, 'e2e-circuit');
   await deleteUser(keycloakUrl, adminToken, id1);
-  const id2 = await createUser(keycloakUrl, adminToken);
+  const id2 = await createUser(keycloakUrl, adminToken, 'e2e-circuit');
   await deleteUser(keycloakUrl, adminToken, id2);
 
   // 3. Poll until the OPEN badge appears in the table (max 20s)

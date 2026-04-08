@@ -19,6 +19,35 @@ interface E2EFixtures {
   consumerPublicUrl: string;
   adminToken: string;
   webhookAdminToken: string;
+  _autoCleanupWebhooks: void;
+}
+
+/**
+ * Delete every webhook in the demo realm. Best-effort: never throws — if the
+ * cleanup itself fails (network blip, token expiry) we don't want to mask the
+ * actual test failure that may have caused the issue.
+ */
+async function deleteAllWebhooks(
+  keycloakUrl: string,
+  webhookAdminToken: string,
+): Promise<void> {
+  try {
+    const list = await fetch(`${keycloakUrl}/realms/demo/webhooks/`, {
+      headers: { Authorization: `Bearer ${webhookAdminToken}` },
+    });
+    if (!list.ok) return;
+    const all = (await list.json()) as Array<{ id: string }>;
+    await Promise.all(
+      all.map((wh) =>
+        fetch(`${keycloakUrl}/realms/demo/webhooks/${wh.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${webhookAdminToken}` },
+        }).catch(() => undefined),
+      ),
+    );
+  } catch {
+    // swallow — best-effort
+  }
 }
 
 export const test = base.extend<E2EFixtures>({
@@ -69,6 +98,18 @@ export const test = base.extend<E2EFixtures>({
     const data = (await res.json()) as { access_token: string };
     await use(data.access_token);
   },
+
+  // Auto-fixture: deletes every webhook in the demo realm after each test.
+  // Prevents intra-run state leak — without this, webhooks created by tests
+  // accumulate in the database and tests that scrape the table get slower
+  // (and noisier) as the run progresses.
+  _autoCleanupWebhooks: [
+    async ({ keycloakUrl, webhookAdminToken }, use) => {
+      await use();
+      await deleteAllWebhooks(keycloakUrl, webhookAdminToken);
+    },
+    { auto: true },
+  ],
 });
 
 export { expect } from '@playwright/test';
