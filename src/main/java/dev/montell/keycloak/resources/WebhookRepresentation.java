@@ -25,6 +25,9 @@ public class WebhookRepresentation {
     public Instant createdAt;
     public Integer retryMaxElapsedSeconds;
     public Integer retryMaxIntervalSeconds;
+    public Boolean hasSecondarySecret;
+    public Instant rotationExpiresAt;
+    public Instant rotationStartedAt;
 
     // secret not included in from() — dedicated endpoint GET /{id}/secret
 
@@ -40,6 +43,10 @@ public class WebhookRepresentation {
         r.createdAt = m.getCreatedAt();
         r.retryMaxElapsedSeconds = m.getRetryMaxElapsedSeconds();
         r.retryMaxIntervalSeconds = m.getRetryMaxIntervalSeconds();
+        r.hasSecondarySecret =
+                m.getSecondarySecret() != null && !m.getSecondarySecret().isBlank();
+        r.rotationExpiresAt = m.getRotationExpiresAt();
+        r.rotationStartedAt = m.getRotationStartedAt();
         return r;
     }
 }
