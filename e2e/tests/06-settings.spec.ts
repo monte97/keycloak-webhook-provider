@@ -75,13 +75,14 @@ test('Toggling enabled default off pre-populates create modal', async ({
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
 
-  // PatternFly Switch renders a visually-hidden <input> covered by a toggle
-  // span. Plain click() lands on the input which has opacity:0 and times out.
-  // Force-click the input directly.
-  const enabledDefault = page.locator('#default-enabled');
+  // PatternFly Switch renders the real <input> visually hidden — click the
+  // visible switch <label> (not the form-field label, which shares the `for`
+  // attribute) via its pf-v5-c-switch class.
+  const enabledDefaultLabel = page.locator('label.pf-v5-c-switch[for="default-enabled"]');
+  const enabledDefaultInput = page.locator('#default-enabled');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
   await expect(page.getByLabel('Enabled by default')).toBeVisible({ timeout: 5_000 });
-  await enabledDefault.click({ force: true });
+  await enabledDefaultLabel.click();
 
   // Open create modal
   await page.getByRole('tab', { name: 'Webhooks' }).click();
@@ -98,7 +99,9 @@ test('Toggling enabled default off pre-populates create modal', async ({
   // Reset setting to avoid leaking state to subsequent tests
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
   await expect(page.getByLabel('Enabled by default')).toBeVisible({ timeout: 5_000 });
-  await enabledDefault.click({ force: true });
+  await enabledDefaultLabel.click();
+  // Wait for the toggle to actually flip back before the next test runs
+  await expect(enabledDefaultInput).toBeChecked();
 });
 
 test('Setting retry duration persists and pre-populates create modal', async ({
