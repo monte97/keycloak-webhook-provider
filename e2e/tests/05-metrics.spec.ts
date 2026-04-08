@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures/ports';
 import { triggerUserCycle } from '../fixtures/admin-events';
 import { createWebhookViaUI } from '../fixtures/webhook-helpers';
+import { waitForDelivery } from '../fixtures/consumer';
 import { TAB_METRICHE, HEADING_METRICHE, BTN_AGGIORNA } from '../fixtures/labels.it';
 
 test('Metrics tab is accessible from the main navigation', async ({
@@ -50,22 +51,19 @@ test('Metrics show non-zero dispatches after events are triggered', async ({
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
   await createWebhookViaUI(page, `http://consumer:8080/${uuid}`);
 
-  // 2. Trigger events and wait for dispatch
+  // 2. Trigger events and wait for the consumer to record the delivery
   await triggerUserCycle(keycloakUrl, adminToken);
-  await page.waitForTimeout(5_000);
+  await waitForDelivery(consumerPublicUrl, uuid);
 
   // 3. Switch to Metriche tab
   await page.getByRole('tab', { name: TAB_METRICHE }).click();
   await expect(page.getByText('Dispatches', { exact: true })).toBeVisible({ timeout: 10_000 });
 
-  // 4. Dispatches count should be > 0 — the text is a number inside the card
-  //    Use Aggiorna to force a fresh fetch (auto-refresh may not have fired yet)
+  // 4. Force a fresh metrics fetch and assert the dispatches count is no longer '—'.
+  //    The web-first assertion auto-retries until the card updates.
   await page.getByRole('button', { name: BTN_AGGIORNA }).click();
-  await page.waitForTimeout(2_000);
-
-  // The dispatch count should NOT be '—' (dashes)
   const dispatchCard = page.locator('.pf-v5-c-card').filter({ hasText: /^Dispatches/ }).first();
-  await expect(dispatchCard).not.toContainText('—');
+  await expect(dispatchCard).not.toContainText('—', { timeout: 10_000 });
 });
 
 test('Aggiorna button triggers a fresh metrics fetch', async ({
@@ -85,9 +83,9 @@ test('Aggiorna button triggers a fresh metrics fetch', async ({
 
   const countBefore = fetchCount;
   await page.getByRole('button', { name: BTN_AGGIORNA }).click();
-  await page.waitForTimeout(1_000);
 
-  expect(fetchCount).toBeGreaterThan(countBefore);
+  // Poll fetchCount instead of sleeping — the request fires shortly after the click.
+  await expect.poll(() => fetchCount, { timeout: 5_000 }).toBeGreaterThan(countBefore);
 });
 
 test('Auto-refresh toggle is present and can be switched off', async ({

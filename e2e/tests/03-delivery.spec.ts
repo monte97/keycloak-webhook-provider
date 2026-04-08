@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures/ports';
 import { triggerUserCycle } from '../fixtures/admin-events';
 import { createWebhookViaUI } from '../fixtures/webhook-helpers';
+import { waitForDelivery } from '../fixtures/consumer';
 
 test('Delivery drawer shows sends table after event delivery', async ({
   page,
@@ -26,9 +27,9 @@ test('Delivery drawer shows sends table after event delivery', async ({
   // 3. Trigger 2 events (create + delete user)
   await triggerUserCycle(keycloakUrl, adminToken);
 
-  // 4. Wait for delivery (async; Keycloak dispatches on executor threads)
-  //    10s is generous — typically takes < 2s on connection-refused URLs, < 1s on success.
-  await page.waitForTimeout(10_000);
+  // 4. Wait until at least one delivery has been recorded by the consumer.
+  //    Polling the consumer API is deterministic and ~10x faster than a fixed sleep.
+  await waitForDelivery(consumerPublicUrl, uuid);
 
   // 5. Click the URL cell to open the drawer (filter row by unique uuid substring).
   // Avoid row.click() — it hits the center which may land on the "Enabled" cell
@@ -70,7 +71,7 @@ test('Delivery drawer filter toggles to Failed', async ({
   await createWebhookViaUI(page, webhookUrl);
 
   await triggerUserCycle(keycloakUrl, adminToken);
-  await page.waitForTimeout(10_000);
+  await waitForDelivery(consumerPublicUrl, uuid);
 
   // Open drawer — click URL cell (first gridcell) to avoid stopPropagation on Enabled cell
   const row = page.getByRole('row').filter({ hasText: uuid });
