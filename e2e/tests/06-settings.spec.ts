@@ -79,10 +79,13 @@ test('Toggling enabled default off pre-populates create modal', async ({
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
   await page.waitForLoadState('networkidle');
 
-  // Set enabled default to off
+  // Set enabled default to off. PatternFly Switch renders a visually-hidden
+  // <input>; clicking via getByLabel hits the invisible input and times out.
+  // Use role=switch which targets the clickable overlay.
+  const enabledDefault = page.getByRole('switch', { name: 'Enabled by default' });
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
-  await expect(page.getByLabel('Enabled by default')).toBeVisible({ timeout: 5_000 });
-  await page.getByLabel('Enabled by default').click();
+  await expect(enabledDefault).toBeVisible({ timeout: 5_000 });
+  await enabledDefault.click();
 
   // Open create modal
   await page.getByRole('tab', { name: 'Webhooks' }).click();
@@ -98,8 +101,8 @@ test('Toggling enabled default off pre-populates create modal', async ({
 
   // Reset setting to avoid leaking state to subsequent tests
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
-  await expect(page.getByLabel('Enabled by default')).toBeVisible({ timeout: 5_000 });
-  await page.getByLabel('Enabled by default').click();
+  await expect(enabledDefault).toBeVisible({ timeout: 5_000 });
+  await enabledDefault.click();
 });
 
 test('Setting retry duration persists and pre-populates create modal', async ({
@@ -139,6 +142,12 @@ test('Setting retry duration persists and pre-populates create modal', async ({
   await retryInputCleanup.blur();
 });
 
+// Scope radio lookups to the "Cronologia consegne" card so page-size labels
+// ('10', '25', '50', '100') don't collide with the metrics-refresh radios
+// ('10 secondi' etc.) via Playwright's default substring matching.
+const cronologiaCard = (page: import('@playwright/test').Page) =>
+  page.locator('.pf-v5-c-card').filter({ hasText: 'Cronologia consegne' });
+
 test('Cronologia consegne card shows 4 radio options with 50 checked by default', async ({
   page,
   keycloakUrl,
@@ -147,14 +156,15 @@ test('Cronologia consegne card shows 4 radio options with 50 checked by default'
   await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
 
-  await expect(page.getByText('Cronologia consegne')).toBeVisible({ timeout: 5_000 });
-  await expect(page.getByRole('radio', { name: '10' })).toBeVisible();
-  await expect(page.getByRole('radio', { name: '25' })).toBeVisible();
-  await expect(page.getByRole('radio', { name: '50' })).toBeVisible();
-  await expect(page.getByRole('radio', { name: '100' })).toBeVisible();
+  const card = cronologiaCard(page);
+  await expect(card).toBeVisible({ timeout: 5_000 });
+  await expect(card.getByRole('radio', { name: '10', exact: true })).toBeVisible();
+  await expect(card.getByRole('radio', { name: '25', exact: true })).toBeVisible();
+  await expect(card.getByRole('radio', { name: '50', exact: true })).toBeVisible();
+  await expect(card.getByRole('radio', { name: '100', exact: true })).toBeVisible();
 
   // Default: 50
-  await expect(page.getByRole('radio', { name: '50' })).toBeChecked();
+  await expect(card.getByRole('radio', { name: '50', exact: true })).toBeChecked();
 });
 
 test('Delivery history page size persists after reload', async ({
@@ -164,18 +174,25 @@ test('Delivery history page size persists after reload', async ({
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
   await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
-  await expect(page.getByRole('radio', { name: '50' })).toBeChecked({ timeout: 5_000 });
 
-  await page.getByRole('radio', { name: '10' }).click();
-  await expect(page.getByRole('radio', { name: '10' })).toBeChecked();
+  const card = cronologiaCard(page);
+  const radio10 = card.getByRole('radio', { name: '10', exact: true });
+  const radio50 = card.getByRole('radio', { name: '50', exact: true });
+
+  await expect(radio50).toBeChecked({ timeout: 5_000 });
+
+  await radio10.click();
+  await expect(radio10).toBeChecked();
 
   await page.reload();
   await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
-  await expect(page.getByRole('radio', { name: '10' })).toBeChecked({ timeout: 5_000 });
+  await expect(cronologiaCard(page).getByRole('radio', { name: '10', exact: true })).toBeChecked({
+    timeout: 5_000,
+  });
 
   // Reset to default
-  await page.getByRole('radio', { name: '50' }).click();
+  await cronologiaCard(page).getByRole('radio', { name: '50', exact: true }).click();
 });
 
 test('Delivery drawer shows Prev/Next pagination buttons', async ({
@@ -187,8 +204,10 @@ test('Delivery drawer shows Prev/Next pagination buttons', async ({
 
   // Set page size to 10 so buttons are always visible
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
-  await expect(page.getByRole('radio', { name: '10' })).toBeVisible({ timeout: 5_000 });
-  await page.getByRole('radio', { name: '10' }).click();
+  const card = cronologiaCard(page);
+  const radio10 = card.getByRole('radio', { name: '10', exact: true });
+  await expect(radio10).toBeVisible({ timeout: 5_000 });
+  await radio10.click();
 
   // Open the delivery drawer (first webhook row)
   await page.getByRole('tab', { name: 'Webhooks' }).click();
@@ -202,5 +221,5 @@ test('Delivery drawer shows Prev/Next pagination buttons', async ({
   // Reset page size to default
   await page.keyboard.press('Escape');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
-  await page.getByRole('radio', { name: '50' }).click();
+  await cronologiaCard(page).getByRole('radio', { name: '50', exact: true }).click();
 });
