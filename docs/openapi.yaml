@@ -42,6 +42,8 @@ tags:
     description: Circuit breaker state and control
   - name: Delivery
     description: Test ping and resend operations
+  - name: Secret Rotation
+    description: Zero-downtime HMAC secret rotation
 
 paths:
   /:
@@ -505,6 +507,83 @@ paths:
               schema:
                 type: string
 
+  /{id}/rotate-secret:
+    post:
+      operationId: rotateSecret
+      summary: Rotate the webhook signing secret
+      description: |
+        Initiates a zero-downtime secret rotation. The new server-generated secret
+        becomes the primary immediately; the old secret is retained as secondary
+        and both are used to sign payloads until the rotation is completed or expires.
+
+        **Graceful mode:** Old secret remains valid for `graceDays` days, allowing
+        receivers to migrate at their own pace. Call `POST /{id}/complete-rotation`
+        once all receivers are updated.
+
+        **Emergency mode:** Old secret is discarded immediately. Only the new secret
+        is used for signing.
+      tags: [Secret Rotation]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RotateSecretRequest"
+      responses:
+        "200":
+          description: Rotation initiated — contains the new secret (shown once only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RotateSecretResponse"
+        "400":
+          description: Invalid request (e.g. graceDays out of range)
+          content:
+            application/json:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: A rotation is already in progress
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /{id}/complete-rotation:
+    post:
+      operationId: completeRotation
+      summary: Complete a graceful secret rotation
+      description: |
+        Finishes a graceful rotation by discarding the secondary (old) secret.
+        After this call only the new primary secret is used for signing.
+        Returns 409 if no rotation is currently in progress.
+      tags: [Secret Rotation]
+      parameters:
+        - $ref: "#/components/parameters/webhookId"
+      responses:
+        "204":
+          description: Rotation completed — secondary secret discarded
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: No rotation is currently in progress
+          content:
+            application/json:
+              schema:
+                type: string
+
   /metrics:
     get:
       operationId: getMetrics
@@ -633,6 +712,20 @@ components:
         retryMaxIntervalSeconds:
           type: ["integer", "null"]
           description: Maximum interval between retries in seconds (default 180)
+        hasSecondarySecret:
+          type: ["boolean", "null"]
+          readOnly: true
+          description: Whether a secondary (old) secret is currently active during rotation
+        rotationExpiresAt:
+          type: ["string", "null"]
+          format: date-time
+          readOnly: true
+          description: When the secondary secret expires (present during graceful rotation)
+        rotationStartedAt:
+          type: ["string", "null"]
+          format: date-time
+          readOnly: true
+          description: When the current rotation was initiated
 
     WebhookCreate:
       type: object
@@ -784,3 +877,34 @@ components:
         failed:
           type: integer
           description: Number of failed resend attempts
+
+    RotateSecretRequest:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [graceful, emergency]
+          description: |
+            `graceful` retains the old secret as secondary for `graceDays` days.
+            `emergency` discards the old secret immediately.
+        graceDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+          default: 7
+          description: Days the secondary (old) secret remains valid. Only used when mode is `graceful`.
+
+    RotateSecretResponse:
+      type: object
+      properties:
+        newSecret:
+          type: string
+          description: The newly generated HMAC secret. Shown once — store it securely.
+        rotationExpiresAt:
+          type: ["string", "null"]
+          format: date-time
+          description: When the secondary secret expires (graceful mode only; null for emergency).
+        mode:
+          type: string
+          enum: [graceful, emergency]
