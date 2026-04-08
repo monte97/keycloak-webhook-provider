@@ -217,6 +217,90 @@ public class WebhooksResource {
         return Response.ok(body).build();
     }
 
+    // --- POST /{id}/rotate-secret ---
+    @POST
+    @Path("{id}/rotate-secret")
+    public Response rotateSecret(
+            @PathParam("id") String id, java.util.Map<String, ?> body) {
+        requireManageEvents();
+        if (body == null || !body.containsKey("mode")) {
+            return Response.status(400).entity("mode is required").build();
+        }
+        String mode = String.valueOf(body.get("mode"));
+        if (!"graceful".equals(mode) && !"emergency".equals(mode)) {
+            return Response.status(400).entity("mode must be 'graceful' or 'emergency'").build();
+        }
+
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+
+        int graceDays = 7;
+        if ("graceful".equals(mode)) {
+            if (body.get("graceDays") != null) {
+                try {
+                    graceDays = ((Number) body.get("graceDays")).intValue();
+                } catch (ClassCastException e) {
+                    return Response.status(400).entity("graceDays must be a number").build();
+                }
+                if (graceDays < 1 || graceDays > 30) {
+                    return Response.status(400)
+                            .entity("graceDays must be between 1 and 30")
+                            .build();
+                }
+            }
+            // Block double-rotation
+            if (w.getSecondarySecret() != null && !w.getSecondarySecret().isBlank()) {
+                var errBody = new java.util.LinkedHashMap<String, Object>();
+                errBody.put("error", "rotation_in_progress");
+                errBody.put(
+                        "expiresAt",
+                        w.getRotationExpiresAt() != null
+                                ? w.getRotationExpiresAt().toString()
+                                : null);
+                return Response.status(409).entity(errBody).build();
+            }
+        }
+
+        String newSecret = generateSecret();
+        Instant now = Instant.now();
+
+        String oldPrimary = w.getSecret();
+        Instant rotationExpiresAt = null;
+        if ("graceful".equals(mode)) {
+            rotationExpiresAt = now.plus(java.time.Duration.ofDays(graceDays));
+            w.setSecondarySecret(oldPrimary);
+            w.setRotationStartedAt(now);
+            w.setRotationExpiresAt(rotationExpiresAt);
+        } else { // emergency
+            w.setSecondarySecret(null);
+            w.setRotationStartedAt(null);
+            w.setRotationExpiresAt(null);
+        }
+        w.setSecret(newSecret);
+
+        // TODO: wire metrics (WebhookComponentHolder.metrics() not yet available)
+        var authResultValue = authResult();
+        String userId = (authResultValue != null && authResultValue.getUser() != null)
+                ? authResultValue.getUser().getId()
+                : "unknown";
+        dev.montell.keycloak.logging.AuditLogger.secretRotated(
+                realm.getId(), id, mode, "graceful".equals(mode) ? graceDays : null, userId);
+
+        var respBody = new java.util.LinkedHashMap<String, Object>();
+        respBody.put("newSecret", newSecret);
+        respBody.put(
+                "rotationExpiresAt",
+                rotationExpiresAt != null ? rotationExpiresAt.toString() : null);
+        respBody.put("mode", mode);
+        return Response.ok(respBody).build();
+    }
+
+    private static String generateSecret() {
+        byte[] raw = new byte[32];
+        new java.security.SecureRandom().nextBytes(raw);
+        return java.util.Base64.getEncoder().encodeToString(raw);
+    }
+
     // --- POST /{id}/circuit/reset ---
     @POST
     @Path("{id}/circuit/reset")
