@@ -9,7 +9,6 @@ test('Metrics tab is accessible from the main navigation', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
 
   const metricsTab = page.getByRole('tab', { name: TAB_METRICHE });
   await expect(metricsTab).toBeVisible({ timeout: 15_000 });
@@ -23,7 +22,6 @@ test('Metrics page shows 4 cards on load', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: TAB_METRICHE }).click();
 
   // Use exact:true so the locator matches only the card title element,
@@ -71,7 +69,6 @@ test('Aggiorna button triggers a fresh metrics fetch', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: TAB_METRICHE }).click();
   await expect(page.getByText('Dispatches', { exact: true })).toBeVisible({ timeout: 10_000 });
 
@@ -93,7 +90,6 @@ test('Auto-refresh toggle is present and can be switched off', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: TAB_METRICHE }).click();
   await expect(page.getByText('Dispatches', { exact: true })).toBeVisible({ timeout: 10_000 });
 
@@ -114,7 +110,6 @@ test('Raw Prometheus section is expandable and contains metric names', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: TAB_METRICHE }).click();
   await expect(page.getByText('Dispatches', { exact: true })).toBeVisible({ timeout: 10_000 });
 

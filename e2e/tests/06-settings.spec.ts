@@ -5,7 +5,6 @@ test('Settings tab shows radio group with default selection', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
 
   const settingsTab = page.getByRole('tab', { name: 'Impostazioni' });
   await expect(settingsTab).toBeVisible({ timeout: 15_000 });
@@ -26,7 +25,6 @@ test('Changing interval persists after page reload', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
   await expect(page.getByRole('radio', { name: '10 secondi' })).toBeChecked({ timeout: 5_000 });
 
@@ -46,7 +44,6 @@ test('Settings tab is accessible from metrics tab and back', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
 
   // Navigate: Webhooks → Metriche → Impostazioni → Metriche
   await page.getByRole('tab', { name: 'Metriche' }).click();
@@ -64,7 +61,6 @@ test('Webhook defaults card is visible with switch and inputs', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
   await expect(page.getByText('Webhook — valori predefiniti')).toBeVisible({ timeout: 5_000 });
   await expect(page.getByLabel('Enabled by default')).toBeVisible();
@@ -77,7 +73,6 @@ test('Toggling enabled default off pre-populates create modal', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
 
   // PatternFly Switch renders a visually-hidden <input> covered by a toggle
   // span. Plain click() lands on the input which has opacity:0 and times out.
@@ -110,7 +105,6 @@ test('Setting retry duration persists and pre-populates create modal', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
 
   // Set retry duration
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
@@ -153,7 +147,6 @@ test('Cronologia consegne card shows 4 radio options with 50 checked by default'
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
 
   const card = cronologiaCard(page);
@@ -172,7 +165,6 @@ test('Delivery history page size persists after reload', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
 
   const card = cronologiaCard(page);
@@ -200,7 +192,6 @@ test('Delivery drawer shows Prev/Next pagination buttons', async ({
   keycloakUrl,
 }) => {
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-  await page.waitForLoadState('networkidle');
 
   // Set page size to 10 so buttons are always visible
   await page.getByRole('tab', { name: 'Impostazioni' }).click();
@@ -213,7 +204,6 @@ test('Delivery drawer shows Prev/Next pagination buttons', async ({
   // avoid landing on the centered "Enabled" switch — same trick used in
   // 03-delivery.spec.ts.
   await page.getByRole('tab', { name: 'Webhooks' }).click();
-  await page.waitForLoadState('networkidle');
   const firstRow = page.getByRole('row').nth(1); // skip header
   await firstRow.getByRole('gridcell').first().click();
 

@@ -11,7 +11,6 @@ test('Circuit opens after repeated failures and resets to CLOSED', async ({
 }) => {
   // 1. Create webhook pointing to unreachable URL with short retry window
   await page.goto(`${keycloakUrl}/realms/demo/webhooks/ui`);
-
   await openCreateModal(page);
   // Use admin.* (not *) so that only admin events (user create/delete) trigger dispatches.
   // Using * would also catch access events (CODE_TO_TOKEN, TOKEN_REFRESH) from keycloak-js
