@@ -38,6 +38,8 @@ async function globalSetup(): Promise<void> {
       CONSUMER_PORT: '0',
       KC_ADMIN_PASSWORD: 'admin',
       KC_REALM: 'demo',
+      // Deterministic 32-byte all-zero key — test-only, never use in prod.
+      WEBHOOK_ENCRYPTION_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
     },
   });
 
