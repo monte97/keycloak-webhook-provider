@@ -1,10 +1,9 @@
-// src/test/java/dev/montell/keycloak/it/JpaWebhookProviderIT.java
-package dev.montell.keycloak.it;
+// src/test/java/dev/montell/keycloak/jpa/JpaWebhookProviderIT.java
+package dev.montell.keycloak.jpa;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import dev.montell.keycloak.jpa.JpaWebhookProvider;
 import dev.montell.keycloak.jpa.entity.*;
 import dev.montell.keycloak.model.*;
 import jakarta.persistence.*;
@@ -34,6 +33,8 @@ class JpaWebhookProviderIT {
 
     @BeforeAll
     static void setup() {
+        EncryptionKeyProvider.init(java.util.Base64.getEncoder().encodeToString(new byte[32]));
+
         Map<String, String> props = new HashMap<>();
         props.put("jakarta.persistence.jdbc.url", postgres.getJdbcUrl());
         props.put("jakarta.persistence.jdbc.user", postgres.getUsername());
@@ -158,5 +159,31 @@ class JpaWebhookProviderIT {
                         mockRealm, w.getId(), event.getId(), "access.LOGIN", 200, true, 1);
         assertNotNull(s2);
         assertEquals(s1.getId(), s2.getId()); // same ID (upsert)
+    }
+
+    @Test
+    @Order(20)
+    void secret_is_encrypted_in_database() {
+        WebhookModel w = provider.createWebhook(mockRealm, "https://secret.example.com", null);
+        w.setSecret("my-hmac-secret");
+        em.getTransaction().commit();
+
+        // Read raw column value via native query
+        em.getTransaction().begin();
+        String raw =
+                (String)
+                        em.createNativeQuery("SELECT SECRET FROM WEBHOOK WHERE ID = ?1")
+                                .setParameter(1, w.getId())
+                                .getSingleResult();
+
+        // Raw value should be base64 ciphertext, not plaintext
+        assertNotNull(raw);
+        assertNotEquals("my-hmac-secret", raw);
+        assertTrue(raw.length() > 20, "Ciphertext should be longer than plaintext");
+
+        // Loading through JPA should decrypt back to plaintext
+        em.clear(); // Force reload from DB
+        WebhookModel loaded = provider.getWebhookById(mockRealm, w.getId());
+        assertEquals("my-hmac-secret", loaded.getSecret());
     }
 }
