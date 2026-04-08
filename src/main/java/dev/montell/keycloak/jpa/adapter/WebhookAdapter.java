@@ -54,6 +54,41 @@ public class WebhookAdapter implements WebhookModel {
     }
 
     @Override
+    public String getSecondarySecret() {
+        return entity.getSecondarySecret();
+    }
+
+    @Override
+    public void setSecondarySecret(String secondarySecret) {
+        entity.setSecondarySecret(secondarySecret);
+    }
+
+    @Override
+    public java.time.Instant getRotationExpiresAt() {
+        return entity.getRotationExpiresAt();
+    }
+
+    @Override
+    public void setRotationExpiresAt(java.time.Instant at) {
+        entity.setRotationExpiresAt(at);
+    }
+
+    @Override
+    public java.time.Instant getRotationStartedAt() {
+        return entity.getRotationStartedAt();
+    }
+
+    @Override
+    public void setRotationStartedAt(java.time.Instant at) {
+        entity.setRotationStartedAt(at);
+    }
+
+    @Override
+    public boolean expireRotationIfDue(java.time.Instant now) {
+        return entity.expireRotationIfDue(now);
+    }
+
+    @Override
     public String getAlgorithm() {
         return entity.getAlgorithm();
     }

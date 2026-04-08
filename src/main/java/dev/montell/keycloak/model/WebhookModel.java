@@ -24,6 +24,18 @@ public interface WebhookModel {
 
     void setSecret(String secret);
 
+    String getSecondarySecret();
+
+    void setSecondarySecret(String secondarySecret);
+
+    java.time.Instant getRotationExpiresAt();
+
+    void setRotationExpiresAt(java.time.Instant at);
+
+    java.time.Instant getRotationStartedAt();
+
+    void setRotationStartedAt(java.time.Instant at);
+
     String getAlgorithm();
 
     void setAlgorithm(String algorithm);
@@ -43,6 +55,14 @@ public interface WebhookModel {
     Instant getUpdatedAt();
 
     void setUpdatedAt(Instant updatedAt);
+
+    /**
+     * Clears the secondary secret and rotation timestamps if the rotation window has elapsed.
+     * Delegates to {@link dev.montell.keycloak.jpa.entity.WebhookEntity#expireRotationIfDue}.
+     *
+     * @return {@code true} if the entity was mutated and needs to be persisted
+     */
+    boolean expireRotationIfDue(java.time.Instant now);
 
     // circuit breaker
     String getCircuitState();
