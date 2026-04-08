@@ -48,7 +48,8 @@ import org.keycloak.services.resources.admin.permissions.AdminPermissions;
 @Consumes(MediaType.APPLICATION_JSON)
 public class WebhooksResource {
 
-    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
+    private static final java.security.SecureRandom SECURE_RANDOM =
+            new java.security.SecureRandom();
 
     private static final ObjectMapper MAPPER =
             new ObjectMapper()
