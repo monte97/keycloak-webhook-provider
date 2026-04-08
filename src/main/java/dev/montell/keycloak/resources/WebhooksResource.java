@@ -289,7 +289,8 @@ public class WebhooksResource {
         }
         w.setSecret(newSecret);
 
-        // TODO: wire metrics (WebhookComponentHolder.metrics() not yet available)
+        var metrics = dev.montell.keycloak.dispatch.WebhookComponentHolder.metrics();
+        if (metrics != null) metrics.recordSecretRotation(realm.getId(), mode);
         var authResultValue = authResult();
         String userId = (authResultValue != null && authResultValue.getUser() != null)
                 ? authResultValue.getUser().getId()
@@ -330,6 +331,8 @@ public class WebhooksResource {
         w.setRotationExpiresAt(null);
         w.setRotationStartedAt(null);
 
+        var metrics = dev.montell.keycloak.dispatch.WebhookComponentHolder.metrics();
+        if (metrics != null) metrics.recordSecretRotation(realm.getId(), "completed");
         var authResultValue = authResult();
         String userId = (authResultValue != null && authResultValue.getUser() != null)
                 ? authResultValue.getUser().getId()
