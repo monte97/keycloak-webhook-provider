@@ -301,6 +301,33 @@ public class WebhooksResource {
         return java.util.Base64.getEncoder().encodeToString(raw);
     }
 
+    // --- POST /{id}/complete-rotation ---
+    @POST
+    @Path("{id}/complete-rotation")
+    public Response completeRotation(@PathParam("id") String id) {
+        requireManageEvents();
+        WebhookModel w = provider().getWebhookById(realm, id);
+        if (w == null) throw new NotFoundException("webhook not found: " + id);
+
+        if (w.getSecondarySecret() == null || w.getSecondarySecret().isBlank()) {
+            return Response.status(409)
+                    .entity(java.util.Map.of("error", "no_rotation_in_progress"))
+                    .build();
+        }
+
+        w.setSecondarySecret(null);
+        w.setRotationExpiresAt(null);
+        w.setRotationStartedAt(null);
+
+        var authResultValue = authResult();
+        String userId = (authResultValue != null && authResultValue.getUser() != null)
+                ? authResultValue.getUser().getId()
+                : "unknown";
+        dev.montell.keycloak.logging.AuditLogger.rotationCompleted(realm.getId(), id, userId);
+
+        return Response.noContent().build();
+    }
+
     // --- POST /{id}/circuit/reset ---
     @POST
     @Path("{id}/circuit/reset")

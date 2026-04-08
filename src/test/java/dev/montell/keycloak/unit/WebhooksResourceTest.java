@@ -714,4 +714,44 @@ class WebhooksResourceTest {
                     () -> resource.rotateSecret("missing", java.util.Map.of("mode", "graceful")));
         }
     }
+
+    @Nested
+    class CompleteRotation {
+
+        @Test
+        void clears_secondary_on_rotating_webhook() {
+            WebhookModel w = mock(WebhookModel.class);
+            when(w.getSecondarySecret()).thenReturn("secondary-in-progress");
+            when(provider.getWebhookById(realm, "wid")).thenReturn(w);
+
+            Response resp = resource.completeRotation("wid");
+
+            assertEquals(204, resp.getStatus());
+            verify(w).setSecondarySecret(null);
+            verify(w).setRotationExpiresAt(null);
+            verify(w).setRotationStartedAt(null);
+            // primary untouched
+            verify(w, never()).setSecret(anyString());
+        }
+
+        @Test
+        void returns_409_when_no_rotation_in_progress() {
+            WebhookModel w = mock(WebhookModel.class);
+            when(w.getSecondarySecret()).thenReturn(null);
+            when(provider.getWebhookById(realm, "wid")).thenReturn(w);
+
+            Response resp = resource.completeRotation("wid");
+
+            assertEquals(409, resp.getStatus());
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> body = (java.util.Map<String, Object>) resp.getEntity();
+            assertEquals("no_rotation_in_progress", body.get("error"));
+        }
+
+        @Test
+        void returns_404_for_unknown_webhook() {
+            when(provider.getWebhookById(realm, "missing")).thenReturn(null);
+            assertThrows(NotFoundException.class, () -> resource.completeRotation("missing"));
+        }
+    }
 }
