@@ -49,6 +49,7 @@ test('Payload preview modal shows event JSON', async ({
   ).toBeVisible();
 
   // 9. Close the modal
-  await page.getByRole('dialog', { name: 'Event payload' }).getByRole('button', { name: 'Close' }).click();
+  // Modal has two "Close" buttons (header X + footer) — click the footer one (last)
+  await page.getByRole('dialog', { name: 'Event payload' }).getByRole('button', { name: 'Close' }).last().click();
   await expect(page.getByRole('dialog', { name: 'Event payload' })).not.toBeVisible();
 });
