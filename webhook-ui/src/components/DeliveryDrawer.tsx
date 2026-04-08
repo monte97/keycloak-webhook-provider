@@ -16,6 +16,8 @@ import {
 import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 import type { Webhook, WebhookSend, CircuitState } from '../api/types';
 import type { WebhookApiClient } from '../api/webhookApi';
+import { SecretRotationModal } from './SecretRotationModal';
+import { SecretDisclosureModal } from './SecretDisclosureModal';
 
 interface DeliveryDrawerProps {
   webhook: Webhook | null;
@@ -58,6 +60,12 @@ export function DeliveryDrawer({
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const prevPageSizeRef = useRef(pageSize);
+
+  const [rotationModalMode, setRotationModalMode] = useState<'graceful' | 'emergency' | null>(null);
+  const [disclosedSecret, setDisclosedSecret] = useState<string | null>(null);
+  const [rotationError, setRotationError] = useState<string | null>(null);
+
+  const isRotating = !!webhook?.hasSecondarySecret;
 
   useEffect(() => {
     if (!webhook) return;
@@ -183,6 +191,30 @@ export function DeliveryDrawer({
     }
   };
 
+  const handleRotate = async (args: { graceDays?: number }) => {
+    if (!webhook) return;
+    setRotationError(null);
+    try {
+      const resp = await api.rotateSecret(webhook.id, {
+        mode: rotationModalMode!,
+        graceDays: args.graceDays,
+      });
+      setRotationModalMode(null);
+      setDisclosedSecret(resp.newSecret);
+    } catch (e) {
+      setRotationError(String(e));
+    }
+  };
+
+  const handleCompleteRotation = async () => {
+    if (!webhook) return;
+    try {
+      await api.completeRotation(webhook.id);
+    } catch (e) {
+      setRotationError(String(e));
+    }
+  };
+
   if (!webhook) return null;
 
   return (
@@ -201,6 +233,38 @@ export function DeliveryDrawer({
       </DrawerHead>
 
       <div style={{ padding: '0 24px 24px' }}>
+        {/* Secret section */}
+        <div style={{ marginBottom: 'var(--pf-v5-global--spacer--md)' }}>
+          <strong>Secret</strong>
+          <div style={{ marginTop: '8px' }}>
+            {!isRotating ? (
+              <Label color="green">Active</Label>
+            ) : (
+              <Label color="orange">Rotating</Label>
+            )}
+          </div>
+          <div style={{ marginTop: '8px', display: 'flex', gap: 8 }}>
+            <Button
+              variant="primary"
+              onClick={() => setRotationModalMode('graceful')}
+              isDisabled={isRotating}
+            >
+              Rotate secret
+            </Button>
+            {isRotating && (
+              <Button variant="secondary" onClick={handleCompleteRotation}>
+                Complete rotation now
+              </Button>
+            )}
+            <Button variant="danger" onClick={() => setRotationModalMode('emergency')}>
+              Emergency rotate
+            </Button>
+          </div>
+          {rotationError && (
+            <div style={{ color: 'red', marginTop: '8px' }}>{rotationError}</div>
+          )}
+        </div>
+
         {/* Circuit breaker section */}
         <Title headingLevel="h3" size="md" style={{ marginBottom: 8 }}>
           Circuit breaker
@@ -404,6 +468,23 @@ export function DeliveryDrawer({
             onChange={(_event, checked) => setForceResend(checked)}
           />
         </Modal>
+      )}
+
+      {rotationModalMode && (
+        <SecretRotationModal
+          mode={rotationModalMode}
+          isOpen
+          onConfirm={handleRotate}
+          onClose={() => setRotationModalMode(null)}
+        />
+      )}
+
+      {disclosedSecret && (
+        <SecretDisclosureModal
+          isOpen
+          newSecret={disclosedSecret}
+          onClose={() => setDisclosedSecret(null)}
+        />
       )}
     </DrawerPanelContent>
   );
