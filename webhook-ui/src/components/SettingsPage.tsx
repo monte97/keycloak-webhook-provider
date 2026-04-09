@@ -12,12 +12,19 @@ import {
   Switch,
   TextInput,
   Title,
+  Alert,
+  Spinner,
 } from '@patternfly/react-core';
 import type { AppSettings, AppSettingsPatch } from '../lib/useSettings';
+import type { RealmSettings } from '../api/types';
 
 interface SettingsPageProps {
   settings: AppSettings;
   onUpdate: (patch: AppSettingsPatch) => void;
+  realmSettings: RealmSettings | null;
+  realmSettingsLoading: boolean;
+  realmSettingsError: string | null;
+  onUpdateRealmSettings: (patch: Partial<RealmSettings>) => void;
 }
 
 const INTERVAL_OPTIONS = [
@@ -95,7 +102,14 @@ function RetryInput({
   );
 }
 
-export function SettingsPage({ settings, onUpdate }: SettingsPageProps) {
+export function SettingsPage({
+  settings,
+  onUpdate,
+  realmSettings,
+  realmSettingsLoading,
+  realmSettingsError,
+  onUpdateRealmSettings,
+}: SettingsPageProps) {
   return (
     <>
       <Title headingLevel="h1" size="xl" style={{ marginBottom: 16 }}>
@@ -175,6 +189,47 @@ export function SettingsPage({ settings, onUpdate }: SettingsPageProps) {
               ))}
             </FormGroup>
           </Form>
+        </CardBody>
+      </Card>
+      <Card style={{ marginTop: 16 }}>
+        <CardTitle>Configurazione server</CardTitle>
+        <CardBody>
+          {realmSettingsLoading && <Spinner size="sm" aria-label="Loading server settings" />}
+          {realmSettingsError && (
+            <Alert variant="danger" isInline title={realmSettingsError} style={{ marginBottom: 8 }} />
+          )}
+          {!realmSettingsLoading && !realmSettingsError && realmSettings && (
+            <Form>
+              <RetryInput
+                label="Event retention (days)"
+                fieldId="retention-event-days"
+                value={realmSettings.retentionEventDays}
+                placeholder="30"
+                onChange={(val) => { if (val !== null) onUpdateRealmSettings({ retentionEventDays: val }); }}
+              />
+              <RetryInput
+                label="Send retention (days)"
+                fieldId="retention-send-days"
+                value={realmSettings.retentionSendDays}
+                placeholder="90"
+                onChange={(val) => { if (val !== null) onUpdateRealmSettings({ retentionSendDays: val }); }}
+              />
+              <RetryInput
+                label="Circuit failure threshold"
+                fieldId="circuit-failure-threshold"
+                value={realmSettings.circuitFailureThreshold}
+                placeholder="5"
+                onChange={(val) => { if (val !== null) onUpdateRealmSettings({ circuitFailureThreshold: val }); }}
+              />
+              <RetryInput
+                label="Circuit open duration (seconds)"
+                fieldId="circuit-open-seconds"
+                value={realmSettings.circuitOpenSeconds}
+                placeholder="60"
+                onChange={(val) => { if (val !== null) onUpdateRealmSettings({ circuitOpenSeconds: val }); }}
+              />
+            </Form>
+          )}
         </CardBody>
       </Card>
     </>
