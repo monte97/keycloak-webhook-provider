@@ -810,4 +810,103 @@ class WebhooksResourceTest {
             assertThrows(NotFoundException.class, () -> resource.getSendPayload("wh-1", "send-1"));
         }
     }
+
+    // -----------------------------------------------------------------------
+    // GET /realm-settings
+    // -----------------------------------------------------------------------
+
+    @Nested
+    class GetRealmSettings {
+
+        @Test
+        void returns_defaults_when_no_attributes_set() {
+            when(realm.getAttribute("_webhook.retention.events.days")).thenReturn(null);
+            when(realm.getAttribute("_webhook.retention.sends.days")).thenReturn(null);
+            // circuit attrs already stubbed to null in setUp
+
+            Response resp = resource.getRealmSettings();
+
+            assertEquals(200, resp.getStatus());
+            @SuppressWarnings("unchecked")
+            var body = (Map<String, Object>) resp.getEntity();
+            assertEquals(30, body.get("retentionEventDays"));
+            assertEquals(90, body.get("retentionSendDays"));
+            assertEquals(5, body.get("circuitFailureThreshold"));
+            assertEquals(60, body.get("circuitOpenSeconds"));
+        }
+
+        @Test
+        void returns_configured_values() {
+            when(realm.getAttribute("_webhook.retention.events.days")).thenReturn("45");
+            when(realm.getAttribute("_webhook.retention.sends.days")).thenReturn("60");
+            when(realm.getAttribute("_webhook.circuit.failure_threshold")).thenReturn("10");
+            when(realm.getAttribute("_webhook.circuit.open_seconds")).thenReturn("120");
+
+            Response resp = resource.getRealmSettings();
+
+            assertEquals(200, resp.getStatus());
+            @SuppressWarnings("unchecked")
+            var body = (Map<String, Object>) resp.getEntity();
+            assertEquals(45, body.get("retentionEventDays"));
+            assertEquals(60, body.get("retentionSendDays"));
+            assertEquals(10, body.get("circuitFailureThreshold"));
+            assertEquals(120, body.get("circuitOpenSeconds"));
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // PUT /realm-settings
+    // -----------------------------------------------------------------------
+
+    @Nested
+    class UpdateRealmSettings {
+
+        @Test
+        void saves_all_fields_and_returns_updated() {
+            when(realm.getAttribute("_webhook.retention.events.days")).thenReturn("45");
+            when(realm.getAttribute("_webhook.retention.sends.days")).thenReturn("60");
+            when(realm.getAttribute("_webhook.circuit.failure_threshold")).thenReturn("3");
+            when(realm.getAttribute("_webhook.circuit.open_seconds")).thenReturn("30");
+
+            var body = Map.of(
+                    "retentionEventDays", 45,
+                    "retentionSendDays", 60,
+                    "circuitFailureThreshold", 3,
+                    "circuitOpenSeconds", 30);
+            Response resp = resource.updateRealmSettings(body);
+
+            assertEquals(200, resp.getStatus());
+            verify(realm).setAttribute("_webhook.retention.events.days", "45");
+            verify(realm).setAttribute("_webhook.retention.sends.days", "60");
+            verify(realm).setAttribute("_webhook.circuit.failure_threshold", "3");
+            verify(realm).setAttribute("_webhook.circuit.open_seconds", "30");
+        }
+
+        @Test
+        void returns_400_when_field_is_zero() {
+            Response resp = resource.updateRealmSettings(Map.of("retentionEventDays", 0));
+            assertEquals(400, resp.getStatus());
+        }
+
+        @Test
+        void returns_400_when_field_is_negative() {
+            Response resp = resource.updateRealmSettings(Map.of("circuitOpenSeconds", -5));
+            assertEquals(400, resp.getStatus());
+        }
+
+        @Test
+        void ignores_absent_fields() {
+            when(realm.getAttribute("_webhook.retention.events.days")).thenReturn("14");
+            when(realm.getAttribute("_webhook.retention.sends.days")).thenReturn("90");
+            // circuit attrs mocked to null in setUp → defaults 5, 60
+
+            Response resp = resource.updateRealmSettings(Map.of("retentionEventDays", 14));
+
+            assertEquals(200, resp.getStatus());
+            verify(realm).setAttribute("_webhook.retention.events.days", "14");
+            verify(realm, never()).setAttribute(eq("_webhook.retention.sends.days"), any(String.class));
+            verify(realm, never()).setAttribute(eq("_webhook.circuit.failure_threshold"), any(String.class));
+            verify(realm, never()).setAttribute(eq("_webhook.circuit.open_seconds"), any(String.class));
+        }
+    }
 }

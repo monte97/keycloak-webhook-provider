@@ -32,7 +32,7 @@ import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluato
 import org.keycloak.services.resources.admin.permissions.AdminPermissions;
 
 /**
- * JAX-RS resource providing 16 REST endpoints for webhook management, event/send history, circuit
+ * JAX-RS resource providing 18 REST endpoints for webhook management, event/send history, circuit
  * breaker control, and delivery operations. Mounted at {@code /realms/{realm}/webhooks} via {@link
  * WebhooksResourceProviderFactory}.
  *
@@ -579,6 +579,70 @@ public class WebhooksResource {
         boolean removed = provider().removeWebhook(realm, id);
         if (!removed) throw new NotFoundException();
         return Response.noContent().build();
+    }
+
+    // --- GET /realm-settings ---
+    @GET
+    @Path("realm-settings")
+    public Response getRealmSettings() {
+        requireManageEvents();
+        var settings = new java.util.LinkedHashMap<String, Object>();
+        settings.put("retentionEventDays",
+                getRealmIntAttribute("_webhook.retention.events.days", 30));
+        settings.put("retentionSendDays",
+                getRealmIntAttribute("_webhook.retention.sends.days", 90));
+        settings.put("circuitFailureThreshold",
+                getRealmIntAttribute("_webhook.circuit.failure_threshold", 5));
+        settings.put("circuitOpenSeconds",
+                getRealmIntAttribute("_webhook.circuit.open_seconds", 60));
+        return Response.ok(settings).build();
+    }
+
+    // --- PUT /realm-settings ---
+    @PUT
+    @Path("realm-settings")
+    public Response updateRealmSettings(java.util.Map<String, ?> body) {
+        requireManageEvents();
+        if (body == null) body = java.util.Collections.emptyMap();
+
+        String[] fields = {
+            "retentionEventDays", "retentionSendDays",
+            "circuitFailureThreshold", "circuitOpenSeconds"
+        };
+        String[] attrs = {
+            "_webhook.retention.events.days", "_webhook.retention.sends.days",
+            "_webhook.circuit.failure_threshold", "_webhook.circuit.open_seconds"
+        };
+
+        for (int i = 0; i < fields.length; i++) {
+            Object val = body.get(fields[i]);
+            if (val == null) continue;
+            int v;
+            try {
+                v = ((Number) val).intValue();
+            } catch (ClassCastException e) {
+                return Response.status(400)
+                        .entity(fields[i] + " must be a positive integer")
+                        .build();
+            }
+            if (v <= 0) {
+                return Response.status(400)
+                        .entity(fields[i] + " must be a positive integer")
+                        .build();
+            }
+            realm.setAttribute(attrs[i], String.valueOf(v));
+        }
+
+        var updated = new java.util.LinkedHashMap<String, Object>();
+        updated.put("retentionEventDays",
+                getRealmIntAttribute("_webhook.retention.events.days", 30));
+        updated.put("retentionSendDays",
+                getRealmIntAttribute("_webhook.retention.sends.days", 90));
+        updated.put("circuitFailureThreshold",
+                getRealmIntAttribute("_webhook.circuit.failure_threshold", 5));
+        updated.put("circuitOpenSeconds",
+                getRealmIntAttribute("_webhook.circuit.open_seconds", 60));
+        return Response.ok(updated).build();
     }
 
     // --- GET /metrics ---
