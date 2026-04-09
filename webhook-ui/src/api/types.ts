@@ -82,6 +82,13 @@ export interface SendPayload {
   eventObject: string;
 }
 
+export interface RealmSettings {
+  retentionEventDays: number;
+  retentionSendDays: number;
+  circuitFailureThreshold: number;
+  circuitOpenSeconds: number;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,

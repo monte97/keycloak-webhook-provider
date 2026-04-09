@@ -10,6 +10,7 @@ import type {
   RotateSecretRequest,
   RotateSecretResponse,
   SendPayload,
+  RealmSettings,
 } from './types';
 import { ApiError } from './types';
 
@@ -98,6 +99,15 @@ export function createWebhookApi(basePath: string, realm: string, keycloak: Keyc
     },
     getSendPayload(webhookId: string, sendId: string): Promise<SendPayload> {
       return request(`/${webhookId}/sends/${sendId}/payload`);
+    },
+    getRealmSettings(): Promise<RealmSettings> {
+      return request('/realm-settings');
+    },
+    updateRealmSettings(patch: Partial<RealmSettings>): Promise<RealmSettings> {
+      return request('/realm-settings', {
+        method: 'PUT',
+        body: JSON.stringify(patch),
+      });
     },
     async getMetrics(): Promise<string> {
       await keycloak.updateToken(30);
