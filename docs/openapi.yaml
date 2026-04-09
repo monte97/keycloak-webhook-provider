@@ -615,6 +615,50 @@ paths:
               schema:
                 type: string
 
+  /realm-settings:
+    get:
+      operationId: getRealmSettings
+      summary: Get realm-level webhook configuration
+      tags: [Settings]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Realm settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RealmSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: updateRealmSettings
+      summary: Update realm-level webhook configuration
+      tags: [Settings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RealmSettings"
+      responses:
+        "200":
+          description: Updated realm settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RealmSettings"
+        "400":
+          description: One or more fields are not positive integers
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /metrics:
     get:
       operationId: getMetrics
@@ -915,6 +959,26 @@ components:
         eventObject:
           type: string
           description: Full JSON payload of the original Keycloak event
+
+    RealmSettings:
+      type: object
+      properties:
+        retentionEventDays:
+          type: integer
+          description: Days to retain webhook events (default 30)
+          example: 30
+        retentionSendDays:
+          type: integer
+          description: Days to retain webhook send records (default 90)
+          example: 90
+        circuitFailureThreshold:
+          type: integer
+          description: Failures before circuit opens (default 5)
+          example: 5
+        circuitOpenSeconds:
+          type: integer
+          description: Seconds the circuit stays open (default 60)
+          example: 60
 
     RotateSecretRequest:
       type: object
