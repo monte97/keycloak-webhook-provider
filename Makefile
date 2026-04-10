@@ -1,6 +1,6 @@
 .PHONY: compile test test-unit test-integration test-mutation package clean \
        openapi-lint openapi-bundle openapi-html openapi-diff \
-       fmt fmt-check spotbugs install-hooks help
+       fmt fmt-check spotbugs pre-push install-hooks help
 
 # ============================================================
 # Configuration
@@ -152,6 +152,10 @@ openapi-diff:
 	else \
 		echo "  OK: counts match"; \
 	fi
+
+## pre-push       Run all pre-push checks locally
+pre-push:
+	scripts/pre-push
 
 ## install-hooks  Install git hooks (pre-push) from scripts/
 install-hooks:
