@@ -82,6 +82,15 @@ export interface SendPayload {
   eventObject: string;
 }
 
+export interface WebhookEvent {
+  id: string;
+  realmId: string;
+  eventType: 'USER' | 'ADMIN';
+  kcEventId: string | null;
+  eventObject: string;
+  createdAt: string;
+}
+
 export interface RealmSettings {
   retentionEventDays: number;
   retentionSendDays: number;

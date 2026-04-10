@@ -11,6 +11,7 @@ import type {
   RotateSecretResponse,
   SendPayload,
   RealmSettings,
+  WebhookEvent,
 } from './types';
 import { ApiError } from './types';
 
@@ -99,6 +100,10 @@ export function createWebhookApi(basePath: string, realm: string, keycloak: Keyc
     },
     getSendPayload(webhookId: string, sendId: string): Promise<SendPayload> {
       return request(`/${webhookId}/sends/${sendId}/payload`);
+    },
+    getEvents(id: string, params: { first?: number; max?: number } = {}): Promise<WebhookEvent[]> {
+      const { first = 0, max = 20 } = params;
+      return request(`/${id}/events?first=${first}&max=${max}`);
     },
     getRealmSettings(): Promise<RealmSettings> {
       return request('/realm-settings');
