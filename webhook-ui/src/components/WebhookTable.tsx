@@ -41,6 +41,7 @@ interface AlertItem {
 }
 
 const POLL_INTERVAL = 30_000;
+const PAGE_SIZE = 20;
 
 export function WebhookTable({ api, defaults, pageSize }: { api: WebhookApiClient; defaults?: WebhookDefaults; pageSize: number }) {
   const alertKeyRef = useRef(0);
@@ -55,12 +56,30 @@ export function WebhookTable({ api, defaults, pageSize }: { api: WebhookApiClien
   const [openKebab, setOpenKebab] = useState<string | null>(null);
   const [readOnly, setReadOnly] = useState(false);
   const [drawerWebhook, setDrawerWebhook] = useState<Webhook | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const currentPageRef = useRef(1);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
-  const fetchWebhooks = useCallback(async () => {
+  const fetchWebhooks = useCallback(async (page?: number) => {
+    const p = page ?? currentPageRef.current;
     try {
-      const data = await api.list();
+      const first = (p - 1) * PAGE_SIZE;
+      const data = await api.list(first, PAGE_SIZE);
+      // Snap back to page 1 if we land on an empty page > 1 (e.g. after deletions)
+      if (data.length === 0 && p > 1) {
+        setCurrentPage(1);
+        currentPageRef.current = 1;
+        const firstPage = await api.list(0, PAGE_SIZE);
+        setWebhooks(firstPage);
+        setHasMore(firstPage.length === PAGE_SIZE);
+        setDrawerWebhook((prev) =>
+          prev ? (firstPage.find((w) => w.id === prev.id) ?? prev) : null,
+        );
+        return;
+      }
       setWebhooks(data);
+      setHasMore(data.length === PAGE_SIZE);
       setDrawerWebhook((prev) =>
         prev ? (data.find((w) => w.id === prev.id) ?? prev) : null,
       );
@@ -168,7 +187,7 @@ export function WebhookTable({ api, defaults, pageSize }: { api: WebhookApiClien
 
   if (loading) return null;
 
-  if (webhooks.length === 0) {
+  if (webhooks.length === 0 && currentPage === 1) {
     return (
       <>
         <EmptyState>
@@ -337,6 +356,33 @@ export function WebhookTable({ api, defaults, pageSize }: { api: WebhookApiClien
                 ))}
               </Tbody>
             </Table>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, padding: '0 16px' }}>
+              <Button
+                variant="secondary"
+                isDisabled={currentPage === 1 || loading}
+                onClick={() => {
+                  const p = currentPage - 1;
+                  setCurrentPage(p);
+                  currentPageRef.current = p;
+                  fetchWebhooks(p);
+                }}
+              >
+                ← Prev
+              </Button>
+              <span>Pagina {currentPage}</span>
+              <Button
+                variant="secondary"
+                isDisabled={!hasMore || loading}
+                onClick={() => {
+                  const p = currentPage + 1;
+                  setCurrentPage(p);
+                  currentPageRef.current = p;
+                  fetchWebhooks(p);
+                }}
+              >
+                Next →
+              </Button>
+            </div>
           </DrawerContentBody>
         </DrawerContent>
       </Drawer>

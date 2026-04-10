@@ -124,4 +124,62 @@ describe('WebhookTable', () => {
       expect(screen.getByText(/200/)).toBeInTheDocument();
     });
   });
+
+  describe('pagination', () => {
+    it('calls api.list with first=0 and max=20 on initial load', async () => {
+      await act(async () => {
+        render(<WebhookTable api={api as any} pageSize={50} />);
+      });
+      expect(api.list).toHaveBeenCalledWith(0, 20);
+    });
+
+    it('Next button is disabled when result has fewer than 20 items', async () => {
+      await act(async () => {
+        render(<WebhookTable api={api as any} pageSize={50} />);
+      });
+      await screen.findByText('https://api.example.com/webhook');
+      expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
+    });
+
+    it('Next button is enabled when result has exactly 20 items', async () => {
+      const twentyWebhooks = Array.from({ length: 20 }, (_, i) => ({
+        ...mockWebhooks[0]!,
+        id: String(i),
+        url: `https://example.com/hook-${i}`,
+      }));
+      api = createMockApi(twentyWebhooks);
+      await act(async () => {
+        render(<WebhookTable api={api as any} pageSize={50} />);
+      });
+      await screen.findByText('https://example.com/hook-0');
+      expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled();
+    });
+
+    it('Prev button is disabled on page 1', async () => {
+      await act(async () => {
+        render(<WebhookTable api={api as any} pageSize={50} />);
+      });
+      await screen.findByText('https://api.example.com/webhook');
+      expect(screen.getByRole('button', { name: /prev/i })).toBeDisabled();
+    });
+
+    it('clicking Next calls api.list with first=20 and max=20', async () => {
+      const twentyWebhooks = Array.from({ length: 20 }, (_, i) => ({
+        ...mockWebhooks[0]!,
+        id: String(i),
+        url: `https://example.com/hook-${i}`,
+      }));
+      api = createMockApi(twentyWebhooks);
+      await act(async () => {
+        render(<WebhookTable api={api as any} pageSize={50} />);
+      });
+      await screen.findByText('https://example.com/hook-0');
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /next/i }));
+      });
+      await waitFor(() => {
+        expect(api.list).toHaveBeenCalledWith(20, 20);
+      });
+    });
+  });
 });
