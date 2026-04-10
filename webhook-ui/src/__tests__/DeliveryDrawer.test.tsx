@@ -643,4 +643,48 @@ describe('DeliveryDrawer', () => {
       expect(prevButtons[prevButtons.length - 1]).toBeDisabled();
     });
   });
+
+  describe('createdAt and rotation info', () => {
+    it('shows "Created" date in drawer header', async () => {
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByText('200'));
+      expect(screen.getByText(/created/i)).toBeInTheDocument();
+    });
+
+    it('shows rotation expiry when rotationExpiresAt is set', async () => {
+      const rotatingWebhook: Webhook = {
+        ...webhook,
+        hasSecondarySecret: true,
+        rotationExpiresAt: new Date(Date.now() + 5 * 86_400_000).toISOString(),
+        rotationStartedAt: new Date(Date.now() - 60_000).toISOString(),
+      };
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={rotatingWebhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByText('200'));
+      expect(screen.getByText(/expires/i)).toBeInTheDocument();
+    });
+
+    it('does not show rotation expiry when rotationExpiresAt is null', async () => {
+      const rotatingWebhook: Webhook = {
+        ...webhook,
+        hasSecondarySecret: true,
+        rotationExpiresAt: null,
+        rotationStartedAt: new Date(Date.now() - 60_000).toISOString(),
+      };
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={rotatingWebhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByText('200'));
+      expect(screen.queryByText(/expires/i)).not.toBeInTheDocument();
+    });
+  });
 });
