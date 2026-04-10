@@ -20,24 +20,32 @@ No manual configuration is required — on first access, the provider auto-creat
 - Searchable event type dropdown with human-readable descriptions
 - Circuit breaker status monitoring (CLOSED/OPEN/HALF_OPEN badges) with manual reset
 - Send test pings
-- View delivery history and event details
+- View delivery history with Prev/Next pagination and per-send payload preview
+- View captured events (USER/ADMIN) in the Events tab with per-event payload preview
+- Webhook list pagination (20 per page)
+- Webhook creation date and secret rotation expiry shown in the delivery drawer
 
 ## Architecture
 
 ```
 webhook-ui/
 ├── src/
-│   ├── main.tsx                  # Entry point — keycloak-js init, realm/base path detection
-│   ├── App.tsx                   # Main layout — webhook list, modals, toast notifications
-│   ├── ErrorBoundary.tsx         # React error boundary
+│   ├── main.tsx                       # Entry point — keycloak-js init, realm/base path detection
+│   ├── App.tsx                        # Main layout — webhook list, settings page
+│   ├── ErrorBoundary.tsx              # React error boundary
 │   ├── api/
-│   │   └── webhookApi.ts         # REST client — typed fetch wrapper with KC token auth
+│   │   ├── types.ts                   # Shared TypeScript interfaces (Webhook, WebhookSend, WebhookEvent, …)
+│   │   └── webhookApi.ts              # REST client — typed fetch wrapper with KC token auth
 │   ├── components/
-│   │   ├── WebhookTable.tsx      # Sortable table with circuit breaker badges
-│   │   ├── WebhookModal.tsx      # Create/edit form — URL, secret, algorithm, event types
-│   │   ├── CircuitBadge.tsx      # CLOSED/OPEN/HALF_OPEN status badge
-│   │   └── eventTypes.ts         # Event type catalog with descriptions
-│   └── __tests__/                # Vitest + React Testing Library tests
+│   │   ├── WebhookTable.tsx           # Paginated webhook list with circuit breaker badges
+│   │   ├── DeliveryDrawer.tsx         # Slide-out drawer — delivery history + events tabs, secret rotation
+│   │   ├── WebhookModal.tsx           # Create/edit form — URL, secret, algorithm, event types
+│   │   ├── CircuitBadge.tsx           # CLOSED/OPEN/HALF_OPEN status badge
+│   │   ├── PayloadPreviewModal.tsx    # JSON payload viewer with copy-to-clipboard
+│   │   ├── SecretRotationModal.tsx    # Graceful/emergency rotation form
+│   │   ├── SecretDisclosureModal.tsx  # One-time new-secret display after rotation
+│   │   └── eventTypes.ts             # Event type catalog with descriptions
+│   └── __tests__/                    # Vitest + React Testing Library tests
 ├── vite.config.ts
 ├── tsconfig.json
 └── package.json
@@ -57,7 +65,7 @@ cd webhook-ui
 
 npm ci                # install dependencies
 npm run dev           # Vite dev server (needs running Keycloak for auth)
-npm test              # run tests once (Vitest + jsdom, 24 tests)
+npm test              # run tests once (Vitest + jsdom)
 npm run test:watch    # watch mode
 ```
 
