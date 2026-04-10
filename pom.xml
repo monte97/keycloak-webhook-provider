@@ -6,7 +6,7 @@
   <artifactId>keycloak-webhook-provider</artifactId>
   <packaging>jar</packaging>
   <version>1.16.1</version>
-  <name>Montell Keycloak Webhook Provider</name>
+  <name>Keycloak Webhook Provider</name>
 
   <properties>
     <java.version>17</java.version>
