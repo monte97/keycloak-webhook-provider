@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+run() {
+  echo "▶ $*"
+  "$@"
+  echo "✔ OK"
+  echo
+}
+
+echo "=== pre-push checks ==="
+echo
+
+run make fmt-check BUILD=local
+run make spotbugs BUILD=local
+run make test-unit BUILD=local
+run make openapi-lint BUILD=local
+run make openapi-diff BUILD=local
+
+echo "=== all checks passed ==="
