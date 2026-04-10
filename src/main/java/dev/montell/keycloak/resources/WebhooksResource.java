@@ -223,8 +223,11 @@ public class WebhooksResource {
         requireViewEvents();
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException("webhook not found: " + id);
-        int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD);
-        int openSeconds = getRealmIntAttribute("_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS);
+        int failureThreshold =
+                getRealmIntAttribute(
+                        "_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD);
+        int openSeconds =
+                getRealmIntAttribute("_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS);
         var body = new java.util.LinkedHashMap<String, Object>();
         body.put("state", w.getCircuitState());
         body.put("failureCount", w.getFailureCount());
@@ -427,8 +430,11 @@ public class WebhooksResource {
         if (send == null) throw new NotFoundException("send not found: " + sid);
 
         // Svix-style: respect circuit breaker
-        int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD);
-        int openSeconds = getRealmIntAttribute("_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS);
+        int failureThreshold =
+                getRealmIntAttribute(
+                        "_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD);
+        int openSeconds =
+                getRealmIntAttribute("_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS);
         var cb = registryHolder.get(w, failureThreshold, openSeconds);
         if (!force && !cb.allowRequest())
             return Response.status(409)
@@ -503,8 +509,11 @@ public class WebhooksResource {
         WebhookModel w = provider().getWebhookById(realm, id);
         if (w == null) throw new NotFoundException("webhook not found: " + id);
 
-        int failureThreshold = getRealmIntAttribute("_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD);
-        int openSeconds = getRealmIntAttribute("_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS);
+        int failureThreshold =
+                getRealmIntAttribute(
+                        "_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD);
+        int openSeconds =
+                getRealmIntAttribute("_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS);
         var cb = registryHolder.get(w, failureThreshold, openSeconds);
         if (!cb.allowRequest())
             return Response.status(409).entity("Circuit breaker is OPEN — reset it first").build();
@@ -592,14 +601,21 @@ public class WebhooksResource {
     public Response getRealmSettings() {
         requireViewEvents();
         var settings = new java.util.LinkedHashMap<String, Object>();
-        settings.put("retentionEventDays",
-                getRealmIntAttribute("_webhook.retention.events.days", DEFAULT_RETENTION_EVENT_DAYS));
-        settings.put("retentionSendDays",
+        settings.put(
+                "retentionEventDays",
+                getRealmIntAttribute(
+                        "_webhook.retention.events.days", DEFAULT_RETENTION_EVENT_DAYS));
+        settings.put(
+                "retentionSendDays",
                 getRealmIntAttribute("_webhook.retention.sends.days", DEFAULT_RETENTION_SEND_DAYS));
-        settings.put("circuitFailureThreshold",
-                getRealmIntAttribute("_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD));
-        settings.put("circuitOpenSeconds",
-                getRealmIntAttribute("_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS));
+        settings.put(
+                "circuitFailureThreshold",
+                getRealmIntAttribute(
+                        "_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD));
+        settings.put(
+                "circuitOpenSeconds",
+                getRealmIntAttribute(
+                        "_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS));
         return Response.ok(settings).build();
     }
 
@@ -639,14 +655,21 @@ public class WebhooksResource {
         }
 
         var updated = new java.util.LinkedHashMap<String, Object>();
-        updated.put("retentionEventDays",
-                getRealmIntAttribute("_webhook.retention.events.days", DEFAULT_RETENTION_EVENT_DAYS));
-        updated.put("retentionSendDays",
+        updated.put(
+                "retentionEventDays",
+                getRealmIntAttribute(
+                        "_webhook.retention.events.days", DEFAULT_RETENTION_EVENT_DAYS));
+        updated.put(
+                "retentionSendDays",
                 getRealmIntAttribute("_webhook.retention.sends.days", DEFAULT_RETENTION_SEND_DAYS));
-        updated.put("circuitFailureThreshold",
-                getRealmIntAttribute("_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD));
-        updated.put("circuitOpenSeconds",
-                getRealmIntAttribute("_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS));
+        updated.put(
+                "circuitFailureThreshold",
+                getRealmIntAttribute(
+                        "_webhook.circuit.failure_threshold", DEFAULT_CIRCUIT_FAILURE_THRESHOLD));
+        updated.put(
+                "circuitOpenSeconds",
+                getRealmIntAttribute(
+                        "_webhook.circuit.open_seconds", DEFAULT_CIRCUIT_OPEN_SECONDS));
         return Response.ok(updated).build();
     }
 

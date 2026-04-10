@@ -868,11 +868,12 @@ class WebhooksResourceTest {
             when(realm.getAttribute("_webhook.circuit.failure_threshold")).thenReturn("3");
             when(realm.getAttribute("_webhook.circuit.open_seconds")).thenReturn("30");
 
-            var body = Map.of(
-                    "retentionEventDays", 45,
-                    "retentionSendDays", 60,
-                    "circuitFailureThreshold", 3,
-                    "circuitOpenSeconds", 30);
+            var body =
+                    Map.of(
+                            "retentionEventDays", 45,
+                            "retentionSendDays", 60,
+                            "circuitFailureThreshold", 3,
+                            "circuitOpenSeconds", 30);
             Response resp = resource.updateRealmSettings(body);
 
             assertEquals(200, resp.getStatus());
@@ -904,9 +905,12 @@ class WebhooksResourceTest {
 
             assertEquals(200, resp.getStatus());
             verify(realm).setAttribute("_webhook.retention.events.days", "14");
-            verify(realm, never()).setAttribute(eq("_webhook.retention.sends.days"), any(String.class));
-            verify(realm, never()).setAttribute(eq("_webhook.circuit.failure_threshold"), any(String.class));
-            verify(realm, never()).setAttribute(eq("_webhook.circuit.open_seconds"), any(String.class));
+            verify(realm, never())
+                    .setAttribute(eq("_webhook.retention.sends.days"), any(String.class));
+            verify(realm, never())
+                    .setAttribute(eq("_webhook.circuit.failure_threshold"), any(String.class));
+            verify(realm, never())
+                    .setAttribute(eq("_webhook.circuit.open_seconds"), any(String.class));
         }
     }
 }
