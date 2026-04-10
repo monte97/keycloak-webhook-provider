@@ -34,6 +34,16 @@ interface DeliveryDrawerProps {
 
 function formatRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 0) {
+    // Future date (e.g. rotationExpiresAt)
+    const s = Math.floor(-diff / 1000);
+    if (s < 60) return `in ${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `in ${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `in ${h}h`;
+    return new Date(iso).toLocaleDateString();
+  }
   const s = Math.floor(diff / 1000);
   if (s < 60) return `${s}s ago`;
   const m = Math.floor(s / 60);
@@ -162,7 +172,7 @@ export function DeliveryDrawer({
   const handleTabChange = (_event: React.MouseEvent<HTMLElement>, tabKey: string | number) => {
     const key = String(tabKey);
     setActiveTab(key);
-    if (key === 'events' && !eventsLoaded && webhook) {
+    if (key === 'events' && !eventsLoaded && !loadingEvents && webhook) {
       loadEvents(webhook.id, 1);
     }
   };

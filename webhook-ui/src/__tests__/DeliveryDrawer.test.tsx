@@ -606,5 +606,41 @@ describe('DeliveryDrawer', () => {
         expect(screen.getByRole('dialog', { name: /event payload/i })).toBeInTheDocument();
       });
     });
+
+    it('clicking Next in Events tab calls getEvents with correct offset', async () => {
+      const fullPage = Array.from({ length: 50 }, (_, i) => ({
+        ...mockEvent,
+        id: `ev${i}`,
+      }));
+      const getEvents = vi.fn().mockResolvedValue(fullPage);
+      const localApi = makeApi({ getEvents });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={localApi} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByRole('tab', { name: /events/i }));
+      fireEvent.click(screen.getByRole('tab', { name: /events/i }));
+      await waitFor(() => expect(getEvents).toHaveBeenCalledWith('w1', { first: 0, max: 50 }));
+      // Click Next
+      const nextButtons = screen.getAllByRole('button', { name: /next/i });
+      fireEvent.click(nextButtons[nextButtons.length - 1]!);
+      await waitFor(() => expect(getEvents).toHaveBeenCalledWith('w1', { first: 50, max: 50 }));
+    });
+
+    it('Events Prev button is disabled on page 1', async () => {
+      const getEvents = vi.fn().mockResolvedValue([mockEvent]);
+      const localApi = makeApi({ getEvents });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={localApi} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByRole('tab', { name: /events/i }));
+      fireEvent.click(screen.getByRole('tab', { name: /events/i }));
+      await waitFor(() => screen.getByText('USER'));
+      const prevButtons = screen.getAllByRole('button', { name: /prev/i });
+      expect(prevButtons[prevButtons.length - 1]).toBeDisabled();
+    });
   });
 });
