@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Drawer } from '@patternfly/react-core';
 import { DeliveryDrawer } from '../components/DeliveryDrawer';
-import type { Webhook, WebhookSend, CircuitState } from '../api/types';
+import type { Webhook, WebhookSend, CircuitState, WebhookEvent } from '../api/types';
 import type { WebhookApiClient } from '../api/webhookApi';
 
 const webhook: Webhook = {
@@ -526,6 +526,85 @@ describe('DeliveryDrawer', () => {
       expect(screen.getByText(/^rotating$/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /rotate secret/i })).toBeDisabled();
       expect(screen.getByRole('button', { name: /complete rotation/i })).not.toBeDisabled();
+    });
+  });
+
+  describe('Events tab', () => {
+    const mockEvent: WebhookEvent = {
+      id: 'ev1',
+      realmId: 'demo',
+      eventType: 'USER',
+      kcEventId: 'kc1',
+      eventObject: '{"realmId":"demo","type":"LOGIN"}',
+      createdAt: new Date(Date.now() - 60_000).toISOString(),
+    };
+
+    it('renders Delivery history and Events tabs', async () => {
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={api} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByRole('tab', { name: /delivery history/i }));
+      expect(screen.getByRole('tab', { name: /events/i })).toBeInTheDocument();
+    });
+
+    it('getEvents is NOT called on drawer open', async () => {
+      const getEvents = vi.fn().mockResolvedValue([]);
+      const localApi = makeApi({ getEvents });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={localApi} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByRole('tab', { name: /delivery history/i }));
+      expect(getEvents).not.toHaveBeenCalled();
+    });
+
+    it('clicking Events tab calls getEvents with first=0 and max=pageSize', async () => {
+      const getEvents = vi.fn().mockResolvedValue([mockEvent]);
+      const localApi = makeApi({ getEvents });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={localApi} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByRole('tab', { name: /events/i }));
+      fireEvent.click(screen.getByRole('tab', { name: /events/i }));
+      await waitFor(() => {
+        expect(getEvents).toHaveBeenCalledWith('w1', { first: 0, max: 50 });
+      });
+    });
+
+    it('renders event rows with eventType and relative time', async () => {
+      const localApi = makeApi({ getEvents: vi.fn().mockResolvedValue([mockEvent]) });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={localApi} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByRole('tab', { name: /events/i }));
+      fireEvent.click(screen.getByRole('tab', { name: /events/i }));
+      await waitFor(() => {
+        expect(screen.getByText('USER')).toBeInTheDocument();
+        expect(screen.getByText(/ago/)).toBeInTheDocument();
+      });
+    });
+
+    it('clicking Payload on event row opens PayloadPreviewModal', async () => {
+      const localApi = makeApi({ getEvents: vi.fn().mockResolvedValue([mockEvent]) });
+      render(
+        <Drawer isExpanded>
+          <DeliveryDrawer webhook={webhook} api={localApi} onClose={vi.fn()} onCircuitReset={vi.fn()} pageSize={50} />
+        </Drawer>,
+      );
+      await waitFor(() => screen.getByRole('tab', { name: /events/i }));
+      fireEvent.click(screen.getByRole('tab', { name: /events/i }));
+      await waitFor(() => screen.getByText('USER'));
+      fireEvent.click(screen.getByRole('button', { name: /^payload$/i }));
+      await waitFor(() => {
+        expect(screen.getByRole('dialog', { name: /event payload/i })).toBeInTheDocument();
+      });
     });
   });
 });

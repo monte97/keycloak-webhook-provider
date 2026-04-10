@@ -12,9 +12,12 @@ import {
   Modal,
   ModalVariant,
   Checkbox,
+  Tabs,
+  Tab,
+  TabTitleText,
 } from '@patternfly/react-core';
 import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
-import type { Webhook, WebhookSend, CircuitState } from '../api/types';
+import type { Webhook, WebhookSend, CircuitState, WebhookEvent } from '../api/types';
 import type { WebhookApiClient } from '../api/webhookApi';
 import { SecretRotationModal } from './SecretRotationModal';
 import { SecretDisclosureModal } from './SecretDisclosureModal';
@@ -68,9 +71,18 @@ export function DeliveryDrawer({
   const [disclosedSecret, setDisclosedSecret] = useState<string | null>(null);
   const [rotationError, setRotationError] = useState<string | null>(null);
 
-  const [loadingPayloadId, setLoadingPayloadId] = useState<string | null>(null);
   const [payloadEventObject, setPayloadEventObject] = useState<string | null>(null);
   const [payloadError, setPayloadError] = useState<string | null>(null);
+  const [loadingPayloadId, setLoadingPayloadId] = useState<string | null>(null);
+
+  // Events tab state
+  const [activeTab, setActiveTab] = useState<string>('deliveries');
+  const [events, setEvents] = useState<WebhookEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [eventsPage, setEventsPage] = useState(1);
+  const [eventsHasMore, setEventsHasMore] = useState(false);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
 
   const isRotating = !!webhook?.hasSecondarySecret;
 
@@ -78,6 +90,10 @@ export function DeliveryDrawer({
     if (!webhook) return;
     setFilter('all');
     setCurrentPage(1);
+    setActiveTab('deliveries');
+    setEventsPage(1);
+    setEventsLoaded(false);
+    setEvents([]);
     loadSends(webhook.id, 'all', 1);
     loadCircuit(webhook.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,6 +140,30 @@ export function DeliveryDrawer({
       );
     } finally {
       setLoadingCircuit(false);
+    }
+  };
+
+  const loadEvents = async (id: string, page: number) => {
+    setLoadingEvents(true);
+    setEventsError(null);
+    try {
+      const first = (page - 1) * pageSize;
+      const result = await api.getEvents(id, { first, max: pageSize });
+      setEvents(result);
+      setEventsHasMore(result.length === pageSize);
+      setEventsLoaded(true);
+    } catch (e) {
+      setEventsError(e instanceof Error ? e.message : 'Failed to load events');
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
+  const handleTabChange = (_event: React.MouseEvent<HTMLElement>, tabKey: string | number) => {
+    const key = String(tabKey);
+    setActiveTab(key);
+    if (key === 'events' && !eventsLoaded && webhook) {
+      loadEvents(webhook.id, 1);
     }
   };
 
@@ -250,6 +290,9 @@ export function DeliveryDrawer({
         >
           {webhook.url}
         </Title>
+        <div style={{ fontSize: '0.875rem', color: '#6a6e73', marginTop: 4 }}>
+          Created {formatRelative(webhook.createdAt)}
+        </div>
         <DrawerActions>
           <DrawerCloseButton onClick={onClose} />
         </DrawerActions>
@@ -259,11 +302,18 @@ export function DeliveryDrawer({
         {/* Secret section */}
         <div style={{ marginBottom: 'var(--pf-v5-global--spacer--md)' }}>
           <strong>Secret</strong>
-          <div style={{ marginTop: '8px' }}>
+          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: 8 }}>
             {!isRotating ? (
               <Label color="green">Active</Label>
             ) : (
-              <Label color="orange">Rotating</Label>
+              <>
+                <Label color="orange">Rotating</Label>
+                {webhook.rotationExpiresAt && (
+                  <span style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
+                    expires {formatRelative(webhook.rotationExpiresAt)}
+                  </span>
+                )}
+              </>
             )}
           </div>
           <div style={{ marginTop: '8px', display: 'flex', gap: 8 }}>
@@ -341,135 +391,211 @@ export function DeliveryDrawer({
           </div>
         )}
 
-        {/* Delivery history section */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginBottom: 8,
-          }}
-        >
-          <Title headingLevel="h3" size="md">
-            Delivery history
-          </Title>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ display: 'flex' }}>
-              <Button
-                variant={filter === 'all' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={handleFilterAll}
+        {/* Tabs: Deliveries / Events */}
+        <Tabs activeKey={activeTab} onSelect={handleTabChange} style={{ marginTop: 8 }} unmountOnExit>
+          <Tab eventKey="deliveries" title={<TabTitleText>Delivery history</TabTitleText>}>
+            <div style={{ paddingTop: 12 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  marginBottom: 8,
+                }}
               >
-                All
-              </Button>
-              <Button
-                variant={filter === 'failed' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={handleFilterFailed}
-              >
-                Failed
-              </Button>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              isLoading={resending}
-              onClick={handleResendFailed}
-            >
-              Resend failed (24h)
-            </Button>
-          </div>
-        </div>
-
-        {loadingSends && <Spinner size="sm" aria-label="Loading sends" />}
-        {sendsError && <Alert variant="danger" isInline title={sendsError} />}
-        {!loadingSends && !sendsError && (
-          <>
-            <Table aria-label="Delivery history" variant="compact">
-              <Thead>
-                <Tr>
-                  <Th>Status</Th>
-                  <Th>HTTP</Th>
-                  <Th>Retries</Th>
-                  <Th>Sent at</Th>
-                  <Th>Actions</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {sends.length === 0 ? (
-                  <Tr>
-                    <Td
-                      colSpan={5}
-                      style={{ textAlign: 'center', color: '#6a6e73' }}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex' }}>
+                    <Button
+                      variant={filter === 'all' ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={handleFilterAll}
                     >
-                      No deliveries found
-                    </Td>
-                  </Tr>
-                ) : (
-                  sends.map((s) => (
-                    <Tr key={s.id}>
-                      <Td dataLabel="Status">
-                        <Label color={s.success ? 'green' : 'red'}>
-                          {s.success ? '✓' : '✗'}
-                        </Label>
-                      </Td>
-                      <Td dataLabel="HTTP">{s.httpStatus}</Td>
-                      <Td dataLabel="Retries">{s.retries}</Td>
-                      <Td dataLabel="Sent at">{formatRelative(s.sentAt)}</Td>
-                      <Td dataLabel="Actions">
-                        <Button
-                          variant="link"
-                          size="sm"
-                          isLoading={resendingSendId === s.id}
-                          isDisabled={resendingSendId !== null || confirmResendId !== null}
-                          onClick={() => handleResendSingle(s.id)}
-                        >
-                          Resend
-                        </Button>
-                        <Button
-                          variant="link"
-                          size="sm"
-                          isLoading={loadingPayloadId === s.id}
-                          isDisabled={loadingPayloadId !== null}
-                          onClick={() => handleViewPayload(s.id)}
-                        >
-                          Payload
-                        </Button>
-                      </Td>
-                    </Tr>
-                  ))
-                )}
-              </Tbody>
-            </Table>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-              <Button
-                variant="secondary"
-                isDisabled={currentPage === 1 || loadingSends}
-                onClick={() => {
-                  const p = currentPage - 1;
-                  setCurrentPage(p);
-                  loadSends(webhook.id, filter, p);
-                }}
-              >
-                ← Prev
-              </Button>
-              <span>Pagina {currentPage}</span>
-              <Button
-                variant="secondary"
-                isDisabled={!hasMore || loadingSends}
-                onClick={() => {
-                  const p = currentPage + 1;
-                  setCurrentPage(p);
-                  loadSends(webhook.id, filter, p);
-                }}
-              >
-                Next →
-              </Button>
+                      All
+                    </Button>
+                    <Button
+                      variant={filter === 'failed' ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={handleFilterFailed}
+                    >
+                      Failed
+                    </Button>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isLoading={resending}
+                    onClick={handleResendFailed}
+                  >
+                    Resend failed (24h)
+                  </Button>
+                </div>
+              </div>
+
+              {loadingSends && <Spinner size="sm" aria-label="Loading sends" />}
+              {sendsError && <Alert variant="danger" isInline title={sendsError} />}
+              {!loadingSends && !sendsError && (
+                <>
+                  <Table aria-label="Deliveries table" variant="compact">
+                    <Thead>
+                      <Tr>
+                        <Th>Status</Th>
+                        <Th>HTTP</Th>
+                        <Th>Retries</Th>
+                        <Th>Sent at</Th>
+                        <Th>Actions</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {sends.length === 0 ? (
+                        <Tr>
+                          <Td
+                            colSpan={5}
+                            style={{ textAlign: 'center', color: '#6a6e73' }}
+                          >
+                            No deliveries found
+                          </Td>
+                        </Tr>
+                      ) : (
+                        sends.map((s) => (
+                          <Tr key={s.id}>
+                            <Td dataLabel="Status">
+                              <Label color={s.success ? 'green' : 'red'}>
+                                {s.success ? '✓' : '✗'}
+                              </Label>
+                            </Td>
+                            <Td dataLabel="HTTP">{s.httpStatus}</Td>
+                            <Td dataLabel="Retries">{s.retries}</Td>
+                            <Td dataLabel="Sent at">{formatRelative(s.sentAt)}</Td>
+                            <Td dataLabel="Actions">
+                              <Button
+                                variant="link"
+                                size="sm"
+                                isLoading={resendingSendId === s.id}
+                                isDisabled={resendingSendId !== null || confirmResendId !== null}
+                                onClick={() => handleResendSingle(s.id)}
+                              >
+                                Resend
+                              </Button>
+                              <Button
+                                variant="link"
+                                size="sm"
+                                isLoading={loadingPayloadId === s.id}
+                                isDisabled={loadingPayloadId !== null}
+                                onClick={() => handleViewPayload(s.id)}
+                              >
+                                Payload
+                              </Button>
+                            </Td>
+                          </Tr>
+                        ))
+                      )}
+                    </Tbody>
+                  </Table>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                    <Button
+                      variant="secondary"
+                      isDisabled={currentPage === 1 || loadingSends}
+                      onClick={() => {
+                        const p = currentPage - 1;
+                        setCurrentPage(p);
+                        loadSends(webhook.id, filter, p);
+                      }}
+                    >
+                      ← Prev
+                    </Button>
+                    <span>Pagina {currentPage}</span>
+                    <Button
+                      variant="secondary"
+                      isDisabled={!hasMore || loadingSends}
+                      onClick={() => {
+                        const p = currentPage + 1;
+                        setCurrentPage(p);
+                        loadSends(webhook.id, filter, p);
+                      }}
+                    >
+                      Next →
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
-          </>
-        )}
+          </Tab>
+
+          <Tab eventKey="events" title={<TabTitleText>Events</TabTitleText>}>
+            <div style={{ paddingTop: 12 }}>
+              {loadingEvents && <Spinner size="sm" aria-label="Loading events" />}
+              {eventsError && <Alert variant="danger" isInline title={eventsError} />}
+              {!loadingEvents && !eventsError && eventsLoaded && (
+                <>
+                  <Table aria-label="Event history" variant="compact">
+                    <Thead>
+                      <Tr>
+                        <Th>Event type</Th>
+                        <Th>Captured at</Th>
+                        <Th>Actions</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {events.length === 0 ? (
+                        <Tr>
+                          <Td
+                            colSpan={3}
+                            style={{ textAlign: 'center', color: '#6a6e73' }}
+                          >
+                            No events found
+                          </Td>
+                        </Tr>
+                      ) : (
+                        events.map((ev) => (
+                          <Tr key={ev.id}>
+                            <Td dataLabel="Event type">{ev.eventType}</Td>
+                            <Td dataLabel="Captured at">{formatRelative(ev.createdAt)}</Td>
+                            <Td dataLabel="Actions">
+                              <Button
+                                variant="link"
+                                size="sm"
+                                onClick={() => setPayloadEventObject(ev.eventObject)}
+                              >
+                                Payload
+                              </Button>
+                            </Td>
+                          </Tr>
+                        ))
+                      )}
+                    </Tbody>
+                  </Table>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                    <Button
+                      variant="secondary"
+                      isDisabled={eventsPage === 1 || loadingEvents}
+                      onClick={() => {
+                        const p = eventsPage - 1;
+                        setEventsPage(p);
+                        loadEvents(webhook.id, p);
+                      }}
+                    >
+                      ← Prev
+                    </Button>
+                    <span>Pagina {eventsPage}</span>
+                    <Button
+                      variant="secondary"
+                      isDisabled={!eventsHasMore || loadingEvents}
+                      onClick={() => {
+                        const p = eventsPage + 1;
+                        setEventsPage(p);
+                        loadEvents(webhook.id, p);
+                      }}
+                    >
+                      Next →
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </Tab>
+        </Tabs>
       </div>
 
       {confirmResendId !== null && (
