@@ -51,17 +51,36 @@ Click **Save** to create the webhook. Click **Cancel** or press `Esc` to discard
 
 Clicking a row opens a side drawer showing delivery details for that webhook.
 
-The drawer header shows:
-- The full target **URL**
-- The **circuit-breaker** badge (`OPEN` / `CLOSED`) and a **Reset circuit** button
+The drawer header shows the full target **URL**.
+
+### Secret
+
+The **Secret** section shows the current signature key status (`Active` or `Rotating`). From here you can start a graceful rotation or trigger an emergency rotation. See [Section 7 — Secret Rotation](#7-secret-rotation) for details.
+
+### Circuit breaker
+
+Below the Secret section, the **Circuit breaker** status badge (`OPEN` / `CLOSED`) and a **Reset circuit** button let you inspect and manually reset the circuit. See [Section 4 — Circuit breaker](#4-circuit-breaker) for details.
+
+### Delivery history tab
 
 The **Delivery history** tab lists recent dispatch attempts. Each row shows:
 - HTTP **status** code (green check = 2xx, red X = failure)
 - Number of **retries** for that attempt
-- **Start** timestamp
-- An **Actions** column with a resend option
+- **Sent at** timestamp
+- An **Actions** column with **Resend** and **Payload** options
 
 Use the **Resend failed** button to replay all failed deliveries for this webhook.
+
+Click **Payload** on any row to open a modal showing the full JSON payload sent with that delivery.
+
+### Events tab
+
+![Events tab](screenshots/03b-events-tab.png)
+
+The **Events** tab lists the raw Keycloak events received for this webhook, before they are dispatched. Each row shows:
+- **Event type** (e.g. `USER`, `ADMIN`)
+- **Captured at** timestamp
+- An **Actions** column with a **Payload** button to inspect the event JSON
 
 ### Pagination
 
@@ -214,3 +233,16 @@ Controls the number of rows shown per page in the delivery history drawer.
 | 25 | 25 rows |
 | **50** *(default)* | 50 rows |
 | 100 | 100 rows |
+
+### Server configuration
+
+Server-side settings that persist in the Keycloak database and apply across all users of the realm.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **Event retention (days)** | 30 | How long raw Keycloak events are kept in the database before being purged. |
+| **Send retention (days)** | 90 | How long delivery records (sends) are kept before being purged. |
+| **Circuit failure threshold** | 5 | Number of consecutive delivery failures before the circuit trips to `CLOSED`. |
+| **Circuit open duration (seconds)** | 60 | How long the circuit stays `CLOSED` before it can be manually reset. |
+
+Changes are saved automatically on blur (no explicit save button required).

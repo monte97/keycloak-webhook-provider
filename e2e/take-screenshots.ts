@@ -27,7 +27,7 @@ async function main() {
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
-    viewport: { width: 1280, height: 800 },
+    viewport: { width: 1280, height: 1400 },
   });
   const page = await context.newPage();
 
@@ -54,24 +54,40 @@ async function main() {
   await shot(page, '02-create-webhook-modal');
   await page.keyboard.press('Escape');
   await page.waitForSelector('[role="dialog"]', { state: 'hidden' });
-
-  // ── 03 Delivery drawer ───────────────────────────────────────────────────
-  // Click the URL cell in the first row (not the toggle or action buttons)
-  const firstRowUrl = page.locator('tbody tr').first().locator('td').first();
-  await firstRowUrl.click();
-  await page.waitForSelector('[data-ouia-component-type="PF5/DrawerPanelContent"]', {
-    state: 'visible',
-    timeout: 5000,
-  }).catch(async () => {
-    // fallback: try clicking the row itself offset to avoid toggle
-    await page.locator('tbody tr').first().click({ position: { x: 200, y: 15 } });
-    await page.waitForTimeout(500);
-  });
+  // Wait for modal backdrop animation to fully complete
+  await page.locator('.pf-v5-c-backdrop').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
   await page.waitForTimeout(800);
+
+  // ── 03 Delivery drawer (Delivery history tab) ───────────────────────────
+  // Click the URL cell in the first data row to open the drawer.
+  // The "Enabled" and "Actions" cells have stopPropagation; click the URL cell area (x≈50).
+  await page.locator('tbody tr').first().waitFor({ state: 'visible', timeout: 5000 });
+  await page.locator('tbody tr').first().click({ position: { x: 50, y: 12 } });
+  // Drawer is detected by the "Rotate secret" button that appears inside it
+  await page.getByRole('button', { name: 'Rotate secret' }).waitFor({ state: 'visible', timeout: 8000 });
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(600);
   await shot(page, '03-delivery-drawer');
 
-  // ── 04 Circuit breaker section (zoom) ───────────────────────────────────
-  // Scroll the drawer to make the circuit section visible and screenshot it
+  // ── 03b Events tab ───────────────────────────────────────────────────────
+  // PF5 drawer tabs use .pf-v5-c-tabs__link, not role="tab"
+  try {
+    const eventsTab = page.locator('.pf-v5-c-tabs__link', { hasText: 'Events' });
+    await eventsTab.waitFor({ state: 'visible', timeout: 5000 });
+    await eventsTab.scrollIntoViewIfNeeded();
+    await eventsTab.click();
+    await page.waitForTimeout(1000);
+    await shot(page, '03b-events-tab');
+    // Go back to delivery history tab
+    const deliveryTab = page.locator('.pf-v5-c-tabs__link', { hasText: 'Delivery history' });
+    await deliveryTab.waitFor({ state: 'visible', timeout: 3000 });
+    await deliveryTab.click();
+    await page.waitForTimeout(400);
+  } catch {
+    console.log('  ⚠ Events tab not found, skipping 03b');
+  }
+
+  // ── 04 Circuit breaker section ───────────────────────────────────────────
   const circuitSection = page.locator('text=Circuit breaker').first();
   if (await circuitSection.isVisible()) {
     await circuitSection.scrollIntoViewIfNeeded();
@@ -87,11 +103,8 @@ async function main() {
   } else {
     await page.keyboard.press('Escape');
   }
-  // Wait for drawer to fully close
-  await page.waitForSelector('[data-ouia-component-type="PF5/DrawerPanelContent"]', {
-    state: 'hidden',
-    timeout: 5000,
-  }).catch(() => {});
+  // Wait for "Rotate secret" to disappear (drawer closed)
+  await page.getByRole('button', { name: 'Rotate secret' }).waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
   await page.waitForTimeout(600);
 
   // ── 05 Metrics tab ───────────────────────────────────────────────────────
@@ -113,6 +126,17 @@ async function main() {
   await settingsTab.click({ timeout: 10_000 });
   await page.waitForTimeout(600);
   await shot(page, '07-settings-page');
+
+  // ── 07b Settings — Server configuration card (Realm Settings) ───────────
+  try {
+    const serverConfigCard = page.getByText('Configurazione server');
+    await serverConfigCard.waitFor({ state: 'visible', timeout: 8000 });
+    await serverConfigCard.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+    await shot(page, '07b-settings-server-config');
+  } catch {
+    console.log('  ⚠ Configurazione server card not found, skipping 07b');
+  }
 
   await browser.close();
   console.log(`\nDone. Screenshots saved to: ${OUT_DIR}`);

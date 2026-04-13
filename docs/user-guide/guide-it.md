@@ -51,17 +51,36 @@ Cliccare **Save** per creare il webhook. Cliccare **Cancel** o premere `Esc` per
 
 Cliccando su una riga si apre un pannello laterale con i dettagli delle consegne per quel webhook.
 
-L'intestazione del pannello mostra:
-- L'**URL** di destinazione completo
-- Il badge del **circuit breaker** (`OPEN` / `CLOSED`) e il pulsante **Reset circuit**
+L'intestazione del pannello mostra l'**URL** di destinazione completo.
+
+### Secret
+
+La sezione **Secret** mostra lo stato attuale della chiave di firma (`Active` o `Rotating`). Da qui è possibile avviare una rotazione graduale o una rotazione di emergenza. Per i dettagli vedi [Sezione 7 — Rotazione del secret](#7-rotazione-del-secret).
+
+### Circuit breaker
+
+Sotto la sezione Secret, il badge di stato del **Circuit breaker** (`OPEN` / `CLOSED`) e il pulsante **Reset circuit** permettono di ispezionare e ripristinare manualmente il circuit. Per i dettagli vedi [Sezione 4 — Circuit breaker](#4-circuit-breaker).
+
+### Scheda Delivery history
 
 La scheda **Delivery history** elenca i tentativi di consegna recenti. Ogni riga mostra:
 - Il codice di **status** HTTP (spunta verde = 2xx, X rosso = errore)
 - Il numero di **retry** per quel tentativo
-- Il timestamp di **inizio**
-- Una colonna **Actions** con l'opzione di reinvio
+- Il timestamp **Sent at**
+- Una colonna **Actions** con le opzioni **Resend** e **Payload**
 
 Il pulsante **Resend failed** permette di ripetere tutte le consegne fallite per quel webhook.
+
+Cliccando **Payload** su qualsiasi riga si apre una modale con il payload JSON completo inviato per quella consegna.
+
+### Scheda Events
+
+![Scheda eventi](screenshots/03b-events-tab.png)
+
+La scheda **Events** elenca gli eventi Keycloak grezzi ricevuti per questo webhook, prima che vengano spediti. Ogni riga mostra:
+- Il **tipo di evento** (es. `USER`, `ADMIN`)
+- Il timestamp **Captured at**
+- Una colonna **Actions** con un pulsante **Payload** per ispezionare il JSON dell'evento
 
 ### Paginazione
 
@@ -214,3 +233,16 @@ Controlla il numero di righe visualizzate per pagina nel drawer della cronologia
 | 25 | 25 righe |
 | **50** *(default)* | 50 righe |
 | 100 | 100 righe |
+
+### Configurazione server
+
+Impostazioni lato server persistite nel database di Keycloak e applicate a tutti gli utenti del realm.
+
+| Impostazione | Default | Descrizione |
+|--------------|---------|-------------|
+| **Event retention (days)** | 30 | Per quanti giorni gli eventi Keycloak grezzi vengono mantenuti nel database prima di essere eliminati. |
+| **Send retention (days)** | 90 | Per quanti giorni i record di consegna (send) vengono mantenuti prima di essere eliminati. |
+| **Circuit failure threshold** | 5 | Numero di errori consecutivi prima che il circuit scatti su `CLOSED`. |
+| **Circuit open duration (seconds)** | 60 | Per quanto tempo il circuit rimane `CLOSED` prima di poter essere ripristinato manualmente. |
+
+Le modifiche vengono salvate automaticamente alla perdita del focus (nessun pulsante di salvataggio esplicito).
