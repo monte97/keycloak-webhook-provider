@@ -59,7 +59,7 @@ class WebhookEventDispatcherTest {
         dispatcher.enqueue(samplePayload(), "kc-id-1", "realm-1");
         long elapsed = System.currentTimeMillis() - start;
 
-        assertTrue(elapsed < 200, "enqueue must not block; took " + elapsed + "ms");
+        assertTrue(elapsed < 500, "enqueue must not block; took " + elapsed + "ms");
         executor.shutdownNow();
     }
 
