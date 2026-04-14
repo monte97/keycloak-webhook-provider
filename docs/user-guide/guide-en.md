@@ -20,7 +20,7 @@ The main screen lists all webhooks configured in the realm. For each webhook you
 |--------|-------------|
 | **URL** | The endpoint that receives POST requests |
 | **Enabled** | Toggle to enable or disable delivery without deleting the webhook |
-| **Circuit** | Current circuit-breaker state: `OPEN` (healthy) or `CLOSED` (tripped) |
+| **Circuit** | Current circuit-breaker state: `CLOSED` (healthy) or `OPEN` (tripped) |
 | **Events** | Number of event types subscribed |
 | **Actions** | Menu for edit and delete |
 
@@ -92,10 +92,10 @@ Use the **← Prev** and **Next →** buttons at the bottom of the delivery tabl
 
 ![Circuit breaker](screenshots/04-circuit-breaker.png)
 
-The circuit breaker protects downstream services from repeated failed requests. When too many consecutive deliveries fail, the circuit **trips** (state moves from `OPEN` to `CLOSED`) and delivery is suspended.
+The circuit breaker protects downstream services from repeated failed requests. When too many consecutive deliveries fail, the circuit **trips** (state moves from `CLOSED` to `OPEN`) and delivery is suspended.
 
-- **OPEN** — the circuit is healthy; deliveries proceed normally.
-- **CLOSED** — the circuit has tripped; deliveries are paused until the circuit is reset.
+- **CLOSED** — the circuit is healthy; deliveries proceed normally.
+- **OPEN** — the circuit has tripped; deliveries are paused until the circuit is reset.
 
 Click **Reset circuit** in the drawer header to manually reopen the circuit and resume delivery.
 
@@ -254,7 +254,7 @@ Server-side settings that persist in the Keycloak database and apply across all 
 |---------|---------|-------------|
 | **Event retention (days)** | 30 | How long raw Keycloak events are kept in the database before being purged. |
 | **Send retention (days)** | 90 | How long delivery records (sends) are kept before being purged. |
-| **Circuit failure threshold** | 5 | Number of consecutive delivery failures before the circuit trips to `CLOSED`. |
-| **Circuit open duration (seconds)** | 60 | How long the circuit stays `CLOSED` before it can be manually reset. |
+| **Circuit failure threshold** | 5 | Number of consecutive delivery failures before the circuit trips to `OPEN`. |
+| **Circuit open duration (seconds)** | 60 | How long the circuit stays `OPEN` before it can be manually reset. |
 
 Changes are saved automatically on blur (no explicit save button required).

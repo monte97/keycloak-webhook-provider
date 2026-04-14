@@ -20,7 +20,7 @@ La schermata principale mostra tutti i webhook configurati nel realm. Per ogni w
 |---------|-------------|
 | **URL** | L'endpoint che riceve le richieste POST |
 | **Enabled** | Toggle per abilitare o disabilitare la consegna senza eliminare il webhook |
-| **Circuit** | Stato attuale del circuit breaker: `OPEN` (funzionante) o `CLOSED` (scattato) |
+| **Circuit** | Stato attuale del circuit breaker: `CLOSED` (funzionante) o `OPEN` (scattato) |
 | **Events** | Numero di tipi di evento sottoscritti |
 | **Actions** | Menu per modifica ed eliminazione |
 
@@ -92,10 +92,10 @@ I pulsanti **← Prev** e **Next →** in fondo alla tabella permettono di navig
 
 ![Circuit breaker](screenshots/04-circuit-breaker.png)
 
-Il circuit breaker protegge i servizi downstream da richieste ripetute in caso di errori. Quando troppi tentativi di consegna consecutivi falliscono, il circuit **scatta** (lo stato passa da `OPEN` a `CLOSED`) e la consegna viene sospesa.
+Il circuit breaker protegge i servizi downstream da richieste ripetute in caso di errori. Quando troppi tentativi di consegna consecutivi falliscono, il circuit **scatta** (lo stato passa da `CLOSED` a `OPEN`) e la consegna viene sospesa.
 
-- **OPEN** — il circuit è funzionante; le consegne procedono normalmente.
-- **CLOSED** — il circuit è scattato; le consegne sono in pausa finché non viene ripristinato.
+- **CLOSED** — il circuit è funzionante; le consegne procedono normalmente.
+- **OPEN** — il circuit è scattato; le consegne sono in pausa finché non viene ripristinato.
 
 Cliccare **Reset circuit** nell'intestazione del pannello per riaprire manualmente il circuit e riprendere le consegne.
 
@@ -254,7 +254,7 @@ Impostazioni lato server persistite nel database di Keycloak e applicate a tutti
 |--------------|---------|-------------|
 | **Event retention (days)** | 30 | Per quanti giorni gli eventi Keycloak grezzi vengono mantenuti nel database prima di essere eliminati. |
 | **Send retention (days)** | 90 | Per quanti giorni i record di consegna (send) vengono mantenuti prima di essere eliminati. |
-| **Circuit failure threshold** | 5 | Numero di errori consecutivi prima che il circuit scatti su `CLOSED`. |
-| **Circuit open duration (seconds)** | 60 | Per quanto tempo il circuit rimane `CLOSED` prima di poter essere ripristinato manualmente. |
+| **Circuit failure threshold** | 5 | Numero di errori consecutivi prima che il circuit scatti su `OPEN`. |
+| **Circuit open duration (seconds)** | 60 | Per quanto tempo il circuit rimane `OPEN` prima di poter essere ripristinato manualmente. |
 
 Le modifiche vengono salvate automaticamente alla perdita del focus (nessun pulsante di salvataggio esplicito).
