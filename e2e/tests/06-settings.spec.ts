@@ -216,8 +216,11 @@ test('Delivery drawer shows Prev/Next pagination buttons', async ({
   const firstRow = page.getByRole('row').nth(1); // skip header
   await firstRow.getByRole('gridcell').first().click();
 
-  await expect(page.getByRole('button', { name: /prev/i })).toBeVisible({ timeout: 5_000 });
-  await expect(page.getByRole('button', { name: /next/i })).toBeVisible();
+  // Scope to the delivery history tabpanel to avoid ambiguity with the
+  // webhook list pagination buttons (both show "← Prev" / "Next →").
+  const deliveryPanel = page.getByRole('tabpanel', { name: 'Delivery history' });
+  await expect(deliveryPanel.getByRole('button', { name: /prev/i })).toBeVisible({ timeout: 5_000 });
+  await expect(deliveryPanel.getByRole('button', { name: /next/i })).toBeVisible();
 
   // Reset page size to default
   await page.keyboard.press('Escape');

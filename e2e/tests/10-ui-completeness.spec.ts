@@ -38,8 +38,9 @@ test('UI completeness: createdAt visible and events tab shows event rows', async
   // 6. Click the Events tab
   await page.getByRole('tab', { name: /events/i }).click();
 
-  // 7. Verify at least one event row is visible
-  await expect(page.getByRole('cell', { name: /USER|ADMIN/ }).first()).toBeVisible({ timeout: 10_000 });
+  // 7. Wait for the events spinner to disappear, then assert at least one row
+  await expect(page.getByLabel('Loading events')).not.toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('gridcell', { name: /USER|ADMIN/ }).first()).toBeVisible({ timeout: 10_000 });
 
   // 8. Click Payload on the first event row
   await page.getByRole('button', { name: /payload/i }).first().click();
