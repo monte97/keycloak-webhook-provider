@@ -30,6 +30,9 @@ dependency-reduced-pom.xml
 test-results/
 webhook-ui/dist/
 webhook-ui/.vite/
+webhook-ui/coverage/
 *.log
 *.env
 !demo/.env
+*.orig
+.npmrc
