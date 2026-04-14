@@ -6,21 +6,10 @@ Features ordered by impact/complexity. Items marked with 🔍 were identified by
 
 ## High priority, low complexity
 
-### HALF_OPEN circuit breaker state
-The circuit breaker currently transitions directly from OPEN → CLOSED on the next scheduled retry. A proper HALF_OPEN state would allow a single probe request through before fully closing the circuit, reducing the risk of re-opening immediately after recovery.
-
-**Relevant code:** `CircuitBreaker`, `WebhookEventDispatcher.sendWithRetry()`  
-**Metric already reserved:** `webhook_circuit_state` gauge value `1 = HALF_OPEN`
-
 ### Configurable retry on specific HTTP status codes
 Currently the dispatcher retries on any failed response (non-2xx) and network errors. Some status codes (400, 401, 404) indicate a permanent client error that will not resolve on retry. Allow operators to configure which status codes trigger a retry.
 
 **Relevant code:** `WebhookEventDispatcher.sendWithRetry()`, webhook configuration model
-
-### 🔍 Resend by delivery ID
-A REST endpoint to replay a specific past delivery attempt by ID, without having to trigger a new event. p2-inc exposes this pattern; we have the delivery history data but no dedicated resend-by-ID endpoint.
-
-**Relevant code:** `WebhooksResource`, `JpaWebhookProvider`, delivery history tables
 
 ---
 
