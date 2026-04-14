@@ -39,7 +39,7 @@ test('Delivery drawer shows sends table after event delivery', async ({
 
   // 6. Verify drawer content
   await expect(page.getByText('Delivery history')).toBeVisible({ timeout: 5_000 });
-  await expect(page.getByRole('grid', { name: 'Delivery history' })).toBeVisible();
+  await expect(page.getByRole('grid', { name: 'Deliveries table' })).toBeVisible();
 
   // At least one row in the sends table (not "No deliveries found")
   await expect(page.getByText('No deliveries found')).not.toBeVisible();
@@ -81,8 +81,8 @@ test('Delivery drawer filter toggles to Failed', async ({
   // Click "Failed" filter — exact:true to avoid matching "Resend failed (24h)" button
   await page.getByRole('button', { name: 'Failed', exact: true }).click();
 
-  // Table reloads — wait for table to be visible
-  await expect(page.getByRole('grid', { name: 'Delivery history' })).toBeVisible();
+  // Wait for the loading spinner to disappear before asserting empty state
+  await expect(page.getByLabel('Loading sends')).not.toBeVisible({ timeout: 5_000 });
 
   // Since all deliveries succeeded, "No deliveries found" should appear
   await expect(page.getByText('No deliveries found')).toBeVisible({ timeout: 5_000 });

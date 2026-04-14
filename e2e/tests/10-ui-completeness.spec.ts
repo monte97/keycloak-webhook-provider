@@ -32,7 +32,8 @@ test('UI completeness: createdAt visible and events tab shows event rows', async
   await expect(page.getByRole('tab', { name: 'Delivery history' })).toBeVisible({ timeout: 5_000 });
 
   // 5. Verify createdAt is shown in the drawer header
-  await expect(page.getByText(/created/i)).toBeVisible({ timeout: 5_000 });
+  // Scope to the drawer head to avoid ambiguity with the "Webhook created" success alert
+  await expect(page.locator('.pf-v5-c-drawer__head').getByText(/created/i)).toBeVisible({ timeout: 5_000 });
 
   // 6. Click the Events tab
   await page.getByRole('tab', { name: /events/i }).click();
