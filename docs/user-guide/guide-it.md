@@ -154,7 +154,19 @@ Ruotare un secret di webhook è un'operazione in due fasi, senza interruzione de
 
 ### Avviare una rotazione
 
-Aprire il webhook nell'interfaccia di amministrazione e cliccare su **Rotate secret** nella scheda Secret del pannello. Scegliere un periodo di grazia (1, 7 o 30 giorni) e confermare. Una modale mostra il nuovo secret una sola volta — copiarlo e configurarlo lato consumer. Il vecchio secret continua a verificare le firme fino al termine del periodo di grazia o fino a quando non si clicca su **Complete rotation now**.
+![Scheda Secret — Active](screenshots/03c-secret-card-active.png)
+
+Aprire il webhook nell'interfaccia di amministrazione e cliccare su **Rotate secret** nella sezione Secret del pannello.
+
+![Modale rotazione secret](screenshots/03d-rotate-secret-modal.png)
+
+Scegliere un periodo di grazia (1, 7 o 30 giorni) e cliccare **Rotate**. Una modale mostra il nuovo secret una sola volta — copiarlo e configurarlo lato consumer.
+
+![Modale disclosure secret](screenshots/03e-secret-disclosure-modal.png)
+
+Spuntare **I have copied the secret to a safe place** e cliccare **Done**. Il pannello si aggiorna mostrando il badge **Rotating** con la data di scadenza. Il vecchio secret continua a verificare le firme fino al termine del periodo di grazia o fino a quando non si clicca su **Complete rotation now**.
+
+![Scheda Secret — Rotating](screenshots/03f-secret-card-rotating.png)
 
 ### Rotazione di emergenza
 

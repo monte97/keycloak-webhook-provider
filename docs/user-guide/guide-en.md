@@ -84,7 +84,7 @@ The **Events** tab lists the raw Keycloak events received for this webhook, befo
 
 ### Pagination
 
-Use the **← Prev** and **Next →** buttons at the bottom of the delivery table to navigate between pages. The number of rows per page is configurable in **Settings → Cronologia consegne** (default: 50). The **Next** button is disabled on the last page; **Prev** is disabled on the first page.
+Use the **← Prev** and **Next →** buttons at the bottom of the delivery table to navigate between pages. The number of rows per page is configurable in **Settings → Delivery history** (default: 50). The **Next** button is disabled on the last page; **Prev** is disabled on the first page.
 
 ---
 
@@ -154,7 +154,19 @@ Rotating a webhook secret is a two-phase, zero-downtime operation: while the rot
 
 ### Starting a rotation
 
-Open the webhook in the admin UI and click **Rotate secret** in the drawer's Secret card. Choose a grace period (1, 7, or 30 days) and confirm. A modal displays the new secret exactly once — copy it and configure it on the consumer side. The old secret continues to verify signatures until the grace period ends or you click **Complete rotation now**.
+![Secret card — Active](screenshots/03c-secret-card-active.png)
+
+Open the webhook in the admin UI and click **Rotate secret** in the drawer's Secret section.
+
+![Rotate secret modal](screenshots/03d-rotate-secret-modal.png)
+
+Choose a grace period (1, 7, or 30 days) and click **Rotate**. A modal displays the new secret exactly once — copy it and configure it on the consumer side.
+
+![Secret disclosure modal](screenshots/03e-secret-disclosure-modal.png)
+
+Check **I have copied the secret to a safe place** and click **Done**. The drawer updates to show a **Rotating** badge with the expiry date. The old secret continues to verify signatures until the grace period ends or you click **Complete rotation now**.
+
+![Secret card — Rotating](screenshots/03f-secret-card-rotating.png)
 
 ### Emergency rotation
 

@@ -87,6 +87,36 @@ async function main() {
     console.log('  ⚠ Events tab not found, skipping 03b');
   }
 
+  // ── 03c Secret card (Active state) ──────────────────────────────────────
+  // The Secret section is at the top of the drawer — scroll it into view
+  const secretSection = page.locator('strong', { hasText: 'Secret' }).first();
+  await secretSection.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shot(page, '03c-secret-card-active');
+
+  // ── 03d Rotate secret modal ──────────────────────────────────────────────
+  await page.getByRole('button', { name: 'Rotate secret' }).click();
+  await page.getByRole('dialog', { name: 'Rotate secret' }).waitFor({ state: 'visible', timeout: 5000 });
+  await page.waitForTimeout(300);
+  await shot(page, '03d-rotate-secret-modal');
+  // Confirm rotation (default 7 days)
+  await page.getByRole('button', { name: /^rotate$/i }).click();
+
+  // ── 03e Secret disclosure modal ──────────────────────────────────────────
+  await page.getByRole('dialog', { name: 'New secret generated' }).waitFor({ state: 'visible', timeout: 10_000 });
+  await page.waitForTimeout(300);
+  await shot(page, '03e-secret-disclosure-modal');
+  // Acknowledge and close
+  await page.getByLabel(/copied the secret/i).check();
+  await page.getByRole('button', { name: /done/i }).click();
+  await page.getByRole('dialog', { name: 'New secret generated' }).waitFor({ state: 'hidden', timeout: 5000 });
+
+  // ── 03f Secret card (Rotating state) ────────────────────────────────────
+  await page.getByText(/rotating/i).first().waitFor({ state: 'visible', timeout: 10_000 });
+  await secretSection.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shot(page, '03f-secret-card-rotating');
+
   // ── 04 Circuit breaker section ───────────────────────────────────────────
   const circuitSection = page.locator('text=Circuit breaker').first();
   if (await circuitSection.isVisible()) {
