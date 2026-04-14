@@ -5,6 +5,15 @@ This document is the authoritative reference for all Keycloak event types handle
 - **Operators** configuring webhook subscriptions — see [Subscription patterns](#subscription-patterns) and the event tables.
 - **Developers** building webhook consumers — see [Payload structure](#payload-structure).
 
+## Event origin
+
+Event types are **defined by Keycloak**, not by this provider. The provider listens via the `EventListenerProvider` SPI and forwards every event that Keycloak emits, adding only the `access.` / `admin.` prefix.
+
+- Access event types come from the [`org.keycloak.events.EventType`](https://www.keycloak.org/docs-api/latest/javadocs/org/keycloak/events/EventType.html) enum.
+- Admin event types come from the combination of [`ResourceType`](https://www.keycloak.org/docs-api/latest/javadocs/org/keycloak/events/admin/ResourceType.html) × [`OperationType`](https://www.keycloak.org/docs-api/latest/javadocs/org/keycloak/events/admin/OperationType.html) enums.
+
+The tables in this document list the most common types (those shown in the UI subscription dropdown). The provider will forward **any** event emitted by Keycloak, including types added in future Keycloak releases, as long as the webhook subscription pattern matches. For the complete authoritative list, refer to the [Keycloak Events documentation](https://www.keycloak.org/docs/latest/server_admin/#events) and the Javadoc links above.
+
 ---
 
 ## Naming convention
