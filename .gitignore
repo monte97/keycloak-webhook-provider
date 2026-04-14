@@ -24,5 +24,12 @@ e2e/test-results/
 e2e/playwright-report/
 e2e/node_modules/
 e2e/dist/
+e2e/REVIEW.md
 docs/superpowers/
 dependency-reduced-pom.xml
+test-results/
+webhook-ui/dist/
+webhook-ui/.vite/
+*.log
+*.env
+!demo/.env
