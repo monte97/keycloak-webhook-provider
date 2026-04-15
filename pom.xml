@@ -13,7 +13,7 @@
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <keycloak.version>26.5.6</keycloak.version>
+    <keycloak.version>26.6.0</keycloak.version>
     <!-- keycloak-admin-client lags behind the SPI artifacts on Maven Central;
          pin it independently so Dependabot can bump the two separately. -->
     <keycloak.admin-client.version>26.0.5</keycloak.admin-client.version>
