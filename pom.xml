@@ -13,7 +13,10 @@
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <keycloak.version>26.0.0</keycloak.version>
+    <keycloak.version>26.5.6</keycloak.version>
+    <!-- keycloak-admin-client lags behind the SPI artifacts on Maven Central;
+         pin it independently so Dependabot can bump the two separately. -->
+    <keycloak.admin-client.version>26.0.5</keycloak.admin-client.version>
     <junit.version>5.11.2</junit.version>
     <mockito.version>5.14.2</mockito.version>
     <testcontainers.version>1.20.6</testcontainers.version>
@@ -144,7 +147,7 @@
     <dependency>
       <groupId>org.keycloak</groupId>
       <artifactId>keycloak-admin-client</artifactId>
-      <version>${keycloak.version}</version>
+      <version>${keycloak.admin-client.version}</version>
       <scope>test</scope>
       <exclusions>
         <!-- exclude old jboss jandex to avoid conflict with io.smallrye:jandex used by hibernate-core -->
